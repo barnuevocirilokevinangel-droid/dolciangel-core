@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Subir Clientes a Firebase</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a2e; color: #eee; }
+  h1 { color: #c084fc; }
+  button { background: #7c3aed; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 10px; cursor: pointer; margin: 10px 0; }
+  button:hover { background: #6d28d9; }
+  #log { background: #0f0f23; padding: 15px; border-radius: 10px; margin-top: 20px; height: 400px; overflow-y: auto; font-size: 13px; }
+  .ok { color: #4ade80; }
+  .err { color: #f87171; }
+  .info { color: #60a5fa; }
+  #progreso { font-size: 20px; color: #c084fc; margin: 10px 0; }
+</style>
+</head>
+<body>
+<h1>📋 Subir Clientes a Firebase</h1>
+<p>Este script sube los 80 clientes extraídos del chat de WhatsApp a Firebase.</p>
+<div id="progreso">Listo para subir</div>
+<button onclick="subirClientes()">🚀 Subir todos los clientes</button>
+<div id="log"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCOcc0JIOYONwlIHva5i7BLdGZ4OFGq1uo",
+  authDomain: "dolciangel-5d2aa.firebaseapp.com",
+  projectId: "dolciangel-5d2aa",
+  storageBucket: "dolciangel-5d2aa.firebasestorage.app",
+  messagingSenderId: "139109905813",
+  appId: "1:139109905813:web:c6f1bae511ce5d9f3eb29c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const clientes = [
+  {nombre: "Angel Barnuevo", telefono: "904610510", cumpleanos: "4/11", puntos: 2},
+  {nombre: "Ruby Palacios", telefono: "", cumpleanos: "20/01", puntos: 0},
+  {nombre: "Enrique Flores", telefono: "996567890", cumpleanos: "02/02", puntos: 0},
+  {nombre: "Juleissy de la Cruz", telefono: "978882332", cumpleanos: "02/02", puntos: 0},
+  {nombre: "Ricio Cámara", telefono: "941833840", cumpleanos: "15/12", puntos: 0},
+  {nombre: "Alejandro López", telefono: "931513256", cumpleanos: "24/10", puntos: 0},
+  {nombre: "Víctor Fernández", telefono: "948666182", cumpleanos: "20/05", puntos: 0},
+  {nombre: "Abraham Eustaquio", telefono: "912090248", cumpleanos: "27/12", puntos: 0},
+  {nombre: "Fabiana Bravo", telefono: "967640220", cumpleanos: "30/04", puntos: 0},
+  {nombre: "Barbara del Aguila", telefono: "962636768", cumpleanos: "12/09", puntos: 0},
+  {nombre: "David López", telefono: "947174799", cumpleanos: "9/11", puntos: 0},
+  {nombre: "Milagros Anco Amancio", telefono: "949776050", cumpleanos: "21/02", puntos: 0},
+  {nombre: "Gustavo Arias", telefono: "924055610", cumpleanos: "26/01", puntos: 0},
+  {nombre: "Nataly Pacheco", telefono: "991628507", cumpleanos: "03/03", puntos: 0},
+  {nombre: "Paula Blas", telefono: "957387306", cumpleanos: "20/03", puntos: 0},
+  {nombre: "Sebastian Velasquez", telefono: "910475573", cumpleanos: "02/10", puntos: 2},
+  {nombre: "Irma Urquía", telefono: "", cumpleanos: "", puntos: 0},
+  {nombre: "Mafer Castillo", telefono: "943776488", cumpleanos: "7/07", puntos: 0},
+  {nombre: "Jessica G.B.", telefono: "994250921", cumpleanos: "12/04", puntos: 1},
+  {nombre: "Álvaro Astudillo", telefono: "94201656", cumpleanos: "31/03", puntos: 9},
+  {nombre: "Rubi Quilcate", telefono: "961557623", cumpleanos: "17/11", puntos: 2},
+  {nombre: "María Jordan", telefono: "", cumpleanos: "", puntos: 8},
+  {nombre: "Patricia Quispe", telefono: "991188820", cumpleanos: "14/05", puntos: 3},
+  {nombre: "María Campos", telefono: "945441585", cumpleanos: "21/12", puntos: 2},
+  {nombre: "Elias Correa", telefono: "979166891", cumpleanos: "4/10", puntos: 1},
+  {nombre: "Sofía Flores", telefono: "944982052", cumpleanos: "29/09", puntos: 1},
+  {nombre: "Jhonatan Vílchez", telefono: "913306362", cumpleanos: "28/04", puntos: 1},
+  {nombre: "Jhonatan Matos", telefono: "983429233", cumpleanos: "20/12", puntos: 3},
+  {nombre: "Jheferson Miranda", telefono: "912727630", cumpleanos: "13/12", puntos: 2},
+  {nombre: "Jhon Ramos", telefono: "971021712", cumpleanos: "24/07", puntos: 6},
+  {nombre: "Yelina Rodríguez", telefono: "962909630", cumpleanos: "11/10", puntos: 1},
+  {nombre: "Fatima Butron", telefono: "950499454", cumpleanos: "13/06", puntos: 5},
+  {nombre: "Diego Chuye", telefono: "937518026", cumpleanos: "26/11", puntos: 5},
+  {nombre: "Roxana Díaz", telefono: "943610301", cumpleanos: "6/07", puntos: 7},
+  {nombre: "Abraham González", telefono: "912109507", cumpleanos: "9/02", puntos: 1},
+  {nombre: "Renzo Vercelli", telefono: "928019362", cumpleanos: "6/07", puntos: 9},
+  {nombre: "Marlene", telefono: "997167575", cumpleanos: "21/05", puntos: 3},
+  {nombre: "Lorena Días", telefono: "975621367", cumpleanos: "6/07", puntos: 2},
+  {nombre: "Erika Rojas", telefono: "964778802", cumpleanos: "17/11", puntos: 1},
+  {nombre: "Nirvana Riojas", telefono: "967150223", cumpleanos: "31/05", puntos: 1},
+  {nombre: "Sandra Mendoza", telefono: "948048002", cumpleanos: "12/12", puntos: 3},
+  {nombre: "Mercedes Silva", telefono: "951538199", cumpleanos: "14/09", puntos: 4},
+  {nombre: "Gampierre", telefono: "948022700", cumpleanos: "8/06", puntos: 1},
+  {nombre: "Nilton Alcántar", telefono: "949723648", cumpleanos: "25/05", puntos: 1},
+  {nombre: "Medaly Quijano", telefono: "924222919", cumpleanos: "11/11", puntos: 1},
+  {nombre: "Fernanda Torres", telefono: "960434844", cumpleanos: "18/03", puntos: 2},
+  {nombre: "Jimmy Castro", telefono: "", cumpleanos: "", puntos: 2},
+  {nombre: "Fiorela Gabriel", telefono: "970453495", cumpleanos: "14/11", puntos: 5},
+  {nombre: "Débora Juárez", telefono: "983256175", cumpleanos: "6/10", puntos: 1},
+  {nombre: "Ariana Sumará", telefono: "984295535", cumpleanos: "26/09", puntos: 5},
+  {nombre: "Oscar San Martín", telefono: "994831746", cumpleanos: "13/11", puntos: 3},
+  {nombre: "Javier Zapata", telefono: "962398795", cumpleanos: "15/07", puntos: 2},
+  {nombre: "Marlon Sal y Rosas", telefono: "970508620", cumpleanos: "24/04", puntos: 1},
+  {nombre: "Ana Ames", telefono: "939254685", cumpleanos: "11/06", puntos: 1},
+  {nombre: "Gollita López", telefono: "931992682", cumpleanos: "2/06", puntos: 3},
+  {nombre: "Paola Aguilar", telefono: "949217408", cumpleanos: "19/05", puntos: 2},
+  {nombre: "Edwin Burgos", telefono: "952968555", cumpleanos: "14/07", puntos: 1},
+  {nombre: "Isabel Meza", telefono: "904872524", cumpleanos: "26/07", puntos: 3},
+  {nombre: "Johana Valdivieso", telefono: "", cumpleanos: "", puntos: 5},
+  {nombre: "Leonela Leonett", telefono: "927810064", cumpleanos: "26/12", puntos: 3},
+  {nombre: "Isaac Hidalgo", telefono: "923269443", cumpleanos: "26/12", puntos: 1},
+  {nombre: "Maria Balarez", telefono: "951317007", cumpleanos: "25/09", puntos: 3},
+  {nombre: "Cristian Gonzales", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Iris Hidalgo", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Sandra Ávila", telefono: "", cumpleanos: "", puntos: 2},
+  {nombre: "Elizabeth Menacho", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Sandra Huarajare", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Xiomara Sausedo", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Vicky Oqueña", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Maria Teresa Arizola", telefono: "", cumpleanos: "", puntos: 2},
+  {nombre: "Michelle Quintero", telefono: "", cumpleanos: "", puntos: 2},
+  {nombre: "Rosario Campos", telefono: "", cumpleanos: "", puntos: 5},
+  {nombre: "Mariana Reyes", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Alexis Maneiro", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Jean Pierre Menacho", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Yolanda Liñan", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Helen Paredes", telefono: "", cumpleanos: "", puntos: 1},
+  {nombre: "Oscar Villareal", telefono: "", cumpleanos: "", puntos: 5},
+  {nombre: "Luz Ortecho", telefono: "981546604", cumpleanos: "", puntos: 1},
+  {nombre: "Brian Mezarina", telefono: "908789234", cumpleanos: "16/03", puntos: 1},
+];
+
+const log = document.getElementById('log');
+const progreso = document.getElementById('progreso');
+
+function agregarLog(msg, tipo='info') {
+  const div = document.createElement('div');
+  div.className = tipo;
+  div.textContent = msg;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+window.subirClientes = async function() {
+  agregarLog('🚀 Iniciando subida de clientes...', 'info');
+  let exitosos = 0;
+  let errores = 0;
+
+  for (let i = 0; i < clientes.length; i++) {
+    const c = clientes[i];
+    try {
+      const id = c.nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      await setDoc(doc(db, 'clientes', id), {
+        nombre: c.nombre,
+        telefono: c.telefono,
+        cumpleanos: c.cumpleanos,
+        puntos: c.puntos,
+        fechaRegistro: new Date().toISOString(),
+        historialPuntos: []
+      });
+      exitosos++;
+      agregarLog(`✅ ${i+1}/${clientes.length} - ${c.nombre} (${c.puntos} pts)`, 'ok');
+      progreso.textContent = `Subiendo... ${i+1}/${clientes.length}`;
+    } catch(e) {
+      errores++;
+      agregarLog(`❌ Error con ${c.nombre}: ${e.message}`, 'err');
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  progreso.textContent = `✅ Completado: ${exitosos} subidos, ${errores} errores`;
+  agregarLog(`\n🎉 LISTO: ${exitosos} clientes subidos a Firebase`, 'ok');
+}
+</script>
+</body>
+</html>

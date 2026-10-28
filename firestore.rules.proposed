@@ -1,0 +1,89 @@
+rules_version = '2';
+
+/*
+ * PROPUESTA SOLAMENTE — NO DESPLEGAR todavía.
+ *
+ * La autorización se apoya en un documento creado manualmente por UID en:
+ *   barnuevo_authorized_users/{firebaseAuthUid}
+ * Esto evita versionar correos privados y permite que las reglas validen el
+ * acceso en servidor. VITE_ALLOWED_EMAILS sigue siendo la compuerta adicional
+ * de la interfaz de Barnuevo OS, no una frontera de seguridad de Firestore.
+ *
+ * Antes de desplegar estas reglas, Dolciangel POS, pedidos y finanzas deben
+ * incorporar Firebase Authentication. Actualmente acceden sin sesión.
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAuthorized() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/barnuevo_authorized_users/$(request.auth.uid));
+    }
+
+    // Membresías creadas exclusivamente desde Firebase Console o un backend.
+    match /barnuevo_authorized_users/{uid} {
+      allow read, write: if false;
+    }
+
+    // Contenido intencionalmente público de la carta de Dolciangel.
+    match /cms_published_mirror/{docId} {
+      allow read: if true;
+      allow write: if isAuthorized();
+    }
+
+    match /cms_draft_mirror/{docId} {
+      allow read, write: if isAuthorized();
+    }
+
+    match /cms_publish_history_mirror/{docId} {
+      allow read, write: if isAuthorized();
+    }
+
+    // Datos operativos y empresariales actuales de Dolciangel.
+    match /locales/{localId}/{document=**} {
+      allow read, write: if isAuthorized();
+    }
+    match /config/{docId} { allow read, write: if isAuthorized(); }
+    match /empleados/{docId} { allow read, write: if isAuthorized(); }
+    match /categorias-BA/{docId} { allow read, write: if isAuthorized(); }
+    match /categorias-VE/{docId} { allow read, write: if isAuthorized(); }
+    match /productos-BA/{docId} { allow read, write: if isAuthorized(); }
+    match /productos-VE/{docId} { allow read, write: if isAuthorized(); }
+    match /recetas-BA/{docId} { allow read, write: if isAuthorized(); }
+    match /recetas-VE/{docId} { allow read, write: if isAuthorized(); }
+    match /info-BA/{docId} { allow read, write: if isAuthorized(); }
+    match /info-VE/{docId} { allow read, write: if isAuthorized(); }
+    match /clientes/{docId} { allow read, write: if isAuthorized(); }
+    match /clientes-VE/{docId} { allow read, write: if isAuthorized(); }
+    match /_test_conexion/{docId} { allow read, write: if isAuthorized(); }
+
+    // Pedidos y kekeras actuales.
+    match /pedidos-angel/{docId} { allow read, write: if isAuthorized(); }
+    match /pedidos-mama/{docId} { allow read, write: if isAuthorized(); }
+    match /kekeras-angel/{docId} { allow read, write: if isAuthorized(); }
+    match /kekeras-mama/{docId} { allow read, write: if isAuthorized(); }
+    match /kekeras-predeterminadas-angel/{docId} { allow read, write: if isAuthorized(); }
+    match /kekeras-predeterminadas-mama/{docId} { allow read, write: if isAuthorized(); }
+
+    // Finanzas existentes.
+    match /finanzas-angel-gastos/{docId} { allow read, write: if isAuthorized(); }
+    match /finanzas-angel-pedidos/{docId} { allow read, write: if isAuthorized(); }
+    match /finanzas-angel-ingresos/{docId} { allow read, write: if isAuthorized(); }
+    match /finanzas-angel-cuentas/{docId} { allow read, write: if isAuthorized(); }
+    match /finanzas-angel-transferencias/{docId} { allow read, write: if isAuthorized(); }
+
+    // Espacio reservado para futuras colecciones propias de Barnuevo OS.
+    match /barnuevo_os/{document=**} {
+      allow read, write: if isAuthorized();
+    }
+
+    // Ningún acceso público general.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

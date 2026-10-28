@@ -1,0 +1,169 @@
+rules_version = '2';
+
+/* ═══════════════════════════════════════════════════════════
+   firestore.rules — proyecto dolciangel-5d2aa (UNIFICADO)
+
+   Este proyecto de Firebase es compartido por CINCO sistemas
+   distintos, cada uno con su propio conjunto de colecciones:
+
+     1. dolciangel-carta-web/  (el CMS nuevo, con Firebase Auth)
+     2. dolciangel-gastos.html  (inventario/ventas/producción — SIN auth)
+     3. dolciangel-pedidos.html (pedidos/kekeras — SIN auth)
+     4. finanzas-angel.html     (finanzas personales — SIN auth)
+     5. dolciangel-core         (POS unificado y gestión — SIN auth)
+
+   Un despliegue anterior de reglas pensadas SOLO para el CMS rompió
+   los otros tres sistemas (permission-denied en todas sus
+   colecciones) porque exigían `request.auth != null`, y esos tres
+   sistemas nunca inician sesión en Firebase — no tienen forma de
+   cumplir esa condición.
+
+   Este archivo restaura el acceso abierto que esos tres sistemas
+   siempre tuvieron, pero ACOTADO a sus colecciones reales (nunca un
+   comodín para toda la base de datos), y mantiene el acceso
+   restringido por Auth solo para las colecciones del CMS nuevo, que
+   sí lo soporta.
+
+   ── Riesgo que esto NO resuelve (documentado, no oculto) ──
+   Las colecciones de gastos/pedidos/finanzas quedan con lectura y
+   escritura abiertas a cualquiera que conozca el projectId — EXACTO
+   el mismo nivel de protección que tenían antes de esta incidencia,
+   ni mejor ni peor. Endurecer eso (agregar Firebase Auth a esos tres
+   sistemas, o como mínimo Firebase App Check) es un trabajo aparte,
+   deliberadamente fuera de esta corrección — el objetivo de HOY es
+   dejar de estar rotos, no rediseñar la seguridad de tres apps que
+   nunca la tuvieron.
+═══════════════════════════════════════════════════════════ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ═══════════════════════════════════════════════════
+       1. CMS nuevo (dolciangel-carta-web) — CON Firebase Auth
+       ═══════════════════════════════════════════════════ */
+    function isCmsAdmin() {
+      return request.auth != null &&
+        request.auth.token.email == 'barnuevocirilokevinangel@gmail.com';
+    }
+
+    // Borrador — todo lo que edita admin.html. Nunca público: puede
+    // tener productos/precios a medio terminar.
+    match /cms_draft_mirror/{docId} {
+      allow read, write: if isCmsAdmin();
+    }
+
+    // Publicado — lo que lee la carta pública (carta.html/index.html),
+    // sin sesión. Escritura solo admin: CmsStore.publish() corre en el
+    // cliente autenticado, no hay Cloud Function todavía.
+    match /cms_published_mirror/{docId} {
+      allow read: if true;
+      allow write: if isCmsAdmin();
+    }
+
+    // Historial de publicaciones — nunca público, solo el admin
+    // necesita verlo (para hacer rollback).
+    match /cms_publish_history_mirror/{docId} {
+      allow read, write: if isCmsAdmin();
+    }
+
+    /* ═══════════════════════════════════════════════════
+       2. dolciangel-gastos.html — SIN Firebase Auth
+       Inventario, ventas, producción, empleados, clientes/fidelidad,
+       por sucursal (BA = Buenos Aires, VE = Villa España).
+       ═══════════════════════════════════════════════════ */
+
+    // locales/{BA,VE} y sus subcolecciones: contadores, historial
+    // (ventas/movimientos), inventario, resumenes, produccion,
+    // tareasdia — todas anidadas bajo el mismo documento de sucursal.
+    match /locales/{localId} {
+      allow read, write: if true;
+      match /{subcoleccion}/{docId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Configuración operativa: general, secciones-BA, secciones-VE,
+    // datos, insumos, postres, ping — todos documentos dentro de
+    // /config, leídos/escritos en tiempo real por el panel.
+    match /config/{docId} {
+      allow read, write: if true;
+    }
+
+    match /empleados/{empleadoId} {
+      allow read, write: if true;
+    }
+
+    // Catálogo interno de producción (distinto del catálogo público
+    // del CMS) — separado por sucursal.
+    match /categorias-BA/{catId} { allow read, write: if true; }
+    match /categorias-VE/{catId} { allow read, write: if true; }
+    match /productos-BA/{prodId} { allow read, write: if true; }
+    match /productos-VE/{prodId} { allow read, write: if true; }
+    match /recetas-BA/{recetaId} { allow read, write: if true; }
+    match /recetas-VE/{recetaId} { allow read, write: if true; }
+
+    // Info editable por sucursal (contenido del editor de info).
+    match /info-BA/{docId} { allow read, write: if true; }
+    match /info-VE/{docId} { allow read, write: if true; }
+
+    // Clientes — incluye los datos de fidelidad como campos del
+    // documento del cliente (no hay una colección "fidelidad" aparte).
+    // BA no lleva sufijo (colección "clientes"), VE sí.
+    match /clientes/{clienteId}    { allow read, write: if true; }
+    match /clientes-VE/{clienteId} { allow read, write: if true; }
+
+    // Ping de diagnóstico de conectividad del panel.
+    match /_test_conexion/{docId} { allow read, write: if true; }
+
+    /* ═══════════════════════════════════════════════════
+       3. dolciangel-pedidos.html — SIN Firebase Auth
+       Pedidos y "kekeras" (moldes/formatos) por perfil de usuario.
+       ═══════════════════════════════════════════════════ */
+    match /pedidos-angel/{id} { allow read, write: if true; }
+    match /pedidos-mama/{id}  { allow read, write: if true; }
+    match /kekeras-angel/{id} { allow read, write: if true; }
+    match /kekeras-mama/{id}  { allow read, write: if true; }
+    match /kekeras-predeterminadas-angel/{id} { allow read, write: if true; }
+    match /kekeras-predeterminadas-mama/{id}  { allow read, write: if true; }
+
+    /* ═══════════════════════════════════════════════════
+       4. finanzas-angel.html — SIN Firebase Auth
+       Finanzas personales (gastos/ingresos/cuentas/transferencias).
+       ═══════════════════════════════════════════════════ */
+    match /finanzas-angel-gastos/{id}         { allow read, write: if true; }
+    match /finanzas-angel-pedidos/{id}        { allow read, write: if true; }
+    match /finanzas-angel-ingresos/{id}       { allow read, write: if true; }
+    match /finanzas-angel-cuentas/{id}        { allow read, write: if true; }
+    match /finanzas-angel-transferencias/{id} { allow read, write: if true; }
+
+    /* ═══════════════════════════════════════════════════
+       5. dolciangel-core (POS unificado y gestión) — SIN Firebase Auth
+       Colecciones operativas del frontend unificado POS:
+       productos, ventas, fidelidad, caja y kardex.
+       ═══════════════════════════════════════════════════ */
+    match /productos/{prodId}                  { allow read, write: if true; }
+    match /ventas/{ventaId}                    { allow read, write: if true; }
+    match /clientes_fidelidad/{clienteId}      { allow read, write: if true; }
+    match /movimientos_caja/{movId}            { allow read, write: if true; }
+    match /sesiones_caja/{sesionId}            { allow read, write: if true; }
+    match /kardex/{kardexId}                   { allow read, write: if true; }
+    match /canjes_fidelidad/{canjeId}          { allow read, write: if true; }
+
+    /* ═══════════════════════════════════════════════════
+       6. Todo lo demás — denegado explícitamente.
+       No hay ningún comodín abierto para el resto de la base de
+       datos: cualquier colección que no esté listada arriba queda
+       sin acceso, a propósito.
+       ═══════════════════════════════════════════════════ */
+    // Barnuevo OS — espacio privado por usuario autenticado.
+    // Coincide con daily, payments, cash y monthly_goals bajo el UID.
+    match /barnuevo_os/{userId}/{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
