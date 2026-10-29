@@ -82,14 +82,18 @@ export const HistorialComandasView = () => {
 
     try {
       const batch = writeBatch(db);
-      const stockField = SEDES[venta.sede]?.stockKey || 'stock_BA';
+      const isVE = venta.sede === 'VE' || venta.sede === 'villaEspana' || (venta.sedeNombre && venta.sedeNombre.toLowerCase().includes('villa'));
+      const stockFieldLegacy = isVE ? 'stock_VE' : 'stock_BA';
+      const nestedStockField = isVE ? 'stock.villaEspana' : 'stock.buenosAires';
+      const targetSedeId = isVE ? 'VE' : 'BA';
 
-      // 1. Devolver el stock a cada producto
+      // 1. Devolver el stock a cada producto en la sede originaria
       if (Array.isArray(venta.items)) {
         for (const item of venta.items) {
           const prodRef = doc(collections.productos, item.id);
           batch.update(prodRef, {
-            [stockField]: increment(item.cantidad),
+            [stockFieldLegacy]: increment(item.cantidad),
+            [nestedStockField]: increment(item.cantidad),
             updatedAt: serverTimestamp()
           });
 
@@ -98,13 +102,13 @@ export const HistorialComandasView = () => {
           batch.set(kardexRef, {
             fecha: new Date().toISOString(),
             timestamp: serverTimestamp(),
-            sede: venta.sede,
+            sede: targetSedeId,
             tipo: 'INGRESO',
             productoId: item.id,
             productoNombre: item.nombre,
             cantidad: item.cantidad,
-            motivo: `Devolución de stock por anulación de venta ${venta.id}`,
-            responsable: perfil.nombre
+            motivo: `Devolución de stock por anulación de venta ${venta.id} (${isVE ? 'Villa España' : 'Buenos Aires'})`,
+            responsable: perfil?.nombre || 'Angel (Dueño)'
           });
         }
       }

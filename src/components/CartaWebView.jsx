@@ -61,9 +61,9 @@ export const CartaWebView = () => {
     });
   }, [productos, searchTerm, selectedCategory, viewFilter]);
 
-  // Métricas de la carta
-  const publicCount = productos.filter(p => p.mostrar_en_carta ?? true).length;
-  const availableCount = productos.filter(p => p.disponible ?? true).length;
+  // Métricas de la carta (Regla estricta: comensales solo ven productos con mostrar_en_carta === true y stock Buenos Aires > 0)
+  const publicCount = productos.filter(p => (p.mostrar_en_carta ?? true) && getProductStock(p, 'BA') > 0).length;
+  const availableCount = productos.filter(p => getProductStock(p, 'BA') > 0).length;
   const cateringCount = productos.filter(p => p.esPedidoGrande).length;
   const vitrinaCount = productos.length - cateringCount;
 
@@ -74,6 +74,8 @@ export const CartaWebView = () => {
       const prodRef = doc(db, 'productos', prodId);
       await updateDoc(prodRef, {
         ...updates,
+        visible_BA: updates.mostrar_en_carta !== undefined ? updates.mostrar_en_carta : true,
+        visible_VE: false, // Villa España queda totalmente excluida del catálogo web público
         updatedAt: serverTimestamp()
       });
       showToast('Producto actualizado en la Carta Digital');
@@ -273,6 +275,19 @@ export const CartaWebView = () => {
         </div>
       </div>
 
+      {/* Alerta de Regla Estricta de Carta Web */}
+      <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-3 text-xs text-amber-950 flex items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🛡️</span>
+          <span>
+            <strong>Regla Estricta de la Carta Web:</strong> Los comensales en <span className="font-mono underline">dolciangel-carta-web</span> solo pueden ver y pedir productos con <code>mostrar_en_carta = true</code> y <code>stock Buenos Aires &gt; 0</code>. Villa España queda totalmente excluida del catálogo web público.
+          </span>
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200/80 px-2 py-0.5 rounded-full whitespace-nowrap">
+          {publicCount} Disponibles Online
+        </span>
+      </div>
+
       {/* CONTENIDO SEGÚN MODO DE VISUALIZACIÓN */}
       {displayMode === 'grid' ? (
         /* VISTA DE TARJETAS CON IMÁGENES Y SKELETON LOADING */
@@ -326,7 +341,7 @@ export const CartaWebView = () => {
                         </button>
                       </div>
 
-                      <div className="absolute top-2 right-2 z-10">
+                      <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
                         <button
                           onClick={() => handleUpdateProduct(prod.id, { mostrar_en_carta: !isPublic })}
                           disabled={isSaving}
@@ -340,6 +355,11 @@ export const CartaWebView = () => {
                           {isPublic ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                           <span>{isPublic ? 'Carta ON' : 'Oculto'}</span>
                         </button>
+                        {isPublic && getProductStock(prod, 'BA') <= 0 && (
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-md bg-rose-700/90 text-white backdrop-blur-xs shadow-xs">
+                            Agotado BA
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -585,27 +605,34 @@ export const CartaWebView = () => {
 
                         {/* Visibilidad en Carta Web */}
                         <td className="py-3.5 px-3 text-center">
-                          <button
-                            onClick={() => handleUpdateProduct(prod.id, { mostrar_en_carta: !isPublic })}
-                            disabled={isSaving}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all active:scale-95 ${
-                              isPublic
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
-                                : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
-                            }`}
-                          >
-                            {isPublic ? (
-                              <>
-                                <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Visible</span>
-                              </>
-                            ) : (
-                              <>
-                                <EyeOff className="w-3.5 h-3.5 text-slate-400" />
-                                <span>Oculto</span>
-                              </>
+                          <div className="flex flex-col items-center gap-1">
+                            <button
+                              onClick={() => handleUpdateProduct(prod.id, { mostrar_en_carta: !isPublic })}
+                              disabled={isSaving}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all active:scale-95 ${
+                                isPublic
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
+                                  : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
+                              }`}
+                            >
+                              {isPublic ? (
+                                <>
+                                  <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Visible</span>
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>Oculto</span>
+                                </>
+                              )}
+                            </button>
+                            {isPublic && getProductStock(prod, 'BA') <= 0 && (
+                              <span className="text-[9px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                                Agotado BA (No visible)
+                              </span>
                             )}
-                          </button>
+                          </div>
                         </td>
 
                         {/* Estado Tienda: Disponible / Agotado */}

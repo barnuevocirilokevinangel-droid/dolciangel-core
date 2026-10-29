@@ -157,7 +157,7 @@ export const LoginModal = ({ isOpen, onClose, canClose = false }) => {
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                {PERFILES.map((p) => (
+                {PERFILES.filter(p => p.sede === 'ALL' || p.sede === selectedSede).map((p) => (
                   <button
                     key={p.id}
                     onClick={() => handleSelectPerfil(p)}
@@ -273,7 +273,9 @@ export const LoginModal = ({ isOpen, onClose, canClose = false }) => {
               </div>
 
               <div className="text-center pt-2 text-[11px] text-slate-400">
-                Pines predeterminados: Mariana (1234), Negro (4321), Angel (0000)
+                {selectedPerfil?.isDueno 
+                  ? 'PIN de Administrador (0000)' 
+                  : 'Ingresa tu PIN asignado de 4 dígitos'}
               </div>
             </div>
           )}

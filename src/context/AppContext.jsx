@@ -42,9 +42,17 @@ export const SEDES = {
 };
 
 export const PERFILES = [
-  { id: 'Mariana', nombre: 'Mariana', rol: 'Cajera / Atención', defaultPin: '1234', avatar: '👩‍💼', isDueno: false },
-  { id: 'Negro', nombre: 'Negro', rol: 'Cajero / Atención', defaultPin: '4321', avatar: '👨‍💼', isDueno: false },
-  { id: 'Angel', nombre: 'Angel / Dueño', rol: 'Administrador General', defaultPin: '0000', avatar: '👑', isDueno: true },
+  // Villa España
+  { id: 'Mariana', nombre: 'Mariana', sede: 'VE', rol: 'Cajera / Atención Villa España', defaultPin: '3852', avatar: '👩‍💼', isDueno: false },
+  { id: 'Kokin', nombre: 'Kokin', sede: 'VE', rol: 'Cajero / Atención Villa España', defaultPin: '7294', avatar: '👨‍💼', isDueno: false },
+  
+  // Buenos Aires
+  { id: 'Marlon', nombre: 'Marlon', sede: 'BA', rol: 'Cajero / Atención Buenos Aires', defaultPin: '5168', avatar: '👨‍💼', isDueno: false },
+  { id: 'Georgette', nombre: 'Georgette', sede: 'BA', rol: 'Cajera / Atención Buenos Aires', defaultPin: '4839', avatar: '👩‍💼', isDueno: false },
+  { id: 'Dayhiro', nombre: 'Dayhiro', sede: 'BA', rol: 'Cajero / Atención Buenos Aires', defaultPin: '9371', avatar: '👨‍💼', isDueno: false },
+
+  // Perfil Global
+  { id: 'Angel', nombre: 'Angel (Dueño)', sede: 'ALL', rol: 'Administrador General 👑', defaultPin: '0000', avatar: '👑', isDueno: true },
 ];
 
 const DEFAULT_ACCOUNTS = [
@@ -63,48 +71,61 @@ export const AppProvider = ({ children }) => {
   });
   const [activeTab, setActiveTab] = useState('ventas');
 
-  // 2. Cuentas / Multi-Mesa simultáneas independientes
-  const [accounts, setAccounts] = useState(() => {
-    const sedeKey = localStorage.getItem('dg_sede') || 'BA';
-    const saved = localStorage.getItem(`dg_accounts_${sedeKey}`);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {
-        console.error('Error parseando cuentas guardadas:', e);
-      }
-    }
-    return DEFAULT_ACCOUNTS;
-  });
-
-  const [activeAccountId, setActiveAccountId] = useState('mesa-01');
-
-  // Guardar cuentas en LocalStorage por sede
-  useEffect(() => {
-    if (sede) {
-      localStorage.setItem(`dg_accounts_${sede}`, JSON.stringify(accounts));
-    }
-  }, [accounts, sede]);
-
-  // Cargar cuentas al cambiar de sede
-  useEffect(() => {
-    if (sede) {
-      const saved = localStorage.getItem(`dg_accounts_${sede}`);
+  // 2. Cuentas / Multi-Mesa simultáneas con aislamiento estricto por sede
+  const [accountsBySede, setAccountsBySede] = useState(() => {
+    const loadSedeAccounts = (sKey) => {
+      const saved = localStorage.getItem(`dg_accounts_${sKey}`);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setAccounts(parsed);
-            setActiveAccountId(parsed[0].id);
-            return;
-          }
-        } catch (e) {}
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {
+          console.error(`Error parseando cuentas guardadas de ${sKey}:`, e);
+        }
       }
-      setAccounts(DEFAULT_ACCOUNTS);
-      setActiveAccountId('mesa-01');
-    }
-  }, [sede]);
+      return DEFAULT_ACCOUNTS;
+    };
+    return {
+      BA: loadSedeAccounts('BA'),
+      VE: loadSedeAccounts('VE')
+    };
+  });
+
+  const [activeAccountBySede, setActiveAccountBySede] = useState({
+    BA: 'mesa-01',
+    VE: 'mesa-01'
+  });
+
+  const currentSedeKey = sede === 'VE' ? 'VE' : 'BA';
+
+  const accounts = useMemo(() => {
+    return accountsBySede[currentSedeKey] || DEFAULT_ACCOUNTS;
+  }, [accountsBySede, currentSedeKey]);
+
+  const activeAccountId = activeAccountBySede[currentSedeKey] || 'mesa-01';
+
+  const setActiveAccountId = (newId) => {
+    setActiveAccountBySede(prev => ({
+      ...prev,
+      [currentSedeKey]: newId
+    }));
+  };
+
+  const setAccounts = (updater) => {
+    setAccountsBySede(prev => {
+      const currentList = prev[currentSedeKey] || DEFAULT_ACCOUNTS;
+      const nextList = typeof updater === 'function' ? updater(currentList) : updater;
+      try {
+        localStorage.setItem(`dg_accounts_${currentSedeKey}`, JSON.stringify(nextList));
+      } catch (e) {
+        console.error('Error guardando en localStorage:', e);
+      }
+      return {
+        ...prev,
+        [currentSedeKey]: nextList
+      };
+    });
+  };
 
   // Cuenta activa actual
   const activeAccount = useMemo(() => {

@@ -109,8 +109,9 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   // Agrupado por categoría para vista normal de acordeones
   const productsByCategory = useMemo(() => {
     const groups = {};
-    dynamicCategories.forEach(c => { groups[c.id] = []; });
-    productos.forEach(p => {
+    (dynamicCategories || []).forEach(c => { if (c && c.id) groups[c.id] = []; });
+    (productos || []).forEach(p => {
+      if (!p) return;
       const catKey = (p.categoria || 'otros').trim().toLowerCase();
       if (!groups[catKey]) groups[catKey] = [];
       groups[catKey].push(p);

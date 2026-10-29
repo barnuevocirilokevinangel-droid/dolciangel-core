@@ -113,21 +113,25 @@ export function formatCategoryLabel(catId = '') {
  * Evita depender de una lista fija en código, manteniendo resiliencia antifrágil.
  */
 export function extractCategories(productos = []) {
+  const safeList = Array.isArray(productos) ? productos : [];
+  const safeBase = Array.isArray(BASE_CATEGORIAS) ? BASE_CATEGORIAS : [];
   const categoryMap = new Map();
 
-  // Categorías base iniciales
-  BASE_CATEGORIAS.forEach(c => {
-    categoryMap.set(c.id.toLowerCase(), {
-      id: c.id.toLowerCase(),
-      label: c.label,
-      icon: c.icon,
-      order: c.order || 99
-    });
+  // Categorías base iniciales con validación de nulidad
+  safeBase.forEach(c => {
+    if (c && c.id) {
+      categoryMap.set(c.id.toLowerCase(), {
+        id: c.id.toLowerCase(),
+        label: c.label || c.id,
+        icon: c.icon || '🍰',
+        order: c.order || 99
+      });
+    }
   });
 
-  // Agregar categorías dinámicas encontradas en productos
-  productos.forEach(p => {
-    if (p.categoria && p.categoria.trim()) {
+  // Agregar categorías dinámicas encontradas en productos de forma segura
+  safeList.forEach(p => {
+    if (p && p.categoria && typeof p.categoria === 'string' && p.categoria.trim()) {
       const catKey = p.categoria.trim().toLowerCase();
       if (!categoryMap.has(catKey)) {
         categoryMap.set(catKey, {
