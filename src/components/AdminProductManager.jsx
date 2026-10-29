@@ -16,6 +16,7 @@ import {
   extractCategories,
   getCategoryIcon 
 } from '../services/productUtils';
+import { ProductImage } from './ProductImage';
 import { 
   Search, 
   Plus, 
@@ -400,8 +401,15 @@ export const AdminProductManager = () => {
                     <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Producto */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-2xl">{p.icono || getCategoryIcon(p.categoria)}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0 shadow-inner bg-slate-50 border border-pink-100/60">
+                            <ProductImage
+                              src={p.imagenUrl || p.imagen || p.img}
+                              alt={p.nombre}
+                              categoria={p.categoria}
+                              rounded="rounded-2xl"
+                            />
+                          </div>
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-bold text-slate-900 text-xs block">
@@ -561,6 +569,37 @@ export const AdminProductManager = () => {
                   placeholder="Detalle de ingredientes, sabor o porciones..."
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500"
                 />
+              </div>
+
+              {/* URL de Imagen con Previsualización Skeleton en Vivo */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Foto del Producto (URL Imagen Web / Cloudinary / Firebase)
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <input
+                      type="url"
+                      value={formImagenUrl}
+                      onChange={(e) => setFormImagenUrl(e.target.value)}
+                      placeholder="https://ejemplo.com/torta-chocolate.webp"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-xs focus:outline-none focus:border-brand-500"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Pega un enlace https directo a la foto para que se visualice en la Carta y el POS.
+                    </span>
+                  </div>
+
+                  {/* Previsualización interactiva con Skeleton */}
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-pink-200 shadow-sm flex-shrink-0 bg-slate-50">
+                    <ProductImage
+                      src={formImagenUrl}
+                      alt={formNombre || 'Previsualización'}
+                      categoria={formCategoria}
+                      rounded="rounded-2xl"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Categoría Dinámica */}

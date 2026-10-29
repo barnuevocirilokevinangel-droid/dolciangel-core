@@ -3,6 +3,7 @@ import { useApp, SEDES } from '../context/AppContext';
 import { validarDNI, validarRUC } from '../services/sunatService';
 import { getProductPrice, getProductStock, extractCategories } from '../services/productUtils';
 import { TicketTermico } from './TicketTermico';
+import { ProductImage } from './ProductImage';
 import { 
   Search, 
   ChevronDown, 
@@ -486,22 +487,38 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                       </div>
                     )}
 
-                    <div>
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="text-2xl">{prod.icono || '🧁'}</span>
-                        
-                        {/* CONTROL VISUAL DE STOCK */}
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                    {/* Contenedor de Imagen con Skeleton Loading */}
+                    <div className="w-full aspect-square rounded-2xl overflow-hidden mb-2.5 relative bg-slate-50 shadow-inner">
+                      <ProductImage
+                        src={prod.imagenUrl || prod.imagen || prod.img}
+                        alt={prod.nombre}
+                        categoria={prod.categoria}
+                        aspectRatio="aspect-square"
+                        rounded="rounded-2xl"
+                      />
+                      {/* Control Visual de Stock Flotante */}
+                      <div className="absolute top-2 right-2 z-10">
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs backdrop-blur-md ${
                           isOutOfStock
-                            ? 'bg-rose-100 text-rose-800 border border-rose-300 font-black'
+                            ? 'bg-rose-100/90 text-rose-800 border border-rose-300 font-black'
                             : currentStock <= 3
-                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            ? 'bg-amber-100/90 text-amber-800 border border-amber-200'
+                            : 'bg-emerald-100/90 text-emerald-800 border border-emerald-200'
                         }`}>
                           {isOutOfStock ? 'Agotado' : `Stock: ${currentStock}`}
                         </span>
                       </div>
 
+                      {prod.esPedidoGrande && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-purple-900/80 text-purple-100 backdrop-blur-md shadow-xs">
+                            🎂 Catering
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
                       <h4 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2">
                         {prod.nombre}
                       </h4>
@@ -627,22 +644,38 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                             </div>
                           )}
 
-                          <div>
-                            <div className="flex items-start justify-between gap-2 mb-1.5">
-                              <span className="text-2xl">{prod.icono || '🧁'}</span>
-                              
-                              {/* BADGE DE STOCK CON ALERTA DE AGOTADO */}
-                              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                          {/* Contenedor de Imagen con Skeleton Loading */}
+                          <div className="w-full aspect-square rounded-2xl overflow-hidden mb-2.5 relative bg-slate-50 shadow-inner">
+                            <ProductImage
+                              src={prod.imagenUrl || prod.imagen || prod.img}
+                              alt={prod.nombre}
+                              categoria={prod.categoria}
+                              aspectRatio="aspect-square"
+                              rounded="rounded-2xl"
+                            />
+                            {/* Badge de Stock Flotante */}
+                            <div className="absolute top-2 right-2 z-10">
+                              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs backdrop-blur-md ${
                                 isOutOfStock
-                                  ? 'bg-rose-100 text-rose-800 border border-rose-300 font-black'
+                                  ? 'bg-rose-100/90 text-rose-800 border border-rose-300 font-black'
                                   : currentStock <= 3
-                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  ? 'bg-amber-100/90 text-amber-800 border border-amber-200'
+                                  : 'bg-emerald-100/90 text-emerald-800 border border-emerald-200'
                               }`}>
                                 {isOutOfStock ? 'Agotado' : `Stock: ${currentStock}`}
                               </span>
                             </div>
 
+                            {prod.esPedidoGrande && (
+                              <div className="absolute top-2 left-2 z-10">
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-purple-900/80 text-purple-100 backdrop-blur-md shadow-xs">
+                                  🎂 Catering
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
                             <h4 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2">
                               {prod.nombre}
                             </h4>
