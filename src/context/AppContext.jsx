@@ -18,6 +18,7 @@ import {
 } from '../services/firebase';
 import { INITIAL_PRODUCTS } from '../data/initialCatalog';
 import { emitirComprobante } from '../services/sunatService';
+import { getProductPrice, getProductStock } from '../services/productUtils';
 
 const AppContext = createContext();
 
@@ -308,8 +309,8 @@ export const AppProvider = ({ children }) => {
 
   // Carrito helpers vinculados a la cuenta activa (o específica)
   const addToCart = (product, targetAccountId = activeAccountId) => {
-    const stockField = sede ? SEDES[sede].stockKey : 'stock_BA';
-    const currentStock = product[stockField] || 0;
+    const currentStock = getProductStock(product, sede);
+    const currentPrice = getProductPrice(product, sede);
 
     if (currentStock <= 0) {
       showToast(`"${product.nombre}" está agotado en ${SEDES[sede]?.nombre || 'esta sede'}`, 'error');
@@ -331,11 +332,11 @@ export const AppProvider = ({ children }) => {
           if (existing) {
             updatedItems = acc.items.map(item =>
               item.product.id === product.id
-                ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * item.product.precio }
+                ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * currentPrice }
                 : item
             );
           } else {
-            updatedItems = [...acc.items, { product, quantity: 1, subtotal: product.precio }];
+            updatedItems = [...acc.items, { product, quantity: 1, subtotal: currentPrice }];
           }
           return { ...acc, items: updatedItems };
         }
@@ -345,21 +346,21 @@ export const AppProvider = ({ children }) => {
   };
 
   const updateCartQuantity = (productId, delta, targetAccountId = activeAccountId) => {
-    const stockField = sede ? SEDES[sede].stockKey : 'stock_BA';
-
     setAccounts(prev => {
       return prev.map(acc => {
         if (acc.id === targetAccountId) {
           const updatedItems = acc.items.map(item => {
             if (item.product.id === productId) {
+              const currentStock = getProductStock(item.product, sede);
+              const currentPrice = getProductPrice(item.product, sede);
               const newQty = item.quantity + delta;
-              const currentStock = item.product[stockField] || 0;
+
               if (newQty > currentStock) {
                 showToast(`Límite de stock alcanzado (${currentStock})`, 'warning');
                 return item;
               }
               if (newQty <= 0) return null;
-              return { ...item, quantity: newQty, subtotal: newQty * item.product.precio };
+              return { ...item, quantity: newQty, subtotal: newQty * currentPrice };
             }
             return item;
           }).filter(Boolean);
@@ -416,15 +417,18 @@ export const AppProvider = ({ children }) => {
     const saleId = 'V-' + Date.now();
     const ventaRef = doc(collections.ventas, saleId);
 
-    const itemsSummary = itemsToProcess.map(item => ({
-      id: item.product.id,
-      nombre: item.product.nombre,
-      categoria: item.product.categoria,
-      precio: item.product.precio,
-      cantidad: item.quantity,
-      subtotal: item.subtotal,
-      icono: item.product.icono || '🧁'
-    }));
+    const itemsSummary = itemsToProcess.map(item => {
+      const priceForSede = getProductPrice(item.product, sede);
+      return {
+        id: item.product.id,
+        nombre: item.product.nombre,
+        categoria: item.product.categoria,
+        precio: priceForSede,
+        cantidad: item.quantity,
+        subtotal: priceForSede * item.quantity,
+        icono: item.product.icono || '🧁'
+      };
+    });
 
     // Emisión / Simulación SUNAT - Nubefact
     const comprobanteData = await emitirComprobante({
@@ -488,8 +492,12 @@ export const AppProvider = ({ children }) => {
     // 2. Descontar stock atómicamente y registrar en kardex
     for (const item of itemsToProcess) {
       const prodRef = doc(collections.productos, item.product.id);
+      const stockFieldLegacy = SEDES[sede].stockKey;
+      const stockFieldNested = sede === 'VE' ? 'stock.villaEspana' : 'stock.buenosAires';
+
       batch.update(prodRef, {
-        [stockField]: increment(-item.quantity),
+        [stockFieldLegacy]: increment(-item.quantity),
+        [stockFieldNested]: increment(-item.quantity),
         updatedAt: serverTimestamp()
       });
 

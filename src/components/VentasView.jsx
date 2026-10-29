@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, SEDES } from '../context/AppContext';
-import { CATEGORIAS } from '../data/initialCatalog';
 import { validarDNI, validarRUC } from '../services/sunatService';
+import { getProductPrice, getProductStock, extractCategories } from '../services/productUtils';
 import { TicketTermico } from './TicketTermico';
 import { 
   Search, 
@@ -52,19 +52,16 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     showToast
   } = useApp();
 
+  // Categorías derivadas dinámicamente de Firestore (Antifrágil)
+  const dynamicCategories = useMemo(() => extractCategories(productos), [productos]);
+
   // Buscador Rápido de Productos
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('todos');
-  const [openAccordions, setOpenAccordions] = useState({
-    tortas: true,
-    cheesecakes: true,
-    pies: true,
-    kekes: true,
-    bocados: true,
-    jugos: true,
-    cafes: true,
-    otros: true
-  });
+  const [openAccordions, setOpenAccordions] = useState({});
+
+  // Inicializar o expandir acordeones por defecto
+  const isAccordionOpen = (catId) => openAccordions[catId] ?? true;
 
   // Modal para agregar nueva mesa/cuenta
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
@@ -84,16 +81,14 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   // Feedback y Ticket Térmico de la última venta
   const [lastSaleReceipt, setLastSaleReceipt] = useState(null);
 
-  const stockField = sede ? SEDES[sede].stockKey : 'stock_BA';
-
   // Toggle acordeón
   const toggleAccordion = (catId) => {
-    setOpenAccordions(prev => ({ ...prev, [catId]: !prev[catId] }));
+    setOpenAccordions(prev => ({ ...prev, [catId]: !(prev[catId] ?? true) }));
   };
 
   const toggleAll = (open) => {
     const next = {};
-    CATEGORIAS.forEach(c => { next[c.id] = open; });
+    dynamicCategories.forEach(c => { next[c.id] = open; });
     setOpenAccordions(next);
   };
 
@@ -113,17 +108,14 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   // Agrupado por categoría para vista normal de acordeones
   const productsByCategory = useMemo(() => {
     const groups = {};
-    CATEGORIAS.forEach(c => { groups[c.id] = []; });
+    dynamicCategories.forEach(c => { groups[c.id] = []; });
     productos.forEach(p => {
-      if (groups[p.categoria]) {
-        groups[p.categoria].push(p);
-      } else {
-        if (!groups['otros']) groups['otros'] = [];
-        groups['otros'].push(p);
-      }
+      const catKey = (p.categoria || 'otros').trim().toLowerCase();
+      if (!groups[catKey]) groups[catKey] = [];
+      groups[catKey].push(p);
     });
     return groups;
-  }, [productos]);
+  }, [productos, dynamicCategories]);
 
   // Autocompletar cliente por celular
   const handlePhoneChange = (e) => {
@@ -408,7 +400,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
             >
               Todos ({productos.length})
             </button>
-            {CATEGORIAS.map((cat) => {
+            {dynamicCategories.map((cat) => {
               const count = (productsByCategory[cat.id] || []).length;
               const isSelected = selectedCategory === cat.id;
               return (
@@ -472,7 +464,8 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {matchingProducts.map((prod) => {
-                const currentStock = prod[stockField] || 0;
+                const currentStock = getProductStock(prod, sede);
+                const currentPrice = getProductPrice(prod, sede);
                 const isOutOfStock = currentStock <= 0;
                 const inCartItem = cart.find(c => c.product.id === prod.id);
 
@@ -519,9 +512,11 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
 
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
                       <div>
-                        <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Precio</span>
+                        <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
+                          Precio ({SEDES[sede]?.nombre || 'Sede'})
+                        </span>
                         <span className="font-extrabold text-brand-700 text-base">
-                          S/ {prod.precio.toFixed(2)}
+                          S/ {currentPrice.toFixed(2)}
                         </span>
                       </div>
 
@@ -575,12 +570,12 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
       ) : (
         /* 4. VISTA DE ACORDEONES POR CATEGORÍA */
         <div className="space-y-4">
-          {CATEGORIAS.map((cat) => {
+          {dynamicCategories.map((cat) => {
             const items = productsByCategory[cat.id] || [];
             if (selectedCategory !== 'todos' && selectedCategory !== cat.id) return null;
             if (items.length === 0) return null;
 
-            const isOpen = openAccordions[cat.id] ?? true;
+            const isOpen = isAccordionOpen(cat.id);
 
             return (
               <div 
@@ -610,7 +605,8 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                 {isOpen && (
                   <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 border-t border-pink-50">
                     {items.map((prod) => {
-                      const currentStock = prod[stockField] || 0;
+                      const currentStock = getProductStock(prod, sede);
+                      const currentPrice = getProductPrice(prod, sede);
                       const isOutOfStock = currentStock <= 0;
                       const inCartItem = cart.find(c => c.product.id === prod.id);
 
@@ -659,9 +655,11 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
 
                           <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
                             <div>
-                              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Precio</span>
-                              <span className="font-bold text-brand-700 text-base">
-                                S/ {prod.precio.toFixed(2)}
+                              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
+                                Precio ({SEDES[sede]?.nombre || 'Sede'})
+                              </span>
+                              <span className="font-extrabold text-brand-700 text-base">
+                                S/ {currentPrice.toFixed(2)}
                               </span>
                             </div>
 
@@ -807,7 +805,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                           {item.product.nombre}
                         </h4>
                         <span className="text-xs text-brand-700 font-bold">
-                          S/ {item.product.precio.toFixed(2)} c/u
+                          S/ {getProductPrice(item.product, sede).toFixed(2)} c/u
                         </span>
                       </div>
                     </div>

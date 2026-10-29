@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp, SEDES, PERFILES } from '../context/AppContext';
 import { runLegacyMigration, resyncLegacyClients } from '../services/migration';
+import { AdminProductManager } from './AdminProductManager';
 import { 
   Settings, 
   Database, 
@@ -15,7 +16,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Layers,
-  Cake
+  Cake,
+  Crown,
+  Sliders
 } from 'lucide-react';
 
 export const AdminView = ({ onOpenSwitchModal }) => {
@@ -31,6 +34,8 @@ export const AdminView = ({ onOpenSwitchModal }) => {
     showToast 
   } = useApp();
 
+  const isDueno = perfil?.isDueno ?? false;
+  const [activeTab, setActiveTab] = useState(isDueno ? 'catalogo' : 'sistema');
   const [isSeeding, setIsSeeding] = useState(false);
 
   // Estados para la Herramienta de Migración
@@ -142,28 +147,84 @@ export const AdminView = ({ onOpenSwitchModal }) => {
 
   return (
     <div className="pb-28 max-w-7xl mx-auto px-4 pt-4 space-y-6">
-      {/* Banner Superior */}
+      {/* Banner Superior con Selector de Sub-Pestañas */}
       <div className="bg-gradient-to-r from-slate-900 via-brand-900 to-pink-900 rounded-3xl p-6 text-white shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center text-2xl shadow-inner">
-            ⚙️
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center text-2xl shadow-inner">
+              ⚙️
+            </div>
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-pink-300 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
+                Panel Central
+              </span>
+              <h2 className="text-xl md:text-2xl font-serif font-bold mt-1">
+                Administración & Catálogo
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Control de rentabilidad, catálogo de sedes y migración de datos de Dolciangel Core
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-pink-300 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-              Configuración & Sistema
-            </span>
-            <h2 className="text-xl md:text-2xl font-serif font-bold mt-1">
-              Panel de Administración
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Control de sedes, migración de datos anteriores y catálogo maestro de Dolciangel Core
-            </p>
+
+          {/* Sub-Pestañas de Navegación Admin */}
+          <div className="flex items-center gap-1.5 bg-black/30 p-1.5 rounded-2xl border border-white/10 text-xs">
+            <button
+              onClick={() => setActiveTab('catalogo')}
+              className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${
+                activeTab === 'catalogo'
+                  ? 'bg-gradient-to-r from-gold-400 to-amber-500 text-slate-950 shadow-md font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Crown className="w-4 h-4 text-amber-900" />
+              <span>Catálogo & Rentabilidad</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('sistema')}
+              className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${
+                activeTab === 'sistema'
+                  ? 'bg-white text-slate-900 shadow-md font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Sliders className="w-4 h-4 text-pink-500" />
+              <span>Base de Datos & Sistema</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* SECCIÓN DESTACADA: HERRAMIENTA DE MIGRACIÓN DE BASE DE DATOS */}
-      <div className="bg-gradient-to-br from-purple-900 via-brand-900 to-pink-950 rounded-3xl p-6 text-white shadow-xl border-2 border-gold-400/30 relative overflow-hidden">
+      {/* Contenido según pestaña */}
+      {activeTab === 'catalogo' ? (
+        isDueno ? (
+          <AdminProductManager />
+        ) : (
+          <div className="bg-white rounded-3xl p-10 border border-pink-100 shadow-sm text-center max-w-lg mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-pink-50 text-brand-600 flex items-center justify-center text-3xl mx-auto">
+              👑
+            </div>
+            <div>
+              <h3 className="text-lg font-serif font-bold text-slate-900">
+                Acceso Exclusivo para el Dueño
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                La gestión de costos, análisis de rentabilidad y edición de precios por sede está reservada únicamente para el perfil de <strong>Angel (Dueño)</strong>.
+              </p>
+            </div>
+            <button
+              onClick={onOpenSwitchModal}
+              className="px-5 py-2.5 rounded-xl bg-brand-700 text-white font-bold text-xs hover:bg-brand-800 transition-all inline-flex items-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Cambiar a Perfil Dueño</span>
+            </button>
+          </div>
+        )
+      ) : (
+        <>
+          {/* SECCIÓN DESTACADA: HERRAMIENTA DE MIGRACIÓN DE BASE DE DATOS */}
+          <div className="bg-gradient-to-br from-purple-900 via-brand-900 to-pink-950 rounded-3xl p-6 text-white shadow-xl border-2 border-gold-400/30 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-brand-500/20 to-transparent rounded-full -mr-20 -mt-20 pointer-events-none" />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -377,6 +438,8 @@ export const AdminView = ({ onOpenSwitchModal }) => {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };
