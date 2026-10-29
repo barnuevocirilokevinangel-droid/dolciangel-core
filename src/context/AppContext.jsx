@@ -17,6 +17,7 @@ import {
   limit
 } from '../services/firebase';
 import { INITIAL_PRODUCTS } from '../data/initialCatalog';
+import { emitirComprobante } from '../services/sunatService';
 
 const AppContext = createContext();
 
@@ -310,6 +311,11 @@ export const AppProvider = ({ children }) => {
     const stockField = sede ? SEDES[sede].stockKey : 'stock_BA';
     const currentStock = product[stockField] || 0;
 
+    if (currentStock <= 0) {
+      showToast(`"${product.nombre}" está agotado en ${SEDES[sede]?.nombre || 'esta sede'}`, 'error');
+      return;
+    }
+
     setAccounts(prev => {
       return prev.map(acc => {
         if (acc.id === targetAccountId) {
@@ -317,7 +323,7 @@ export const AppProvider = ({ children }) => {
           const currentQty = existing ? existing.quantity : 0;
 
           if (currentQty + 1 > currentStock) {
-            showToast(`Stock insuficiente en ${SEDES[sede]?.nombre || 'sede'}. Disponible: ${currentStock}`, 'warning');
+            showToast(`Stock insuficiente de "${product.nombre}". Disponible: ${currentStock}`, 'warning');
             return acc;
           }
 
@@ -420,6 +426,23 @@ export const AppProvider = ({ children }) => {
       icono: item.product.icono || '🧁'
     }));
 
+    // Emisión / Simulación SUNAT - Nubefact
+    const comprobanteData = await emitirComprobante({
+      id: saleId,
+      tipoComprobante,
+      total: totalToPay,
+      metodoPago,
+      items: itemsSummary,
+      cliente: {
+        documento: clienteDoc || '',
+        nombre: clienteNombre || 'Público General',
+        telefono: clienteTelefono || ''
+      }
+    });
+
+    const opGravada = Number((totalToPay / 1.18).toFixed(2));
+    const igv = Number((totalToPay - opGravada).toFixed(2));
+
     // 1. Guardar la venta en 'ventas' con la información de la Mesa/Cuenta
     const ventaDocData = {
       id: saleId,
@@ -436,8 +459,21 @@ export const AppProvider = ({ children }) => {
       },
       items: itemsSummary,
       total: totalToPay,
+      opGravada,
+      igv,
       metodoPago, // 'EFECTIVO' | 'YAPE_PLIN' | 'TARJETA'
-      tipoComprobante, // 'NOTA_INTERNA' | 'BOLETA' | 'FACTURA'
+      tipoComprobante, // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
+      comprobante: {
+        tipo: comprobanteData.tipo,
+        serie: comprobanteData.serie,
+        numero: comprobanteData.numero,
+        codigoCompleto: comprobanteData.codigoCompleto || `${comprobanteData.serie}-${comprobanteData.numero}`,
+        estado: comprobanteData.estado || 'SIMULADO_LOCAL',
+        enlace_del_pdf: comprobanteData.enlace_del_pdf || null,
+        enlace_del_xml: comprobanteData.enlace_del_xml || null,
+        cadena_para_codigo_qr: comprobanteData.cadena_para_codigo_qr || null,
+        fecha: new Date().toISOString()
+      },
       cliente: {
         documento: clienteDoc || '',
         nombre: clienteNombre || 'Público General',

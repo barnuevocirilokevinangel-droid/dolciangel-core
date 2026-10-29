@@ -25,6 +25,7 @@ import {
   Crown,
   Check
 } from 'lucide-react';
+import { TicketTermico } from './TicketTermico';
 
 export const HistorialComandasView = () => {
   const { sede, perfil, ventas, showToast } = useApp();
@@ -56,7 +57,10 @@ export const HistorialComandasView = () => {
                           (v.vendedor || '').toLowerCase().includes(term) ||
                           (v.cuenta?.nombre || '').toLowerCase().includes(term);
       const matchMetodo = filterMetodo === 'TODOS' || v.metodoPago === filterMetodo;
-      const matchComp = filterComprobante === 'TODOS' || v.tipoComprobante === filterComprobante;
+      const matchComp = filterComprobante === 'TODOS' || 
+                        v.tipoComprobante === filterComprobante ||
+                        ((filterComprobante === 'NOTA_VENTA' || filterComprobante === 'NOTA_INTERNA') && 
+                         (v.tipoComprobante === 'NOTA_VENTA' || v.tipoComprobante === 'NOTA_INTERNA'));
       return matchSede && matchSearch && matchMetodo && matchComp;
     });
   }, [ventas, sede, searchTerm, filterMetodo, filterComprobante]);
@@ -254,7 +258,7 @@ export const HistorialComandasView = () => {
           <span className="text-slate-400 font-bold uppercase text-[10px] mr-1">Comprobante:</span>
           {[
             { id: 'TODOS', label: 'Todos' },
-            { id: 'NOTA_INTERNA', label: 'Nota Interna' },
+            { id: 'NOTA_VENTA', label: 'Notas de Venta' },
             { id: 'BOLETA', label: 'Boletas' },
             { id: 'FACTURA', label: 'Facturas' },
           ].map((c) => (
@@ -507,8 +511,8 @@ export const HistorialComandasView = () => {
       {/* Modal: Vista de Ticket SUNAT & Reimpresión */}
       {selectedTicket && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-sm">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-sm max-h-[92vh] overflow-y-auto text-center">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Comprobante Electrónico
               </span>
@@ -520,74 +524,19 @@ export const HistorialComandasView = () => {
               </button>
             </div>
 
-            <div className="bg-slate-50 p-4 my-4 rounded-2xl border border-slate-200 font-mono text-xs space-y-2">
-              <div className="text-center pb-2 border-b border-dashed border-slate-300">
-                <span className="font-extrabold text-sm block">DOLCIANGEL S.A.C.</span>
-                <span className="text-[10px] text-slate-500 block">RUC: 20608976543</span>
-                <span className="text-[10px] text-slate-500 block">Sede {selectedTicket.sedeNombre}</span>
-                {selectedTicket.cuenta?.nombre && (
-                  <span className="text-xs font-bold text-slate-700 block">
-                    Cuenta: {selectedTicket.cuenta.nombre}
-                  </span>
-                )}
-                <span className="text-xs font-bold text-brand-700 block mt-1">
-                  {selectedTicket.tipoComprobante} {selectedTicket.id}
-                </span>
-              </div>
+            <TicketTermico venta={selectedTicket} />
 
-              <div className="text-[11px] text-slate-600 space-y-0.5">
-                <div>Fecha: {new Date(selectedTicket.fecha).toLocaleString()}</div>
-                <div>Cajero: {selectedTicket.vendedor}</div>
-                <div>Cliente: {selectedTicket.cliente?.nombre || 'Público General'}</div>
-                {selectedTicket.cliente?.documento && (
-                  <div>Doc: {selectedTicket.cliente.documento}</div>
-                )}
-                <div>Pago: {selectedTicket.metodoPago}</div>
-              </div>
-
-              <div className="py-2 border-t border-b border-dashed border-slate-300 space-y-1">
-                {selectedTicket.items?.map((it, idx) => (
-                  <div key={idx} className="flex justify-between text-[11px]">
-                    <span className="truncate max-w-[170px]">{it.cantidad}x {it.nombre}</span>
-                    <span className="font-bold">S/ {it.subtotal.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-1 pt-1 text-[11px]">
-                <div className="flex justify-between text-slate-500">
-                  <span>Op. Gravada:</span>
-                  <span>S/ {(selectedTicket.total / 1.18).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>I.G.V. (18%):</span>
-                  <span>S/ {(selectedTicket.total - (selectedTicket.total / 1.18)).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-slate-900 text-sm pt-1 border-t border-slate-200">
-                  <span>IMPORTE TOTAL:</span>
-                  <span className="text-brand-700">S/ {selectedTicket.total.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <div className="text-center pt-3 text-[10px] text-slate-400">
-                <div className="w-16 h-16 bg-slate-200 mx-auto flex items-center justify-center rounded-lg text-lg mb-1">
-                  📱
-                </div>
-                <span>Representación impresa de Comprobante Electrónico</span>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-4">
               <button
                 onClick={() => window.print()}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                className="flex-1 py-3 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
               >
-                <Printer className="w-4 h-4" />
-                <span>Imprimir Ticket</span>
+                <Printer className="w-4 h-4 text-gold-400" />
+                <span>🖨️ Imprimir Ticket (80mm)</span>
               </button>
               <button
                 onClick={() => setSelectedTicket(null)}
-                className="py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
+                className="py-3 px-4 rounded-2xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all"
               >
                 Cerrar
               </button>
