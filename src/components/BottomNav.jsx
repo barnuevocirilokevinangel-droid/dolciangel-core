@@ -9,7 +9,8 @@ import {
   Gift, 
   History, 
   Globe, 
-  Settings 
+  Settings,
+  Monitor
 } from 'lucide-react';
 
 export const BottomNav = () => {
@@ -64,6 +65,11 @@ export const BottomNav = () => {
       id: 'carta',
       label: 'Carta Web',
       icon: Globe,
+    },
+    {
+      id: 'web',
+      label: 'Web Hero',
+      icon: Monitor,
     },
     {
       id: 'admin',

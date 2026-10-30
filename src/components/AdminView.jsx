@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp, SEDES, PERFILES } from '../context/AppContext';
 import { runLegacyMigration, resyncLegacyClients } from '../services/migration';
 import { AdminProductManager } from './AdminProductManager';
+import { GestorHeroView } from './GestorHeroView';
 import { 
   Settings, 
   Database, 
@@ -18,7 +19,8 @@ import {
   Layers,
   Cake,
   Crown,
-  Sliders
+  Sliders,
+  Globe
 } from 'lucide-react';
 
 export const AdminView = ({ onOpenSwitchModal }) => {
@@ -168,35 +170,48 @@ export const AdminView = ({ onOpenSwitchModal }) => {
           </div>
 
           {/* Sub-Pestañas de Navegación Admin */}
-          <div className="flex items-center gap-1.5 bg-black/30 p-1.5 rounded-2xl border border-white/10 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5 bg-black/30 p-1.5 rounded-2xl border border-white/10 text-xs">
             <button
               onClick={() => setActiveTab('catalogo')}
-              className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${
+              className={`px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
                 activeTab === 'catalogo'
                   ? 'bg-gradient-to-r from-gold-400 to-amber-500 text-slate-950 shadow-md font-extrabold'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Crown className="w-4 h-4 text-amber-900" />
+              <Crown className="w-3.5 h-3.5 text-amber-900" />
               <span>Catálogo & Rentabilidad</span>
             </button>
             <button
+              onClick={() => setActiveTab('web')}
+              className={`px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
+                activeTab === 'web'
+                  ? 'bg-gradient-to-r from-amber-400 via-rose-500 to-pink-600 text-white shadow-md font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5 text-amber-200" />
+              <span>🖥️ Web Principal</span>
+            </button>
+            <button
               onClick={() => setActiveTab('sistema')}
-              className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${
+              className={`px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
                 activeTab === 'sistema'
                   ? 'bg-white text-slate-900 shadow-md font-extrabold'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Sliders className="w-4 h-4 text-pink-500" />
-              <span>Base de Datos & Sistema</span>
+              <Sliders className="w-3.5 h-3.5 text-pink-500" />
+              <span>Sistema & Migración</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Contenido según pestaña */}
-      {activeTab === 'catalogo' ? (
+      {activeTab === 'web' ? (
+        <GestorHeroView />
+      ) : activeTab === 'catalogo' ? (
         isDueno ? (
           <AdminProductManager />
         ) : (

@@ -12,6 +12,7 @@ import { ResumenView } from './components/ResumenView';
 import { StatsView } from './components/StatsView';
 import { HistorialGlobalView } from './components/HistorialGlobalView';
 import { AdminView } from './components/AdminView';
+import { GestorHeroView } from './components/GestorHeroView';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 const MainLayout = () => {
@@ -74,6 +75,7 @@ const MainLayout = () => {
           <HistorialGlobalView />
         )}
         {activeTab === 'carta' && <CartaWebView />}
+        {activeTab === 'web' && <GestorHeroView />}
         {activeTab === 'admin' && (
           <AdminView onOpenSwitchModal={() => setIsSwitchModalOpen(true)} />
         )}
