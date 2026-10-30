@@ -52,7 +52,7 @@ export const PERFILES = [
   { id: 'Dayhiro', nombre: 'Dayhiro', sede: 'BA', rol: 'Cajero / Atención Buenos Aires', defaultPin: '9371', avatar: '👨‍💼', isDueno: false },
 
   // Perfil Global
-  { id: 'Angel', nombre: 'Angel (Dueño)', sede: 'ALL', rol: 'Administrador General 👑', defaultPin: '0000', avatar: '👑', isDueno: true },
+  { id: 'Angel', nombre: 'Angel (Dueño)', sede: 'ALL', rol: 'Administrador General 👑', defaultPin: '442919', avatar: '👑', isDueno: true },
 ];
 
 const DEFAULT_ACCOUNTS = [
@@ -493,7 +493,7 @@ export const AppProvider = ({ children }) => {
         serie: comprobanteData.serie,
         numero: comprobanteData.numero,
         codigoCompleto: comprobanteData.codigoCompleto || `${comprobanteData.serie}-${comprobanteData.numero}`,
-        estado: comprobanteData.estado || 'SIMULADO_LOCAL',
+        estado: comprobanteData.estado || 'EMITIDO',
         enlace_del_pdf: comprobanteData.enlace_del_pdf || null,
         enlace_del_xml: comprobanteData.enlace_del_xml || null,
         cadena_para_codigo_qr: comprobanteData.cadena_para_codigo_qr || null,

@@ -41,12 +41,14 @@ export const LoginModal = ({ isOpen, onClose, canClose = false }) => {
     setStep(3);
   };
 
+  const targetPinLength = selectedPerfil?.defaultPin ? selectedPerfil.defaultPin.length : 4;
+
   const handlePinInput = (digit) => {
-    if (pin.length < 4) {
+    if (pin.length < targetPinLength) {
       const nextPin = pin + digit;
       setPin(nextPin);
       setError('');
-      if (nextPin.length === 4) {
+      if (nextPin.length === targetPinLength) {
         verifyPin(nextPin);
       }
     }
@@ -211,20 +213,22 @@ export const LoginModal = ({ isOpen, onClose, canClose = false }) => {
                 <div className="w-10 h-10 rounded-full bg-pink-100 text-brand-700 mx-auto flex items-center justify-center mb-2">
                   <Lock className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-800">Ingresa tu PIN de 4 dígitos</h3>
+                <h3 className="text-base font-bold text-slate-800">
+                  {selectedPerfil.isDueno ? 'PIN Maestro de Dueño (6 dígitos)' : 'Ingresa tu PIN de 4 dígitos'}
+                </h3>
                 <p className="text-xs text-slate-500">
-                  {selectedPerfil.isDueno ? 'PIN de administrador (def: 0000)' : 'PIN de colaborador'}
+                  {selectedPerfil.isDueno ? 'Acceso administrativo total' : 'Colaborador autorizado de Dolciangel'}
                 </p>
               </div>
 
-              {/* Indicador de 4 dígitos */}
-              <div className="flex justify-center gap-3 my-3">
-                {[0, 1, 2, 3].map((idx) => {
+              {/* Indicador dinámico de dígitos */}
+              <div className="flex justify-center gap-2.5 my-3">
+                {Array.from({ length: targetPinLength }).map((_, idx) => {
                   const filled = pin.length > idx;
                   return (
                     <div
                       key={idx}
-                      className={`w-4 h-4 rounded-full transition-all duration-200 ${
+                      className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${
                         filled
                           ? 'bg-brand-700 scale-125 shadow-md shadow-brand-500/30'
                           : 'bg-slate-200 border border-slate-300'
@@ -274,7 +278,7 @@ export const LoginModal = ({ isOpen, onClose, canClose = false }) => {
 
               <div className="text-center pt-2 text-[11px] text-slate-400">
                 {selectedPerfil?.isDueno 
-                  ? 'PIN de Administrador (0000)' 
+                  ? 'Seguridad de Administrador' 
                   : 'Ingresa tu PIN asignado de 4 dígitos'}
               </div>
             </div>

@@ -49,7 +49,9 @@ export const HistorialComandasView = () => {
   // Filtrado
   const filteredVentas = useMemo(() => {
     return ventas.filter(v => {
-      const matchSede = !v.sede || v.sede === sede;
+      const matchSede = !v.sede || v.sede === sede ||
+        (sede === 'VE' && (v.sede === 'villaEspana' || v.sede === 'VE')) ||
+        (sede === 'BA' && (v.sede === 'buenosAires' || v.sede === 'BA'));
       const term = searchTerm.toLowerCase();
       const matchSearch = (v.id || '').toLowerCase().includes(term) ||
                           (v.cliente?.nombre || '').toLowerCase().includes(term) ||
