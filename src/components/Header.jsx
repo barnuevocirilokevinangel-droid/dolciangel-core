@@ -3,7 +3,7 @@ import { useApp, SEDES } from '../context/AppContext';
 import { Store, User, LogOut, Wifi, WifiOff, ShoppingBag, Sparkles } from 'lucide-react';
 
 export const Header = ({ onOpenCart, onOpenSwitchModal }) => {
-  const { sede, perfil, syncStatus, activeAccount, cartCount, cartTotal } = useApp();
+  const { sede, perfil, syncStatus, isOnline, activeAccount, cartCount, cartTotal } = useApp();
 
   const currentSedeInfo = sede ? SEDES[sede] : null;
 
@@ -22,14 +22,23 @@ export const Header = ({ onOpenCart, onOpenSwitchModal }) => {
                 CORE
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${
-                  syncStatus === 'connected' ? 'bg-emerald-500 animate-pulse-green' :
-                  syncStatus === 'connecting' ? 'bg-amber-400 animate-pulse' : 'bg-rose-500'
-                }`} />
-                {syncStatus === 'connected' ? 'Sincronizado' : syncStatus === 'connecting' ? 'Conectando...' : 'Desconectado'}
-              </span>
+            <div className="flex items-center gap-1.5 text-xs">
+              {!isOnline ? (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[11px] animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span>Sin conexión</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-slate-500">
+                  <span className={`w-2 h-2 rounded-full ${
+                    syncStatus === 'connected' ? 'bg-emerald-500 animate-pulse-green' :
+                    syncStatus === 'connecting' ? 'bg-amber-400 animate-pulse' : 'bg-rose-500'
+                  }`} />
+                  <span>
+                    {syncStatus === 'connected' ? 'Sincronizado' : syncStatus === 'connecting' ? 'Conectando...' : 'Desconectado'}
+                  </span>
+                </span>
+              )}
             </div>
           </div>
         </div>

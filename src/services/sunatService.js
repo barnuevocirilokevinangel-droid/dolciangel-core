@@ -178,8 +178,13 @@ export async function emitirComprobante(venta) {
     }
   }
 
+  // SIMULADOR PERFECTO DE SUNAT (Ready for Nubefact)
+  // Como aún no tenemos la API Key configurada en producción, simulamos la emisión
+  // con un delay realista de 1 segundo para la experiencia de usuario y persistimos el estado.
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
   // GENERACIÓN OFICIAL LOCAL CON PROTOCOLO SUNAT
-  const correlativo = Math.floor(1000 + (Date.now() % 9000));
+  const correlativo = venta.correlativo || Math.floor(1000 + (Date.now() % 9000));
   const serie = payload.serie;
   const numero = correlativo.toString().padStart(6, '0');
   const codigoCompleto = `${serie}-${numero}`;
@@ -198,16 +203,19 @@ export async function emitirComprobante(venta) {
   ].join('|');
 
   return {
+    exito: true,
     success: true,
+    enlace_del_pdf: null,
+    comprobante_simulado: true,
+    estado_sunat: 'simulado_local',
     tipo,
     serie,
     numero,
     codigoCompleto,
-    enlace_del_pdf: null,
     enlace_del_xml: null,
     cadena_para_codigo_qr: qrString,
     estado: 'EMITIDO',
-    mensaje: 'Comprobante emitido con éxito con protocolo SUNAT',
+    mensaje: 'Comprobante simulado localmente con éxito (Ready for Nubefact)',
     fechaEmision: new Date().toISOString(),
     payload: payload
   };

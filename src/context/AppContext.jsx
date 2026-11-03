@@ -154,8 +154,29 @@ export const AppProvider = ({ children }) => {
     }, 0);
   }, [accounts]);
 
-  // 3. Estado de sincronización Firestore
+  // 3. Estado de sincronización Firestore y Detección de Red Offline/Online
   const [syncStatus, setSyncStatus] = useState('connecting');
+  const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      showToast('Conexión restablecida con éxito', 'success');
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      showToast('Sin conexión a internet. Modo offline activado.', 'warning');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const [productos, setProductos] = useState([]);
   const [ventas, setVentas] = useState([]);
   const [sesionCaja, setSesionCaja] = useState(null);
@@ -392,6 +413,28 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  // Asignar cantidad exacta con validación estricta (antifrágil contra inputs negativos o 0)
+  const updateCartItemExact = (productId, rawQuantity, targetAccountId = activeAccountId) => {
+    setAccounts(prev => {
+      return prev.map(acc => {
+        if (acc.id === targetAccountId) {
+          const updatedItems = acc.items.map(item => {
+            if (item.product.id === productId) {
+              const currentStock = getProductStock(item.product, sede);
+              const currentPrice = getProductPrice(item.product, sede);
+              const parsed = parseInt(rawQuantity, 10);
+              const safeQty = isNaN(parsed) || parsed < 1 ? 1 : Math.min(parsed, currentStock);
+              return { ...item, quantity: safeQty, subtotal: safeQty * currentPrice };
+            }
+            return item;
+          });
+          return { ...acc, items: updatedItems };
+        }
+        return acc;
+      });
+    });
+  };
+
   const removeFromCart = (productId, targetAccountId = activeAccountId) => {
     setAccounts(prev => {
       return prev.map(acc => {
@@ -477,6 +520,7 @@ export const AppProvider = ({ children }) => {
       sedeNombre: SEDES[sede].nombre,
       vendedor: perfil.nombre,
       vendedorRol: perfil.rol,
+      estado_sunat: 'simulado_local',
       cuenta: {
         id: targetAccount.id,
         nombre: targetAccount.name,
@@ -614,11 +658,12 @@ export const AppProvider = ({ children }) => {
       cart,
       addToCart,
       updateCartQuantity,
+      updateCartItemExact,
       removeFromCart,
       clearCart,
       cartTotal,
       cartCount,
-      // Firestore Collections
+      // Firestore Collections y Red
       productos,
       ventas,
       sesionCaja,
@@ -626,6 +671,7 @@ export const AppProvider = ({ children }) => {
       kardex,
       clientesFidelidad,
       syncStatus,
+      isOnline,
       seedInitialProducts,
       processSale,
       toast,

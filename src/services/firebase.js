@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, 
+  enableIndexedDbPersistence,
   collection, 
   doc, 
   getDoc,
@@ -31,6 +32,18 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
+
+// Habilitar persistencia offline con IndexedDB
+// Garantiza que ventas y comandas en mostrador se guarden localmente si se corta el wifi
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('Persistencia Firestore: Múltiples pestañas abiertas. La persistencia opera en la pestaña principal.');
+    } else if (err.code === 'unimplemented') {
+      console.warn('Persistencia Firestore: El navegador actual no soporta almacenamiento IndexedDB.');
+    }
+  });
+}
 
 // Colecciones principales de Dolciangel Core
 export const collections = {

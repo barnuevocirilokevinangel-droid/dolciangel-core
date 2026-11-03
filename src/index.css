@@ -34,3 +34,51 @@
 .animate-pulse-green {
   animation: pulseGreen 2s infinite ease-in-out;
 }
+
+/* ========================================================
+   OPTIMIZACIÓN DE IMPRESIÓN PARA TICKET TÉRMICO (80mm / 58mm)
+   Oculta toda la interfaz web (botones, menús, cabeceras)
+   y muestra únicamente el ticket térmico sin márgenes en blanco.
+   ======================================================== */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0 !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 80mm !important;
+  }
+
+  /* Ocultar elementos web interactivos */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Mostrar únicamente el contenedor del ticket térmico */
+  #ticket-print-root,
+  #ticket-print-root *,
+  #ticket-termico-print,
+  #ticket-termico-print * {
+    visibility: visible !important;
+  }
+
+  #ticket-print-root,
+  #ticket-termico-print {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 78mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 2mm 3mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

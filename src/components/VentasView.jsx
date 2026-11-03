@@ -3,6 +3,7 @@ import { useApp, SEDES } from '../context/AppContext';
 import { validarDNI, validarRUC } from '../services/sunatService';
 import { getProductPrice, getProductStock, extractCategories } from '../services/productUtils';
 import { TicketTermico } from './TicketTermico';
+import { TicketPrint } from './TicketPrint';
 import { ProductImage } from './ProductImage';
 import { 
   Search, 
@@ -43,6 +44,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     cart, 
     addToCart, 
     updateCartQuantity, 
+    updateCartItemExact,
     removeFromCart, 
     clearCart, 
     cartTotal, 
@@ -170,9 +172,18 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     setMontoRecibido(monto.toFixed(2));
   };
 
-  // Ejecutar venta y liquidar únicamente la cuenta activa
+  // Ejecutar venta y liquidar únicamente la cuenta activa (con blindaje contra doble click e inconsistencias)
   const handleFinalizeSale = async (e) => {
     e.preventDefault();
+
+    // Bloqueo estricto de múltiples clics concurrentes
+    if (isProcessing) return;
+
+    // Validación de comanda vacía
+    if (cartTotal <= 0 || cart.length === 0) {
+      showToast('El carrito está vacío. Agrega productos antes de cobrar.', 'warning');
+      return;
+    }
 
     // Validar Boleta
     if (tipoComprobante === 'BOLETA') {
@@ -217,6 +228,8 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
         targetAccountId: activeAccountId
       });
 
+      // Limpieza total garantizada de la cuenta activa
+      clearCart(activeAccountId);
       setLastSaleReceipt(saleResult);
       setShowCheckout(false);
       setIsCartOpen(false);
@@ -546,9 +559,33 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="w-6 text-center text-xs font-bold text-slate-800">
-                            {inCartItem.quantity}
-                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={currentStock}
+                            value={inCartItem.quantity}
+                            onKeyDown={(e) => {
+                              if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                                e.preventDefault();
+                              }
+                            }}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (raw === '') return;
+                              const parsed = parseInt(raw, 10);
+                              if (isNaN(parsed) || parsed < 1) {
+                                updateCartItemExact(prod.id, 1);
+                                return;
+                              }
+                              if (parsed > currentStock) {
+                                showToast(`Stock máximo de ${prod.nombre}: ${currentStock}`, 'warning');
+                                updateCartItemExact(prod.id, currentStock);
+                                return;
+                              }
+                              updateCartItemExact(prod.id, parsed);
+                            }}
+                            className="w-7 text-center text-xs font-bold text-slate-800 bg-transparent border-0 focus:ring-0 p-0"
+                          />
                           <button
                             onClick={() => addToCart(prod)}
                             disabled={inCartItem.quantity >= currentStock}
@@ -705,9 +742,33 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                                 >
                                   <Minus className="w-3.5 h-3.5" />
                                 </button>
-                                <span className="w-6 text-center text-xs font-bold text-slate-800">
-                                  {inCartItem.quantity}
-                                </span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={currentStock}
+                                  value={inCartItem.quantity}
+                                  onKeyDown={(e) => {
+                                    if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    if (raw === '') return;
+                                    const parsed = parseInt(raw, 10);
+                                    if (isNaN(parsed) || parsed < 1) {
+                                      updateCartItemExact(prod.id, 1);
+                                      return;
+                                    }
+                                    if (parsed > currentStock) {
+                                      showToast(`Stock máximo de ${prod.nombre}: ${currentStock}`, 'warning');
+                                      updateCartItemExact(prod.id, currentStock);
+                                      return;
+                                    }
+                                    updateCartItemExact(prod.id, parsed);
+                                  }}
+                                  className="w-7 text-center text-xs font-bold text-slate-800 bg-transparent border-0 focus:ring-0 p-0"
+                                />
                                 <button
                                   onClick={() => addToCart(prod)}
                                   disabled={inCartItem.quantity >= currentStock}
@@ -852,9 +913,34 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-6 text-center text-xs font-bold text-slate-800">
-                          {item.quantity}
-                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          max={getProductStock(item.product, sede)}
+                          value={item.quantity}
+                          onKeyDown={(e) => {
+                            if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                              e.preventDefault();
+                            }
+                          }}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === '') return;
+                            const parsed = parseInt(raw, 10);
+                            const maxStock = getProductStock(item.product, sede);
+                            if (isNaN(parsed) || parsed < 1) {
+                              updateCartItemExact(item.product.id, 1);
+                              return;
+                            }
+                            if (parsed > maxStock) {
+                              showToast(`Stock máximo de ${item.product.nombre}: ${maxStock}`, 'warning');
+                              updateCartItemExact(item.product.id, maxStock);
+                              return;
+                            }
+                            updateCartItemExact(item.product.id, parsed);
+                          }}
+                          className="w-7 text-center text-xs font-bold text-slate-800 bg-transparent border-0 focus:ring-0 p-0"
+                        />
                         <button
                           onClick={() => addToCart(item.product)}
                           className="w-6 h-6 rounded bg-brand-700 text-white flex items-center justify-center"
@@ -881,36 +967,37 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
               )}
             </div>
 
-            {cart.length > 0 && (
-              <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
-                <div className="space-y-1.5 text-xs text-slate-600">
-                  <div className="flex justify-between">
-                    <span>Op. Gravada:</span>
-                    <span className="font-semibold">S/ {opGravada.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>IGV (18% incluido):</span>
-                    <span className="font-semibold">S/ {igvCalculado.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-base font-extrabold text-slate-900 pt-1 border-t border-slate-200">
-                    <span>Total a Pagar ({activeAccount.name}):</span>
-                    <span className="text-brand-700 text-xl font-bold">
-                      S/ {cartTotal.toFixed(2)}
-                    </span>
-                  </div>
+            {/* Resumen y Botón de Cobro de Comanda */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
+              <div className="space-y-1.5 text-xs text-slate-600">
+                <div className="flex justify-between">
+                  <span>Op. Gravada:</span>
+                  <span className="font-semibold">S/ {opGravada.toFixed(2)}</span>
                 </div>
-
-                <button
-                  onClick={() => setShowCheckout(true)}
-                  className="w-full py-3.5 px-4 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-sm shadow-lg shadow-brand-700/30 flex items-center justify-center gap-2 active:scale-98 transition-all"
-                >
-                  <span>Cobrar {activeAccount.name}</span>
-                  <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs">
+                <div className="flex justify-between text-slate-500">
+                  <span>IGV (18% incluido):</span>
+                  <span className="font-semibold">S/ {igvCalculado.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-base font-extrabold text-slate-900 pt-1 border-t border-slate-200">
+                  <span>Total a Pagar ({activeAccount.name}):</span>
+                  <span className="text-brand-700 text-xl font-bold">
                     S/ {cartTotal.toFixed(2)}
                   </span>
-                </button>
+                </div>
               </div>
-            )}
+
+              <button
+                type="button"
+                onClick={() => setShowCheckout(true)}
+                disabled={cartTotal <= 0 || cart.length === 0}
+                className="w-full py-3.5 px-4 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-700 text-white font-extrabold text-sm shadow-lg shadow-brand-700/30 flex items-center justify-center gap-2 active:scale-98 transition-all"
+              >
+                <span>Proceder al Cobro ({activeAccount.name})</span>
+                <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs">
+                  S/ {cartTotal.toFixed(2)}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1084,7 +1171,16 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                       step="0.5"
                       min={0}
                       value={montoRecibido}
-                      onChange={(e) => setMontoRecibido(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === 'e' || e.key === '+') {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.startsWith('-')) return;
+                        setMontoRecibido(val);
+                      }}
                       placeholder={cartTotal.toFixed(2)}
                       className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-amber-300 bg-white font-extrabold text-slate-800 focus:outline-none focus:border-amber-500 text-base"
                     />
@@ -1315,15 +1411,18 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isProcessing}
-                  className="flex-[2] py-3.5 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white font-extrabold text-xs shadow-lg shadow-brand-700/30 flex items-center justify-center gap-2 transition-all active:scale-98"
+                  disabled={isProcessing || cartTotal <= 0 || cart.length === 0}
+                  className="flex-[2] py-3.5 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs shadow-lg shadow-brand-700/30 flex items-center justify-center gap-2 transition-all active:scale-98"
                 >
                   {isProcessing ? (
-                    <span className="animate-spin text-base">⏳ Emitiendo Comprobante...</span>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="inline-block animate-spin text-sm">⏳</span>
+                      <span>Cargando...</span>
+                    </span>
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      <span>Cobrar {activeAccount.name} (S/ {cartTotal.toFixed(2)})</span>
+                      <span>Confirmar Venta (S/ {cartTotal.toFixed(2)})</span>
                     </>
                   )}
                 </button>
@@ -1348,9 +1447,9 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
               Comanda de <strong>{lastSaleReceipt.cuenta?.nombre}</strong> cobrada e inventario descontado.
             </p>
 
-            {/* Vista Previa del Ticket Térmico Oficial */}
+            {/* Vista Previa del Ticket Térmico Oficial (80mm / 58mm) */}
             <div className="my-4">
-              <TicketTermico venta={lastSaleReceipt} />
+              <TicketPrint venta={lastSaleReceipt} />
             </div>
 
             {/* Botones Táctiles Grandes: Imprimir Ticket y Nueva Venta */}
