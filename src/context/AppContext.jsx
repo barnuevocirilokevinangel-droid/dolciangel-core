@@ -496,21 +496,30 @@ export const AppProvider = ({ children }) => {
 
     const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
     const effectiveTipoComprobante = isVE ? 'NOTA_VENTA' : (tipoComprobante || 'NOTA_VENTA');
+    const tipoDocLabel = effectiveTipoComprobante === 'FACTURA' ? 'Factura' : effectiveTipoComprobante === 'BOLETA' ? 'Boleta' : 'Nota de Venta';
 
-    // Emisión / Simulación SUNAT (Buenos Aires) o Control Interno (Villa España)
+    // Emisión hacia ApiPeru (Buenos Aires) o Control Interno (Villa España)
     const comprobanteData = await emitirComprobante({
       id: saleId,
-      sede,
+      sede: isVE ? 'villaEspana' : 'buenosAires',
+      tipoDocumento: tipoDocLabel,
       tipoComprobante: effectiveTipoComprobante,
       total: totalToPay,
       metodoPago,
       items: itemsSummary,
+      clienteDoc: isVE ? '' : (clienteDoc || ''),
+      clienteNombre: clienteNombre || 'CLIENTES VARIOS',
+      clienteDireccion: '',
       cliente: {
         documento: isVE ? '' : (clienteDoc || ''),
-        nombre: clienteNombre || 'Público General',
+        nombre: clienteNombre || 'CLIENTES VARIOS',
         telefono: clienteTelefono || ''
       }
     });
+
+    if (!comprobanteData.exito) {
+      throw new Error(comprobanteData.error || 'Error al emitir comprobante en SUNAT con ApiPeru');
+    }
 
     const opGravada = Number((totalToPay / 1.18).toFixed(2));
     const igv = Number((totalToPay - opGravada).toFixed(2));
@@ -524,7 +533,7 @@ export const AppProvider = ({ children }) => {
       sedeNombre: SEDES[sede].nombre,
       vendedor: perfil.nombre,
       vendedorRol: perfil.rol,
-      estado_sunat: isVE ? 'no_aplica' : (comprobanteData.estado_sunat || 'simulado_local'),
+      estado_sunat: isVE ? 'no_aplica' : (comprobanteData.estado_sunat || 'aceptado'),
       cuenta: {
         id: targetAccount.id,
         nombre: targetAccount.name,
@@ -537,13 +546,13 @@ export const AppProvider = ({ children }) => {
       metodoPago, // 'EFECTIVO' | 'YAPE_PLIN' | 'TARJETA'
       tipoComprobante: effectiveTipoComprobante, // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
       comprobante: {
-        tipo: comprobanteData.tipo,
-        serie: comprobanteData.serie,
-        numero: comprobanteData.numero,
-        codigoCompleto: comprobanteData.codigoCompleto || `${comprobanteData.serie}-${comprobanteData.numero}`,
-        estado: comprobanteData.estado || 'EMITIDO',
-        enlace_del_pdf: comprobanteData.enlace_del_pdf || null,
-        enlace_del_xml: comprobanteData.enlace_del_xml || null,
+        tipo: comprobanteData.tipo || effectiveTipoComprobante,
+        serie: comprobanteData.serie || (effectiveTipoComprobante === 'FACTURA' ? 'F001' : effectiveTipoComprobante === 'BOLETA' ? 'B001' : 'NV01'),
+        numero: comprobanteData.numero || 1,
+        codigoCompleto: comprobanteData.codigoCompleto || `${comprobanteData.serie || 'B001'}-${comprobanteData.numero || 1}`,
+        estado: comprobanteData.estado || (isVE ? 'CONTROL_INTERNO' : 'ACEPTADO_SUNAT'),
+        enlace_del_pdf: comprobanteData.url_comprobante_sunat || comprobanteData.enlace_del_pdf || null,
+        url_comprobante_sunat: comprobanteData.url_comprobante_sunat || null,
         cadena_para_codigo_qr: comprobanteData.cadena_para_codigo_qr || null,
         fecha: new Date().toISOString()
       },

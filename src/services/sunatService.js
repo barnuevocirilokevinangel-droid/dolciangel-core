@@ -1,16 +1,10 @@
-/**
- * SERVICIO DE FACTURACIÓN ELECTRÓNICA SUNAT / NUBEFACT
- * Dolciangel Core POS
- * 
- * Estructurado según las especificaciones de la API v1 de Nubefact (Perú).
- * Permite simulación local completa y conexión inmediata con solo ingresar
- * NUBEFACT_URL y NUBEFACT_TOKEN.
- */
+// src/services/sunatService.js
+const API_URL = "https://app.apiperu.dev/api/cpe";
+const API_TOKEN = "2def7b1448e04c9763445c648197b71d7852c21deaafa1a937772798ff81254b";
 
 export const SUNAT_CONFIG = {
-  // Credenciales para endpoint genérico JSON (compatible con Nubefact u otro proveedor económico)
-  API_URL: import.meta.env?.VITE_API_SUNAT_URL || import.meta.env?.VITE_NUBEFACT_URL || '',
-  TOKEN: import.meta.env?.VITE_API_SUNAT_TOKEN || import.meta.env?.VITE_NUBEFACT_TOKEN || '',
+  API_URL,
+  TOKEN: API_TOKEN,
   EMPRESA_RUC: '20609876543',
   EMPRESA_RAZON_SOCIAL: 'DOLCIANGEL PASTELERÍA & CAFÉ S.A.C.',
   EMPRESA_DIRECCION: 'Av. Pacífico Mz. B Lt. 12 - Nuevo Chimbote',
@@ -21,7 +15,6 @@ export const SUNAT_CONFIG = {
   }
 };
 
-// Alias de retrocompatibilidad
 export const NUBEFACT_CONFIG = SUNAT_CONFIG;
 
 /**
@@ -42,231 +35,134 @@ export function validarRUC(ruc) {
   return /^(10|20)\d{9}$/.test(clean);
 }
 
-/**
- * Convierte una venta de Dolciangel al payload oficial JSON de Nubefact
- */
-export function generarPayloadNubefact(venta) {
-  const tipo = venta.tipoComprobante || 'NOTA_VENTA';
-  const total = Number(venta.total) || 0;
-  const totalGravada = Number((total / 1.18).toFixed(2));
-  const totalIgv = Number((total - totalGravada).toFixed(2));
-
-  // Determinar tipo de comprobante y serie
-  let tipoDeComprobante = 2; // 2 = Boleta por defecto
-  let serie = NUBEFACT_CONFIG.SERIES.BOLETA;
-  let tipoDocIdentidad = '1'; // 1 = DNI
-  let docNumero = (venta.cliente?.documento || '').trim();
-  let denominacion = (venta.cliente?.nombre || 'Público General').trim();
-
-  if (tipo === 'FACTURA') {
-    tipoDeComprobante = 1;
-    serie = NUBEFACT_CONFIG.SERIES.FACTURA;
-    tipoDocIdentidad = '6'; // 6 = RUC
-  } else if (tipo === 'BOLETA') {
-    tipoDeComprobante = 2;
-    serie = NUBEFACT_CONFIG.SERIES.BOLETA;
-    tipoDocIdentidad = docNumero.length === 8 ? '1' : '-';
-    if (!docNumero && total < 700) {
-      docNumero = '00000000';
-      denominacion = denominacion || 'CLIENTE MENOR';
-    }
-  } else {
-    // NOTA DE VENTA INTERNA
-    tipoDeComprobante = 0; // Uso interno
-    serie = NUBEFACT_CONFIG.SERIES.NOTA_VENTA;
-    tipoDocIdentidad = '-';
-  }
-
-  // Estructurar items según formato Nubefact
-  const itemsNubefact = (venta.items || []).map((it, idx) => {
-    const cant = Number(it.cantidad) || 1;
-    const precioConIgv = Number(it.precio || it.precioUnitario) || 0;
-    const valorSinIgv = Number((precioConIgv / 1.18).toFixed(4));
-    const subtotalSinIgv = Number((valorSinIgv * cant).toFixed(2));
-    const totalItem = Number((precioConIgv * cant).toFixed(2));
-    const igvItem = Number((totalItem - subtotalSinIgv).toFixed(2));
-
-    return {
-      unidad_de_medida: 'NIU', // NIU = Unidad de bien
-      codigo: it.id || `PROD-${idx + 1}`,
-      descripcion: (it.nombre || 'Producto Dolciangel').toUpperCase(),
-      cantidad: cant,
-      valor_unitario: valorSinIgv,
-      precio_unitario: Number(precioConIgv.toFixed(2)),
-      descuento: 0,
-      subtotal: subtotalSinIgv,
-      tipo_de_igv: 1, // 1 = Gravado - Operación Onerosa
-      igv: igvItem,
-      total: totalItem,
-      anticipo_regularizacion: false
-    };
-  });
-
-  const now = new Date();
-  const fechaEmision = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
-
-  return {
-    operacion: 'generar_comprobante',
-    tipo_de_comprobante: tipoDeComprobante,
-    serie: serie,
-    numero: venta.correlativo || Math.floor(1000 + Math.random() * 9000),
-    sunat_transaction: 1, // 1 = Venta Interna
-    cliente_tipo_de_documento: tipoDocIdentidad,
-    cliente_numero_de_documento: docNumero || '00000000',
-    cliente_denominacion: denominacion.toUpperCase(),
-    cliente_direccion: venta.cliente?.direccion || 'NUEVO CHIMBOTE',
-    cliente_email: venta.cliente?.email || '',
-    fecha_de_emision: fechaEmision,
-    moneda: 1, // 1 = PEN (Soles)
-    tipo_de_cambio: '',
-    porcentaje_de_igv: 18.00,
-    descuento_global: 0,
-    total_descuento: 0,
-    total_anticipo: 0,
-    total_gravada: totalGravada,
-    total_inafecta: 0,
-    total_exonerada: 0,
-    total_igv: totalIgv,
-    total_gratuita: 0,
-    total_otros_cargos: 0,
-    total: Number(total.toFixed(2)),
-    medio_de_pago: venta.metodoPago === 'EFECTIVO' ? 'EFECTIVO' : venta.metodoPago === 'YAPE_PLIN' ? 'YAPE/PLIN' : 'TARJETA',
-    items: itemsNubefact
-  };
-}
-
-/**
- * Emite el comprobante electrónico hacia el proveedor SUNAT (Nubefact o endpoint genérico JSON)
- * REGLAS DE NEGOCIO ESTRICTAS:
- * 1. Sede Villa España opera 100% bajo control interno sin valor fiscal; aborta la llamada API y retorna éxito local inmediato.
- * 2. Solo las ventas de Buenos Aires con tipo "BOLETA" o "FACTURA" disparan el consumo de la API externa.
- * 3. Si no hay API Key o falla la conexión, opera en simulación local para no trabar el mostrador.
- */
-export async function emitirComprobante(venta) {
-  const sede = venta?.sede || '';
-  const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
-
-  // 1. REGLA ESTRICTA VILLA ESPAÑA: abortar la API y retornar inmediatamente un éxito local
+export const emitirComprobante = async (ventaData) => {
+  // 1. Bloqueo estricto para Villa España: Solo emite ticket interno
+  const isVE = ventaData.sede === 'villaEspana' || ventaData.sede === 'VE' || ventaData.sede === 'Villa España';
   if (isVE) {
-    const correlativo = venta.correlativo || Math.floor(1000 + (Date.now() % 9000));
-    const serie = SUNAT_CONFIG.SERIES.NOTA_VENTA;
-    const numero = correlativo.toString().padStart(6, '0');
+    const correlativo = ventaData.correlativo || 1;
     return {
       exito: true,
       tipo: 'interno',
       comprobante_simulado: true,
-      serie,
-      numero,
-      codigoCompleto: `${serie}-${numero}`,
+      serie: "NV01",
+      numero: correlativo,
+      codigoCompleto: `NV01-${String(correlativo).padStart(6, '0')}`,
       estado_sunat: 'no_aplica',
       estado: 'CONTROL_INTERNO',
       enlace_del_pdf: null,
-      mensaje: 'Ticket de control interno emitido en Villa España (sin valor fiscal)'
+      mensaje: "Ticket interno emitido sin valor fiscal"
     };
   }
 
-  const tipo = venta.tipoComprobante || 'NOTA_VENTA';
-  const esFiscal = tipo === 'BOLETA' || tipo === 'FACTURA';
-
-  // 2. REGLA ESTRICTA NOTA DE VENTA BUENOS AIRES: uso interno, no consume API
-  if (!esFiscal) {
-    const correlativo = venta.correlativo || Math.floor(1000 + (Date.now() % 9000));
-    const serie = SUNAT_CONFIG.SERIES.NOTA_VENTA;
-    const numero = correlativo.toString().padStart(6, '0');
+  // Si es Nota de Venta interna en cualquier sede
+  const esNotaVenta = ventaData.tipoDocumento === 'Nota de Venta' || ventaData.tipoComprobante === 'NOTA_VENTA';
+  if (esNotaVenta) {
+    const correlativo = ventaData.correlativo || 1;
     return {
       exito: true,
       tipo: 'interno',
       comprobante_simulado: true,
-      serie,
-      numero,
-      codigoCompleto: `${serie}-${numero}`,
+      serie: "NV01",
+      numero: correlativo,
+      codigoCompleto: `NV01-${String(correlativo).padStart(6, '0')}`,
       estado_sunat: 'no_aplica',
       estado: 'CONTROL_INTERNO',
       enlace_del_pdf: null,
-      mensaje: 'Nota de venta interna emitida en Buenos Aires'
+      mensaje: "Ticket interno emitido sin valor fiscal"
     };
   }
 
-  // 3. SOLO VENTAS DE BUENOS AIRES MARCADAS EXPLÍCITAMENTE COMO BOLETA O FACTURA:
-  const payload = generarPayloadNubefact(venta);
+  // 2. Lógica de Facturación Electrónica para Buenos Aires
+  try {
+    // Cálculos para evitar decimales infinitos
+    const total = parseFloat(ventaData.total) || 0;
+    const totalGravada = total / 1.18;
+    const totalIgv = total - totalGravada;
 
-  // Consumir endpoint genérico JSON (usando VITE_API_SUNAT_URL / VITE_API_SUNAT_TOKEN)
-  if (SUNAT_CONFIG.API_URL && SUNAT_CONFIG.TOKEN) {
-    try {
-      const response = await fetch(SUNAT_CONFIG.API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': SUNAT_CONFIG.TOKEN.startsWith('Bearer ') || SUNAT_CONFIG.TOKEN.startsWith('Token ')
-            ? SUNAT_CONFIG.TOKEN
-            : `Bearer ${SUNAT_CONFIG.TOKEN}`,
-          'token': SUNAT_CONFIG.TOKEN
-        },
-        body: JSON.stringify(payload)
-      });
+    const esFactura = ventaData.tipoDocumento === 'Factura' || ventaData.tipoComprobante === 'FACTURA';
+    const serie = esFactura ? "F001" : "B001";
+    const numero = ventaData.correlativo || Math.floor(1000 + (Date.now() % 9000));
+    const docCliente = (ventaData.clienteDoc || ventaData.cliente?.documento || '').trim();
+    const nombreCliente = (ventaData.clienteNombre || ventaData.cliente?.nombre || "CLIENTES VARIOS").trim();
+    const direccionCliente = (ventaData.clienteDireccion || ventaData.cliente?.direccion || "").trim();
 
-      const data = await response.json();
+    const payload = {
+      operacion: "generar_comprobante",
+      tipo_de_comprobante: esFactura ? "1" : "2",
+      serie: serie,
+      numero: numero,
+      sunat_transaction: "1",
+      cliente_tipo_de_documento: docCliente ? (esFactura ? "6" : "1") : "-",
+      cliente_numero_de_documento: docCliente || "00000000",
+      cliente_denominacion: nombreCliente || "CLIENTES VARIOS",
+      cliente_direccion: direccionCliente || "",
+      moneda: "1",
+      porcentaje_de_igv: 18.00,
+      total_gravada: parseFloat(totalGravada.toFixed(2)),
+      total_igv: parseFloat(totalIgv.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
+      enviar_automaticamente_a_la_sunat: true,
+      items: (ventaData.items || []).map((item, idx) => {
+         const precioUnitario = parseFloat(item.precio || item.precioUnitario || 0);
+         const valorUnitario = precioUnitario / 1.18;
+         const cantidad = parseInt(item.cantidad || 1, 10);
+         
+         return {
+           unidad_de_medida: "NIU",
+           codigo: item.id || `00${idx + 1}`,
+           descripcion: item.nombre || 'Producto Dolciangel',
+           cantidad: cantidad,
+           valor_unitario: parseFloat(valorUnitario.toFixed(5)),
+           precio_unitario: parseFloat(precioUnitario.toFixed(2)),
+           descuento: "",
+           subtotal: parseFloat((valorUnitario * cantidad).toFixed(2)),
+           tipo_de_igv: "1",
+           igv: parseFloat(((precioUnitario - valorUnitario) * cantidad).toFixed(2)),
+           total: parseFloat((precioUnitario * cantidad).toFixed(2)),
+           anticipo_regularizacion: false
+         };
+      })
+    };
 
-      if (!response.ok || data.errors || data.error) {
-        throw new Error(data.errors || data.error || 'Error en respuesta del proveedor de facturación SUNAT');
-      }
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${API_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
 
+    const data = await response.json();
+
+    if (data.success) {
+      const pdfLink = data.data?.links?.pdf || data.data?.pdf || null;
       return {
         exito: true,
         success: true,
-        tipo,
-        serie: data.serie || payload.serie,
-        numero: data.numero || payload.numero,
-        codigoCompleto: `${data.serie || payload.serie}-${data.numero || payload.numero}`,
-        enlace_del_pdf: data.enlace_del_pdf || data.pdf || null,
-        enlace_del_xml: data.enlace_del_xml || data.xml || null,
-        cadena_para_codigo_qr: data.cadena_para_codigo_qr || data.qr || null,
+        serie: data.data?.serie || serie,
+        numero: data.data?.numero || numero,
+        codigoCompleto: `${data.data?.serie || serie}-${data.data?.numero || numero}`,
+        url_comprobante_sunat: pdfLink,
+        enlace_del_pdf: pdfLink,
+        cadena_para_codigo_qr: data.data?.cadena_para_codigo_qr || data.data?.qr || null,
         estado: 'ACEPTADO_SUNAT',
         estado_sunat: 'aceptado',
-        fechaEmision: new Date().toISOString(),
-        payload: payload
+        mensaje: "Comprobante emitido con éxito en SUNAT"
       };
-    } catch (err) {
-      console.warn('Fallo en conexión con API SUNAT externa, pasando a contingencia/simulación local:', err);
+    } else {
+      console.error("Error devuelto por ApiPeru:", data);
+      return { 
+        exito: false, 
+        success: false,
+        serie,
+        numero,
+        codigoCompleto: `${serie}-${numero}`,
+        error: data.message || "Error al emitir en SUNAT. Revisa los datos." 
+      };
     }
+  } catch (error) {
+    console.error("Error de conexión:", error);
+    return { exito: false, error: "Error de red al conectar con ApiPeru." };
   }
-
-  // Simulación local de 1 segundo (Ready for Nubefact / Proveedor Económico)
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  const correlativo = venta.correlativo || Math.floor(1000 + (Date.now() % 9000));
-  const serie = payload.serie;
-  const numero = correlativo.toString().padStart(6, '0');
-  const codigoCompleto = `${serie}-${numero}`;
-
-  // Cadena oficial QR SUNAT
-  const qrString = [
-    SUNAT_CONFIG.EMPRESA_RUC,
-    payload.tipo_de_comprobante.toString().padStart(2, '0'),
-    serie,
-    numero,
-    payload.total_igv.toFixed(2),
-    payload.total.toFixed(2),
-    payload.fecha_de_emision,
-    payload.cliente_tipo_de_documento,
-    payload.cliente_numero_de_documento
-  ].join('|');
-
-  return {
-    exito: true,
-    success: true,
-    enlace_del_pdf: null,
-    comprobante_simulado: true,
-    estado_sunat: 'simulado_local',
-    tipo,
-    serie,
-    numero,
-    codigoCompleto,
-    enlace_del_xml: null,
-    cadena_para_codigo_qr: qrString,
-    estado: 'EMITIDO',
-    mensaje: 'Comprobante simulado localmente con éxito para Buenos Aires (Ready for SUNAT)',
-    fechaEmision: new Date().toISOString(),
-    payload: payload
-  };
-}
+};
