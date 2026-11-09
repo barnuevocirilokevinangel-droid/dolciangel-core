@@ -504,7 +504,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                     key={prod.id}
                     className={`relative p-3.5 rounded-2xl border transition-all flex flex-col justify-between ${
                       isOutOfStock 
-                        ? 'bg-slate-50/80 border-slate-200 opacity-60' 
+                        ? 'bg-slate-100/90 border-slate-200 opacity-50 pointer-events-none cursor-not-allowed select-none' 
                         : inCartItem
                         ? 'bg-pink-50/40 border-brand-400 shadow-sm'
                         : 'bg-white border-slate-100 hover:border-pink-300 hover:shadow-md'
@@ -526,16 +526,20 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                         rounded="rounded-2xl"
                       />
                       {/* Control Visual de Stock Flotante */}
-                      <div className="absolute top-2 right-2 z-10">
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs backdrop-blur-md ${
-                          isOutOfStock
-                            ? 'bg-rose-100/90 text-rose-800 border border-rose-300 font-black'
-                            : currentStock <= 3
-                            ? 'bg-amber-100/90 text-amber-800 border border-amber-200'
-                            : 'bg-emerald-100/90 text-emerald-800 border border-emerald-200'
-                        }`}>
-                          {isOutOfStock ? 'Agotado' : `Stock: ${currentStock}`}
-                        </span>
+                      <div className="absolute top-2 right-2 z-10 pointer-events-auto">
+                        {isOutOfStock ? (
+                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-md bg-rose-600 text-white border border-rose-700 tracking-wider uppercase">
+                            AGOTADO
+                          </span>
+                        ) : (
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs backdrop-blur-md ${
+                            currentStock <= 3
+                              ? 'bg-amber-100/90 text-amber-800 border border-amber-200'
+                              : 'bg-emerald-100/90 text-emerald-800 border border-emerald-200'
+                          }`}>
+                            Stock: {currentStock}
+                          </span>
+                        )}
                       </div>
 
                       {prod.esPedidoGrande && (
@@ -602,10 +606,16 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                             className="w-7 text-center text-xs font-bold text-slate-800 bg-transparent border-0 focus:ring-0 p-0"
                           />
                           <button
-                            onClick={() => addToCart(prod)}
+                            onClick={() => {
+                              if (inCartItem.quantity >= currentStock) {
+                                showToast(`Stock máximo alcanzado para "${prod.nombre}" (Disponible: ${currentStock})`, 'warning');
+                                return;
+                              }
+                              addToCart(prod);
+                            }}
                             disabled={inCartItem.quantity >= currentStock}
                             title={inCartItem.quantity >= currentStock ? 'Stock máximo alcanzado' : 'Agregar otro'}
-                            className="w-7 h-7 rounded-lg bg-brand-700 hover:bg-brand-800 disabled:opacity-40 text-white flex items-center justify-center active:scale-90"
+                            className="w-7 h-7 rounded-lg bg-brand-700 hover:bg-brand-800 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center active:scale-90"
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
@@ -616,12 +626,12 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                           disabled={isOutOfStock}
                           className={`flex items-center gap-1 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
                             isOutOfStock
-                              ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-200'
+                              ? 'bg-rose-100 text-rose-700 cursor-not-allowed border border-rose-200 font-extrabold'
                               : 'bg-brand-700 hover:bg-brand-800 text-white shadow-brand-700/20'
                           }`}
                         >
                           {isOutOfStock ? (
-                            <span>Agotado</span>
+                            <span>AGOTADO</span>
                           ) : (
                             <>
                               <Plus className="w-3.5 h-3.5" />
@@ -685,7 +695,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                           key={prod.id}
                           className={`relative p-3.5 rounded-2xl border transition-all flex flex-col justify-between ${
                             isOutOfStock 
-                              ? 'bg-slate-50/80 border-slate-200 opacity-60' 
+                              ? 'bg-slate-100/90 border-slate-200 opacity-50 pointer-events-none cursor-not-allowed select-none' 
                               : inCartItem
                               ? 'bg-pink-50/40 border-brand-400 shadow-sm'
                               : 'bg-white border-slate-100 hover:border-pink-300 hover:shadow-md'
@@ -707,16 +717,20 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                               rounded="rounded-2xl"
                             />
                             {/* Badge de Stock Flotante */}
-                            <div className="absolute top-2 right-2 z-10">
-                              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs backdrop-blur-md ${
-                                isOutOfStock
-                                  ? 'bg-rose-100/90 text-rose-800 border border-rose-300 font-black'
-                                  : currentStock <= 3
-                                  ? 'bg-amber-100/90 text-amber-800 border border-amber-200'
-                                  : 'bg-emerald-100/90 text-emerald-800 border border-emerald-200'
-                              }`}>
-                                {isOutOfStock ? 'Agotado' : `Stock: ${currentStock}`}
-                              </span>
+                            <div className="absolute top-2 right-2 z-10 pointer-events-auto">
+                              {isOutOfStock ? (
+                                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-md bg-rose-600 text-white border border-rose-700 tracking-wider uppercase">
+                                  AGOTADO
+                                </span>
+                              ) : (
+                                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs backdrop-blur-md ${
+                                  currentStock <= 3
+                                    ? 'bg-amber-100/90 text-amber-800 border border-amber-200'
+                                    : 'bg-emerald-100/90 text-emerald-800 border border-emerald-200'
+                                }`}>
+                                  Stock: {currentStock}
+                                </span>
+                              )}
                             </div>
 
                             {prod.esPedidoGrande && (
@@ -785,10 +799,16 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                                   className="w-7 text-center text-xs font-bold text-slate-800 bg-transparent border-0 focus:ring-0 p-0"
                                 />
                                 <button
-                                  onClick={() => addToCart(prod)}
+                                  onClick={() => {
+                                    if (inCartItem.quantity >= currentStock) {
+                                      showToast(`Stock máximo alcanzado para "${prod.nombre}" (Disponible: ${currentStock})`, 'warning');
+                                      return;
+                                    }
+                                    addToCart(prod);
+                                  }}
                                   disabled={inCartItem.quantity >= currentStock}
                                   title={inCartItem.quantity >= currentStock ? 'Stock máximo alcanzado' : 'Agregar otro'}
-                                  className="w-7 h-7 rounded-lg bg-brand-700 hover:bg-brand-800 disabled:opacity-40 text-white flex items-center justify-center active:scale-90"
+                                  className="w-7 h-7 rounded-lg bg-brand-700 hover:bg-brand-800 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center active:scale-90"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
                                 </button>
@@ -799,12 +819,12 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                                 disabled={isOutOfStock}
                                 className={`flex items-center gap-1 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
                                   isOutOfStock
-                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-200'
+                                    ? 'bg-rose-100 text-rose-700 cursor-not-allowed border border-rose-200 font-extrabold'
                                     : 'bg-brand-700 hover:bg-brand-800 text-white shadow-brand-700/20'
                                 }`}
                               >
                                 {isOutOfStock ? (
-                                  <span>Agotado</span>
+                                  <span>AGOTADO</span>
                                 ) : (
                                   <>
                                     <Plus className="w-3.5 h-3.5" />
@@ -957,8 +977,17 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                           className="w-7 text-center text-xs font-bold text-slate-800 bg-transparent border-0 focus:ring-0 p-0"
                         />
                         <button
-                          onClick={() => addToCart(item.product)}
-                          className="w-6 h-6 rounded bg-brand-700 text-white flex items-center justify-center"
+                          onClick={() => {
+                            const maxStock = getProductStock(item.product, sede);
+                            if (item.quantity >= maxStock) {
+                              showToast(`Stock máximo alcanzado para "${item.product.nombre}". Disponible: ${maxStock}`, 'warning');
+                              return;
+                            }
+                            addToCart(item.product);
+                          }}
+                          disabled={item.quantity >= getProductStock(item.product, sede)}
+                          title={item.quantity >= getProductStock(item.product, sede) ? 'Stock máximo alcanzado' : 'Agregar 1'}
+                          className="w-6 h-6 rounded bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center active:scale-95 transition-all"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>

@@ -146,22 +146,33 @@ export const CartaWebView = () => {
             </div>
           </div>
 
-          {/* Estadísticas de la carta */}
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur p-3 rounded-2xl border border-white/15 text-xs">
-            <div className="text-center px-2">
-              <span className="text-[10px] text-pink-200 block uppercase font-bold">Vitrina Diaria</span>
-              <span className="text-lg font-extrabold text-white">{vitrinaCount}</span>
+          {/* Estadísticas de la carta y Acceso Directo */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur p-3 rounded-2xl border border-white/15 text-xs">
+              <div className="text-center px-2">
+                <span className="text-[10px] text-pink-200 block uppercase font-bold">Vitrina Diaria</span>
+                <span className="text-lg font-extrabold text-white">{vitrinaCount}</span>
+              </div>
+              <div className="w-px h-8 bg-white/20" />
+              <div className="text-center px-2">
+                <span className="text-[10px] text-pink-200 block uppercase font-bold">Catering / Pedidos</span>
+                <span className="text-lg font-extrabold text-purple-300">{cateringCount}</span>
+              </div>
+              <div className="w-px h-8 bg-white/20" />
+              <div className="text-center px-2">
+                <span className="text-[10px] text-pink-200 block uppercase font-bold">En Carta Web</span>
+                <span className="text-lg font-extrabold text-gold-300">{publicCount}</span>
+              </div>
             </div>
-            <div className="w-px h-8 bg-white/20" />
-            <div className="text-center px-2">
-              <span className="text-[10px] text-pink-200 block uppercase font-bold">Catering / Pedidos</span>
-              <span className="text-lg font-extrabold text-purple-300">{cateringCount}</span>
-            </div>
-            <div className="w-px h-8 bg-white/20" />
-            <div className="text-center px-2">
-              <span className="text-[10px] text-pink-200 block uppercase font-bold">En Carta Web</span>
-              <span className="text-lg font-extrabold text-gold-300">{publicCount}</span>
-            </div>
+            <a
+              href="/carta"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-3 rounded-2xl bg-white text-brand-800 hover:bg-pink-50 font-bold text-xs shadow-md transition-all flex items-center gap-2"
+            >
+              <span>Ver Carta Clientes</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
           </div>
         </div>
       </div>

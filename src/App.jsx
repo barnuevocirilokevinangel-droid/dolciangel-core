@@ -5,6 +5,7 @@ import { BottomNav } from './components/BottomNav';
 import { LoginModal } from './components/LoginModal';
 import { VentasView } from './components/VentasView';
 import { CartaWebView } from './components/CartaWebView';
+import { PublicCartaView } from './components/PublicCartaView';
 import { CajaView } from './components/CajaView';
 import { FidelidadView } from './components/FidelidadView';
 import { KardexView } from './components/KardexView';
@@ -109,6 +110,16 @@ const MainLayout = () => {
 };
 
 export default function App() {
+  const isCartaRoute = typeof window !== 'undefined' && (
+    window.location.pathname.toLowerCase().startsWith('/carta') ||
+    window.location.hash.toLowerCase().startsWith('#/carta') ||
+    window.location.search.toLowerCase().includes('route=carta')
+  );
+
+  if (isCartaRoute) {
+    return <PublicCartaView />;
+  }
+
   return (
     <AppProvider>
       <MainLayout />
