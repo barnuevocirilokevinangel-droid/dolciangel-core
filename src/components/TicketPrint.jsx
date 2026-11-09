@@ -52,13 +52,64 @@ export const TicketPrint = ({ venta, id = "ticket-print-root", className = "" })
       className={`ticket-termico-container bg-white text-black font-mono text-[11px] leading-tight select-none ${className}`}
       style={{
         width: '100%',
-        maxWidth: '78mm',
+        maxWidth: '80mm',
         margin: '0 auto',
-        padding: '2mm 3mm',
+        padding: '4mm',
         color: '#000000',
-        fontFamily: "'Courier New', Courier, monospace"
+        fontFamily: "'Courier New', Courier, monospace",
+        pageBreakInside: 'avoid',
+        breakInside: 'avoid',
+        height: 'auto'
       }}
     >
+      {/* Estilos de impresión térmica continua (58mm / 80mm) */}
+      <style>{`
+        @page {
+          size: auto;
+          margin: 0mm;
+        }
+        @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            width: 100% !important;
+            height: auto !important;
+          }
+          /* Oculta todos los elementos de la interfaz de la web al imprimir */
+          body * {
+            visibility: hidden !important;
+          }
+          /* Muestra ÚNICAMENTE el ticket blanco y negro con tipografía monoespaciada legible */
+          #${id},
+          #${id} * {
+            visibility: visible !important;
+          }
+          #${id} {
+            position: absolute !important;
+            left: 0 !important;
+            right: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 80mm !important;
+            margin: 0 auto !important;
+            padding: 4mm !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 11px !important;
+            line-height: 1.25 !important;
+            box-shadow: none !important;
+            border: none !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        }
+      `}</style>
       {/* 1. CABECERA: LOGO, EMPRESA Y SEDE */}
       <div className="text-center pb-2 mb-2 border-b border-dashed border-black">
         <div className="text-xl leading-none mb-1">🧁</div>
@@ -125,7 +176,7 @@ export const TicketPrint = ({ venta, id = "ticket-print-root", className = "" })
 
       {/* 4. ITEMS DE LA VENTA */}
       <div className="pb-2 mb-2 border-b border-dashed border-black">
-        <div className="flex justify-between font-bold text-[10px] uppercase pb-1 mb-1 border-b border-gray-400">
+        <div className="flex justify-between font-bold text-[10px] uppercase pb-1 mb-1 border-b border-black">
           <span>Cant. Descripción</span>
           <span className="text-right">Total</span>
         </div>
@@ -180,7 +231,7 @@ export const TicketPrint = ({ venta, id = "ticket-print-root", className = "" })
       </div>
 
       {/* 7. PIE DE TICKET */}
-      <div className="text-center pt-1 text-[9px] space-y-1 text-gray-700">
+      <div className="text-center pt-1 text-[9px] space-y-1 text-black">
         {isVE ? (
           <p className="font-extrabold text-[8px] uppercase tracking-wide text-black">
             ** TICKET DE CONTROL INTERNO - SIN VALOR FISCAL **
@@ -190,13 +241,13 @@ export const TicketPrint = ({ venta, id = "ticket-print-root", className = "" })
             ✓ Comprobante autorizado por SUNAT
           </p>
         ) : null}
-        <p className="font-bold">
+        <p className="font-bold text-black">
           ¡Gracias por endulzar tu momento con Dolciangel!
         </p>
-        <p className="text-[8px]">
+        <p className="text-[8px] text-black">
           Conserve este comprobante para cualquier cambio o reclamo.
         </p>
-        <p className="text-[8px] font-mono">
+        <p className="text-[8px] font-mono font-bold text-black">
           www.dolciangel.pe
         </p>
       </div>

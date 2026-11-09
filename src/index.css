@@ -36,14 +36,14 @@
 }
 
 /* ========================================================
-   OPTIMIZACIÓN DE IMPRESIÓN PARA TICKET TÉRMICO (80mm / 58mm)
-   Oculta toda la interfaz web (botones, menús, cabeceras)
-   y muestra únicamente el ticket térmico sin márgenes en blanco.
+   OPTIMIZACIÓN DE IMPRESIÓN PARA TICKET TÉRMICO CONTINUO (58mm / 80mm)
+   Oculta toda la interfaz web (header, modales, botones, navbar)
+   y muestra únicamente el ticket blanco y negro con tipografía legible.
    ======================================================== */
 @media print {
   @page {
-    size: 80mm auto;
-    margin: 0 !important;
+    size: auto;
+    margin: 0mm;
   }
 
   html, body {
@@ -51,34 +51,48 @@
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    width: 80mm !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
   }
 
-  /* Ocultar elementos web interactivos */
+  /* Ocultar todos los elementos de la interfaz web al imprimir */
   body * {
     visibility: hidden !important;
   }
 
-  /* Mostrar únicamente el contenedor del ticket térmico */
+  /* Mostrar ÚNICAMENTE el ticket blanco y negro con tipografía monoespaciada legible */
   #ticket-print-root,
   #ticket-print-root *,
   #ticket-termico-print,
-  #ticket-termico-print * {
+  #ticket-termico-print *,
+  .ticket-termico-container,
+  .ticket-termico-container * {
     visibility: visible !important;
   }
 
   #ticket-print-root,
-  #ticket-termico-print {
+  #ticket-termico-print,
+  .ticket-termico-container {
     position: absolute !important;
     left: 0 !important;
+    right: 0 !important;
     top: 0 !important;
-    width: 78mm !important;
+    width: 100% !important;
     max-width: 80mm !important;
-    margin: 0 !important;
-    padding: 2mm 3mm !important;
+    margin: 0 auto !important;
+    padding: 4mm !important;
     background: #ffffff !important;
     color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
     box-shadow: none !important;
     border: none !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }

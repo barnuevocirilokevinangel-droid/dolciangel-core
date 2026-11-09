@@ -45,9 +45,22 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
 
   return (
     <div className="w-full">
-      {/* ESTILOS DE IMPRESIÓN PARA TICKETERA TÉRMICA DE 80mm / 58mm */}
+      {/* ESTILOS DE IMPRESIÓN PARA TICKETERA TÉRMICA CONTINUA (58mm / 80mm) */}
       <style>{`
+        @page {
+          size: auto;
+          margin: 0mm;
+        }
         @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: auto !important;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -57,19 +70,24 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
           #ticket-termico-print {
             position: absolute !important;
             left: 0 !important;
+            right: 0 !important;
             top: 0 !important;
-            width: 78mm !important;
-            margin: 0 !important;
-            padding: 2mm 3mm !important;
-            background: white !important;
-            color: black !important;
+            width: 100% !important;
+            max-width: 80mm !important;
+            margin: 0 auto !important;
+            padding: 4mm !important;
+            background: #ffffff !important;
+            color: #000000 !important;
             font-family: 'Courier New', Courier, monospace !important;
             font-size: 11px !important;
             line-height: 1.25 !important;
-          }
-          @page {
-            size: 80mm auto;
-            margin: 0;
+            box-shadow: none !important;
+            border: none !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
         }
       `}</style>
