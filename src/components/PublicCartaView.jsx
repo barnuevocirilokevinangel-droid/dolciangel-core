@@ -18,21 +18,19 @@ import {
   ChevronRight,
   PhoneCall,
   Bell,
-  Heart,
-  ShieldCheck,
-  Award,
-  Lock
+  ArrowLeft,
+  Lock,
+  Store
 } from 'lucide-react';
 
 const DEFAULT_CONFIG = {
-  titulo: 'Hay momentos que\nmerecen quedarse.',
-  subtitulo: 'Elaboración diaria con ingredientes seleccionados.\nEncuéntranos en Villa España y Nuevo Chimbote.',
-  imagenUrl: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80',
+  titulo: 'Carta Digital del Día',
+  subtitulo: 'Postres artesanales horneados diariamente con stock confirmado en vivo para Buenos Aires (Nuevo Chimbote).',
   avisoSuperior: '✨ Atención hoy en Buenos Aires de 3:00 PM a 10:00 PM • Pedidos y delivery vía WhatsApp',
   telefonoWhatsapp: '51963810237'
 };
 
-export const PublicCartaView = ({ onGoToAdmin }) => {
+export const PublicCartaView = ({ onNavigate }) => {
   const [productos, setProductos] = useState([]);
   const [webConfig, setWebConfig] = useState(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
@@ -42,7 +40,7 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [clientName, setClientName] = useState('');
 
-  // 1. Suscripción en tiempo real a 'configuracion/web_publica' (Hero, textos, avisos, WhatsApp)
+  // 1. Suscripción en tiempo real a 'configuracion/web_publica'
   useEffect(() => {
     const unsubConfig = onSnapshot(doc(db, 'configuracion', 'web_publica'), (docSnap) => {
       if (docSnap.exists()) {
@@ -51,13 +49,12 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
           ...prev,
           titulo: data.titulo || prev.titulo,
           subtitulo: data.subtitulo || prev.subtitulo,
-          imagenUrl: data.imagenUrl || prev.imagenUrl,
           avisoSuperior: data.avisoSuperior !== undefined ? data.avisoSuperior : prev.avisoSuperior,
           telefonoWhatsapp: data.telefonoWhatsapp || prev.telefonoWhatsapp
         }));
       }
     }, (err) => {
-      console.warn('Aviso leyendo configuracion/web_publica:', err);
+      console.warn('Aviso leyendo configuracion/web_publica en /carta:', err);
     });
 
     return () => unsubConfig();
@@ -183,13 +180,13 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
 
   const handleOpenDirectChat = () => {
     const phone = webConfig.telefonoWhatsapp || '51963810237';
-    const msg = encodeURIComponent('¡Hola Dolciangel! 🧁 Deseo consultar por la disponibilidad de postres de hoy.');
+    const msg = encodeURIComponent('¡Hola Dolciangel! 🧁 Deseo consultar por la disponibilidad de postres de hoy en la carta.');
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   };
 
   return (
     <div className="min-h-screen bg-[#FFFDF9] text-slate-800 pb-28 font-sans selection:bg-brand-500 selection:text-white">
-      {/* 1. BARRA DE AVISO / ANUNCIO SUPERIOR */}
+      {/* 1. BARRA DE AVISO SUPERIOR */}
       {webConfig.avisoSuperior && (
         <div className="bg-gradient-to-r from-amber-600 via-rose-700 to-brand-800 text-white text-xs font-bold py-2 px-4 shadow-sm text-center flex items-center justify-center gap-2">
           <Bell className="w-3.5 h-3.5 text-gold-300 shrink-0 animate-bounce" />
@@ -197,48 +194,44 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
         </div>
       )}
 
-      {/* 2. NAVBAR SUPERIOR BOUTIQUE */}
-      <nav className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-pink-100 shadow-xs px-4 py-3">
+      {/* 2. NAVBAR SUPERIOR DE LA CARTA */}
+      <nav className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-pink-100 shadow-xs px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
-          {/* Logo Brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-700 to-rose-600 flex items-center justify-center text-white shadow-md shadow-brand-700/20 text-lg">
-              🧁
-            </div>
-            <div>
-              <span className="font-serif font-black text-lg tracking-tight text-slate-900 block leading-tight">
-                DOLCIANGEL
-              </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-700 block -mt-0.5">
-                Pastelería Fina & Café
-              </span>
+          {/* Botón Volver al Inicio (Landing) */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onNavigate && onNavigate('landing')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-pink-100/70 text-slate-700 hover:text-brand-800 text-xs font-bold transition-all active:scale-95"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Inicio</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🧁</span>
+              <div>
+                <span className="font-serif font-black text-base sm:text-lg tracking-tight text-slate-900 block leading-tight">
+                  Carta Digital
+                </span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-700 block">
+                  Buenos Aires • Nuevo Chimbote
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Enlaces de Navegación Rápida */}
+          {/* Acciones */}
           <div className="flex items-center gap-2">
-            <a
-              href="#carta"
-              className="text-xs font-bold text-slate-700 hover:text-brand-700 px-3 py-1.5 rounded-full hover:bg-pink-50 transition-colors hidden sm:inline"
-            >
-              Carta del Día
-            </a>
-            <a
-              href="#sedes"
-              className="text-xs font-bold text-slate-700 hover:text-brand-700 px-3 py-1.5 rounded-full hover:bg-pink-50 transition-colors hidden sm:inline"
-            >
-              Nuestras Sedes
-            </a>
             <button
               onClick={handleOpenDirectChat}
               className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
             >
               <MessageCircle className="w-3.5 h-3.5 fill-white text-emerald-600" />
-              <span>WhatsApp</span>
+              <span className="hidden sm:inline">WhatsApp</span>
             </button>
-            {onGoToAdmin && (
+            {onNavigate && (
               <button
-                onClick={onGoToAdmin}
+                onClick={() => onNavigate('core')}
                 title="Acceso Colaboradores / POS"
                 className="p-2 rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors ml-1"
               >
@@ -249,167 +242,39 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
         </div>
       </nav>
 
-      {/* 3. HERO / PRESENTACIÓN DE DOLCIANGEL */}
-      <header className="relative overflow-hidden bg-gradient-to-b from-[#2C1810] via-[#3a2015] to-[#1f100a] text-[#FFFDF8] pt-12 pb-16 px-4">
-        {/* Glow de ambientación */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-10 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative z-10">
-          {/* Textos y Llamado a la Acción (7 cols) */}
-          <div className="md:col-span-7 space-y-4 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-bold text-amber-300 border border-white/15 shadow-inner">
-              <Sparkles className="w-3.5 h-3.5 text-gold-400" />
-              <span>Elaboración 100% Artesanal • Horneado del Día</span>
+      {/* 3. ENCABEZADO COMPACTO DE LA CARTA */}
+      <header className="bg-gradient-to-r from-brand-900 via-rose-900 to-pink-900 text-white py-8 px-4 relative overflow-hidden">
+        <div className="max-w-5xl mx-auto relative z-10 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-0.5 rounded-full text-[11px] font-bold text-pink-200 border border-white/15">
+              <Sparkles className="w-3 h-3 text-gold-400" />
+              <span>Stock Confirmado en Vivo</span>
             </div>
-
-            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black leading-tight text-[#F8E7C8] whitespace-pre-line drop-shadow-sm">
-              {webConfig.titulo}
+            <h1 className="font-serif font-black text-2xl sm:text-3xl text-white">
+              Vitrina del Día • Buenos Aires
             </h1>
-
-            <p className="text-xs sm:text-sm text-amber-100/80 leading-relaxed whitespace-pre-line max-w-lg mx-auto md:mx-0">
-              {webConfig.subtitulo}
+            <p className="text-xs text-pink-100/80 max-w-lg">
+              Av. Pacífico Mz. B Lt. 12 (Nuevo Chimbote) • Atención de Lunes a Domingo de 3:00 PM a 10:00 PM
             </p>
-
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
-              <a
-                href="#carta"
-                className="px-6 py-3 rounded-full bg-gradient-to-r from-brand-600 via-rose-600 to-pink-600 hover:from-brand-700 hover:to-pink-700 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-brand-700/30 transition-all flex items-center gap-2 active:scale-95"
-              >
-                <span>Explorar Carta Digital</span>
-                <span>🍰</span>
-              </a>
-              <button
-                onClick={handleOpenDirectChat}
-                className="px-5 py-3 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs sm:text-sm transition-all flex items-center gap-2 backdrop-blur-sm"
-              >
-                <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Pedir por WhatsApp</span>
-              </button>
-            </div>
-
-            {/* Badges de Garantía */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-4 text-[11px] text-amber-200/80 border-t border-white/10">
-              <span className="flex items-center gap-1.5">
-                <Award className="w-3.5 h-3.5 text-gold-400" />
-                <span>Insumos Premium</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Heart className="w-3.5 h-3.5 text-rose-400" />
-                <span>Sin Preservantes</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Calidad Garantizada</span>
-              </span>
-            </div>
           </div>
 
-          {/* Banner Fotográfico Protagonista (5 cols) */}
-          <div className="md:col-span-5 flex justify-center">
-            <div className="relative group max-w-xs sm:max-w-sm w-full">
-              <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-rose-500 rounded-3xl blur-lg opacity-30 group-hover:opacity-50 transition duration-500" />
-              <div className="relative rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-[#1a0d07] aspect-square flex items-center justify-center p-3">
-                <img
-                  src={webConfig.imagenUrl}
-                  alt="Postres Dolciangel"
-                  className="w-full h-full object-cover rounded-2xl transform group-hover:scale-105 transition-transform duration-700"
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80';
-                  }}
-                />
-              </div>
-            </div>
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/15 text-xs text-pink-200">
+            <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Delivery & Recojo en tienda disponible</span>
           </div>
         </div>
       </header>
 
-      {/* 4. PRESENTACIÓN DE HORARIOS & SEDES */}
-      <section id="sedes" className="max-w-5xl mx-auto px-4 -mt-8 relative z-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Sede Buenos Aires */}
-          <div className="bg-white rounded-3xl p-5 shadow-xl shadow-pink-950/5 border border-pink-100 flex items-start gap-4 transition-all hover:border-pink-300">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-700 to-rose-600 text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-brand-700/20">
-              ☕
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-brand-700 bg-pink-50 px-2 py-0.5 rounded-full">
-                  Sede Principal & Café
-                </span>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Abierto Hoy
-                </span>
-              </div>
-              <h3 className="font-serif font-bold text-slate-900 text-base mt-1">
-                Buenos Aires (Nuevo Chimbote)
-              </h3>
-              <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1">
-                <MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0" />
-                <span>Av. Pacífico Mz. B Lt. 12 - Nuevo Chimbote</span>
-              </p>
-              <p className="text-xs text-slate-600 flex items-center gap-1.5 mt-1 font-semibold">
-                <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span>Lunes a Domingo: 3:00 PM – 10:00 PM</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Sede Villa España */}
-          <div className="bg-white rounded-3xl p-5 shadow-xl shadow-pink-950/5 border border-pink-100 flex items-start gap-4 transition-all hover:border-pink-300">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-600 to-rose-600 text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-amber-600/20">
-              🏪
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">
-                  Taller & Despacho
-                </span>
-                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                  Chimbote
-                </span>
-              </div>
-              <h3 className="font-serif font-bold text-slate-900 text-base mt-1">
-                Villa España (Chimbote)
-              </h3>
-              <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1">
-                <MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0" />
-                <span>Villa España Mz. A Lt. 8 - Chimbote</span>
-              </p>
-              <p className="text-xs text-slate-600 flex items-center gap-1.5 mt-1 font-semibold">
-                <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span>Lunes a Sábado: 3:30 PM – 9:30 PM</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. CARTA DIGITAL INTERACTIVA */}
-      <section id="carta" className="max-w-5xl mx-auto px-4 mt-12 space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-1.5 bg-brand-50 text-brand-800 px-3 py-1 rounded-full text-xs font-bold border border-brand-200">
-            <span>🍰</span>
-            <span>Vitrina del Día • Buenos Aires</span>
-          </div>
-          <h2 className="font-serif font-bold text-2xl sm:text-3xl text-slate-900">
-            Carta Digital Interactiva
-          </h2>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Elige tus postres favoritos con stock confirmado en vivo y envía tu pedido directo a nuestro WhatsApp.
-          </p>
-        </div>
-
-        {/* Buscador y Filtro de Categorías */}
-        <div className="bg-white rounded-3xl shadow-sm border border-pink-100 p-4 space-y-3">
+      {/* 4. BUSCADOR Y SELECTOR DE CATEGORÍAS */}
+      <section className="max-w-5xl mx-auto px-4 -mt-4 relative z-20 space-y-4">
+        <div className="bg-white rounded-3xl shadow-xl shadow-pink-950/5 border border-pink-100 p-4 space-y-3">
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar cheesecake, torta de chocolate, pie de limón..."
+              placeholder="Buscar cheesecake de maracuyá, torta de chocolate, pie de limón..."
               className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
             />
             {searchTerm && (
@@ -451,8 +316,10 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Grilla de Productos */}
+      {/* 5. GRILLA DE PRODUCTOS DE LA CARTA */}
+      <main className="max-w-5xl mx-auto px-4 mt-8">
         {loading ? (
           <div className="text-center py-16 space-y-3">
             <div className="w-10 h-10 border-4 border-pink-200 border-t-brand-700 rounded-full animate-spin mx-auto" />
@@ -577,7 +444,7 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
             })}
           </div>
         )}
-      </section>
+      </main>
 
       {/* 6. BOTÓN FLOTANTE DIRECTO DE WHATSAPP (Bottom Right) */}
       <button
@@ -591,7 +458,7 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
         </span>
       </button>
 
-      {/* 7. BARRA FIJA INFERIOR DEL CARRITO (Sticky Bar cuando hay items) */}
+      {/* 7. BARRA FIJA INFERIOR DEL CARRITO */}
       {cartItemCount > 0 && (
         <div className="fixed bottom-4 left-4 right-4 max-w-lg mx-auto z-40 animate-slideUp">
           <div className="bg-slate-950/95 backdrop-blur-md text-white p-3.5 rounded-3xl shadow-2xl border border-white/15 flex items-center justify-between gap-3">
@@ -621,7 +488,7 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
         </div>
       )}
 
-      {/* 8. MODAL DE RESUMEN DEL PEDIDO & ENVÍO A WHATSAPP */}
+      {/* 8. MODAL DE RESUMEN DEL PEDIDO */}
       {isCartModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
           <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
@@ -673,7 +540,7 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
                         onClick={() => handleUpdateQuantity(it.product.id, -1)}
                         className="w-6 h-6 rounded bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold"
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3.5 h-3.5" />
                       </button>
                       <span className="w-5 text-center text-xs font-bold">{it.quantity}</span>
                       <button
@@ -681,7 +548,7 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
                         disabled={it.quantity >= maxStock}
                         className="w-6 h-6 rounded bg-pink-100 text-brand-800 disabled:opacity-40 flex items-center justify-center text-xs font-bold"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
@@ -728,27 +595,28 @@ export const PublicCartaView = ({ onGoToAdmin }) => {
         </div>
       )}
 
-      {/* 9. FOOTER CORPORATIVO */}
+      {/* 9. FOOTER DE LA CARTA */}
       <footer className="mt-20 border-t border-pink-100 bg-white py-10 px-4 text-center text-xs text-slate-500 space-y-3">
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-lg">🧁</span>
-          <span className="font-serif font-bold text-slate-900 text-sm">DOLCIANGEL</span>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => onNavigate && onNavigate('landing')}
+            className="font-bold text-brand-700 hover:underline text-xs"
+          >
+            ← Volver a la Portada Principal
+          </button>
         </div>
         <p className="max-w-md mx-auto text-[11px] text-slate-400">
-          Pastelería Fina & Café • Av. Pacífico Mz. B Lt. 12 (Buenos Aires, Nuevo Chimbote) • Villa España (Chimbote)
-        </p>
-        <p className="text-[10px] text-slate-400">
-          © {new Date().getFullYear()} Dolciangel. Todos los derechos reservados.
+          Dolciangel Pastelería Fina & Café • Av. Pacífico Mz. B Lt. 12 (Buenos Aires, Nuevo Chimbote)
         </p>
 
-        {onGoToAdmin && (
+        {onNavigate && (
           <div className="pt-4 border-t border-slate-100 max-w-xs mx-auto">
             <button
-              onClick={onGoToAdmin}
+              onClick={() => onNavigate('core')}
               className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-brand-700 transition-colors py-1 px-3 rounded-full hover:bg-pink-50"
             >
               <Lock className="w-3 h-3" />
-              <span>Acceso Personal / POS (Dolciangel Core)</span>
+              <span>Acceso Colaboradores / POS</span>
             </button>
           </div>
         )}

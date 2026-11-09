@@ -6,6 +6,7 @@ import { LoginModal } from './components/LoginModal';
 import { VentasView } from './components/VentasView';
 import { CartaWebView } from './components/CartaWebView';
 import { PublicCartaView } from './components/PublicCartaView';
+import { LandingPageView } from './components/LandingPageView';
 import { CajaView } from './components/CajaView';
 import { FidelidadView } from './components/FidelidadView';
 import { KardexView } from './components/KardexView';
@@ -16,43 +17,51 @@ import { AdminView } from './components/AdminView';
 import { GestorHeroView } from './components/GestorHeroView';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 
-const checkIsCoreOrAdmin = () => {
-  if (typeof window === 'undefined') return false;
+export const resolveCurrentRoute = () => {
+  if (typeof window === 'undefined') return 'landing';
 
   const hostname = window.location.hostname.toLowerCase();
-  // 1. Detección automática del dominio exclusivo del Core/Admin
+  // 1. Detección automática del host exclusivo del Core/POS
   if (hostname === 'core.dolciangel.com' || hostname.startsWith('core.') || hostname.startsWith('admin.')) {
-    return true;
+    return 'core';
   }
 
   const pathname = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase();
   const search = window.location.search.toLowerCase();
 
-  // 2. Rutas explícitas de administración / POS
+  // 2. Ruta /core o /admin -> Punto de Venta (POS) y panel de gestión protegido por PIN
   if (
-    pathname.startsWith('/admin') ||
     pathname.startsWith('/core') ||
+    pathname.startsWith('/admin') ||
     pathname.startsWith('/pos') ||
     pathname.startsWith('/sistema') ||
-    hash.startsWith('#/admin') ||
     hash.startsWith('#/core') ||
+    hash.startsWith('#/admin') ||
     hash.startsWith('#/pos') ||
-    hash.startsWith('#admin') ||
     hash.startsWith('#core') ||
-    search.includes('route=admin') ||
+    hash.startsWith('#admin') ||
     search.includes('route=core') ||
-    search.includes('admin=true') ||
-    search.includes('core=true')
+    search.includes('route=admin')
   ) {
-    return true;
+    return 'core';
   }
 
-  // 3. La raíz '/' o '/carta' es por defecto la vista pública de cara al cliente
-  return false;
+  // 3. Ruta /carta -> Carta digital pública para clientes
+  if (
+    pathname.startsWith('/carta') ||
+    hash.startsWith('#/carta') ||
+    hash.startsWith('#carta') ||
+    search.includes('route=carta')
+  ) {
+    return 'carta';
+  }
+
+  // 4. Ruta '/' por defecto -> Landing page pública de presentación
+  return 'landing';
 };
 
-const MainLayout = ({ onGoToPublic }) => {
+const MainLayout = ({ onNavigate }) => {
   const { 
     sede, 
     perfil, 
@@ -77,22 +86,41 @@ const MainLayout = ({ onGoToPublic }) => {
     }
   }, [productos.length]);
 
-  const isAuthModalOpen = (!sede || !perfil) || isSwitchModalOpen;
+  // SEGURIDAD: Si no está autenticado, bloqueo estricto con pantalla de PIN antes de mostrar POS o inventario
+  if (!sede || !perfil) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
+        <LoginModal 
+          isOpen={true} 
+          onClose={() => {}}
+          canClose={false}
+        />
+        <div className="fixed bottom-6 z-50 text-center">
+          <button
+            onClick={() => onNavigate && onNavigate('landing')}
+            className="text-xs text-slate-400 hover:text-white underline font-semibold transition-colors"
+          >
+            ← Volver a la página web pública
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-brand-500 selection:text-white">
-      {/* Modal de Inicio / Cambio de Sede y Perfil */}
+      {/* Modal de Cambio de Sede y Perfil cuando ya está autenticado */}
       <LoginModal 
-        isOpen={isAuthModalOpen} 
+        isOpen={isSwitchModalOpen} 
         onClose={() => setIsSwitchModalOpen(false)}
-        canClose={Boolean(sede && perfil)}
+        canClose={true}
       />
 
       {/* Cabecera Principal */}
       <Header 
         onOpenCart={() => setIsCartOpen(true)}
         onOpenSwitchModal={() => setIsSwitchModalOpen(true)}
-        onGoToPublic={onGoToPublic}
+        onGoToPublic={() => onNavigate && onNavigate('landing')}
       />
 
       {/* Contenido Dinámico de la Pestaña Activa */}
@@ -146,12 +174,12 @@ const MainLayout = ({ onGoToPublic }) => {
 };
 
 export default function App() {
-  const [isCoreMode, setIsCoreMode] = useState(checkIsCoreOrAdmin);
+  const [currentRoute, setCurrentRoute] = useState(resolveCurrentRoute);
 
-  // Escuchar cambios de URL, historial o hash en el navegador
+  // Escuchar cambios de URL (popstate del historial y hashchange)
   useEffect(() => {
     const handleLocationChange = () => {
-      setIsCoreMode(checkIsCoreOrAdmin());
+      setCurrentRoute(resolveCurrentRoute());
     };
 
     window.addEventListener('popstate', handleLocationChange);
@@ -163,30 +191,39 @@ export default function App() {
     };
   }, []);
 
-  const handleGoToAdmin = () => {
-    window.location.hash = '/admin';
-    setIsCoreMode(true);
-  };
-
-  const handleGoToPublic = () => {
-    window.location.hash = '';
-    try {
-      window.history.pushState({}, '', '/');
-    } catch (e) {
-      // Ignorar si el navegador restringe pushState
+  const handleNavigate = (route) => {
+    let targetPath = '/';
+    if (route === 'carta') {
+      targetPath = '/carta';
+    } else if (route === 'core' || route === 'admin') {
+      targetPath = '/core';
+    } else {
+      targetPath = '/';
     }
-    setIsCoreMode(false);
+
+    try {
+      window.history.pushState({}, '', targetPath);
+    } catch (e) {
+      window.location.hash = targetPath;
+    }
+    setCurrentRoute(route);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Si no está en modo Core/Admin, muestra la web pública de clientes (/) sin login ni PIN
-  if (!isCoreMode) {
-    return <PublicCartaView onGoToAdmin={handleGoToAdmin} />;
+  // 1. RUTA /carta: Carta digital interactiva para clientes (Sin PIN)
+  if (currentRoute === 'carta') {
+    return <PublicCartaView onNavigate={handleNavigate} />;
   }
 
-  // Si está en /admin, /core o core.dolciangel.com, carga el POS/Admin protegido por PIN
-  return (
-    <AppProvider>
-      <MainLayout onGoToPublic={handleGoToPublic} />
-    </AppProvider>
-  );
+  // 2. RUTA /core (o /admin): Punto de Venta y Gestión protegido por PIN de colaborador
+  if (currentRoute === 'core') {
+    return (
+      <AppProvider>
+        <MainLayout onNavigate={handleNavigate} />
+      </AppProvider>
+    );
+  }
+
+  // 3. RUTA /: Landing page pública de presentación (Hero, marca, locales en Nuevo Chimbote y Chimbote) (Sin PIN)
+  return <LandingPageView onNavigate={handleNavigate} />;
 }
