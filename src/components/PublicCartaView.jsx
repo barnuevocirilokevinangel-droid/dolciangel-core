@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { db, collections, onSnapshot, doc, setDoc, serverTimestamp } from '../services/firebase';
-import { getProductPrice, getProductStock, extractCategories } from '../services/productUtils';
+import { getProductPrice, getProductStock, extractCategories, getCategoryIcon } from '../services/productUtils';
 import { LegalModals } from './LegalModals';
 import { 
   Sparkles, 
@@ -103,15 +103,30 @@ const HERO_DESSERTS = [
 
 export function resolveProductImg(p) {
   if (!p) return null;
+  // 1. Prioridad: URLs reales de imagen subidas a Cloudinary, Firebase Storage, etc.
+  if (p.foto_url && typeof p.foto_url === 'string' && p.foto_url.trim().length > 5) return p.foto_url.trim();
+  if (p.fotoUrl && typeof p.fotoUrl === 'string' && p.fotoUrl.trim().length > 5) return p.fotoUrl.trim();
   if (p.imagenUrl && typeof p.imagenUrl === 'string' && p.imagenUrl.trim().length > 5) return p.imagenUrl.trim();
+  if (p.imagen_url && typeof p.imagen_url === 'string' && p.imagen_url.trim().length > 5) return p.imagen_url.trim();
   if (p.imagen && typeof p.imagen === 'string' && p.imagen.trim().length > 5) return p.imagen.trim();
   if (p.foto && typeof p.foto === 'string' && p.foto.trim().length > 5) return p.foto.trim();
   if (p.img && typeof p.img === 'string' && p.img.trim().length > 5) return p.img.trim();
   
+  // 2. Si es café, infusión o bebida sin foto, NO asociar fotos de pasteles (ej. Café Mocca)
+  const cat = String(p.categoria || '').toLowerCase();
+  if (cat.includes('cafe') || cat.includes('café') || cat.includes('infusion') || cat.includes('infusión') || cat.includes('jugo') || cat.includes('bebida') || cat.includes('salado') || cat.includes('bocado') || cat.includes('sandwich')) {
+    return null;
+  }
+
   const n = String(p.nombre || '').toLowerCase();
-  if (n.includes('maracuy') || n.includes('passion') || n.includes('cheesecake')) return '/assets/hero/cheesecake-maracuya.png';
-  if (n.includes('chocolate') || n.includes('moca') || n.includes('selva') || n.includes('cacao') || n.includes('fudge') || n.includes('trufa')) return '/assets/hero/torta-chocolate.png';
-  if (n.includes('velvet') || n.includes('fresa') || n.includes('arándano') || n.includes('arandano') || n.includes('lúcuma') || n.includes('lucuma') || n.includes('berries') || n.includes('frutos rojos')) return '/assets/hero/red-velvet.png';
+  if (n.includes('cafe') || n.includes('café') || n.includes('cappuccino') || n.includes('espresso') || n.includes('latte') || n.includes('americano') || n.includes('mocca') || n.includes('moka')) {
+    return null;
+  }
+
+  // 3. Ilustraciones de alta fidelidad solo para postres emblemáticos si no tienen foto propia
+  if (n.includes('maracuy') || n.includes('cheesecake de maracuya')) return '/assets/hero/cheesecake-maracuya.png';
+  if ((n.includes('chocolate') || n.includes('suprema') || n.includes('selva negra') || n.includes('fudge')) && (cat.includes('torta') || cat.includes('pastel'))) return '/assets/hero/torta-chocolate.png';
+  if (n.includes('red velvet') || n.includes('velvet')) return '/assets/hero/red-velvet.png';
   
   return null;
 }
@@ -156,6 +171,9 @@ export const PublicCartaView = ({ onNavigate }) => {
   const [isLibroOpen, setIsLibroOpen] = useState(false);
   const [isTerminosOpen, setIsTerminosOpen] = useState(false);
   const [isPrivacidadOpen, setIsPrivacidadOpen] = useState(false);
+
+  // Control de errores de carga de imágenes para fallback automático
+  const [imgErrors, setImgErrors] = useState({});
 
   // Toast flotante
   const [toast, setToast] = useState(null);
@@ -910,15 +928,18 @@ export const PublicCartaView = ({ onNavigate }) => {
                         type="button" 
                         onClick={() => setSelectedProductModal(dolciSelectionProducts[0])}
                       >
-                        <span className="dolci-selection-card__media" aria-hidden="true">
-                          {resolveProductImg(dolciSelectionProducts[0]) ? (
+                        <span className="dolci-selection-card__media bg-[#FDFBF7]" aria-hidden="true">
+                          {resolveProductImg(dolciSelectionProducts[0]) && !imgErrors[dolciSelectionProducts[0].id] ? (
                             <img 
-                              className="dolci-selection-card__image is-loaded" 
+                              className="dolci-selection-card__image is-loaded object-contain w-full h-full p-2" 
                               src={resolveProductImg(dolciSelectionProducts[0])} 
                               alt={dolciSelectionProducts[0].nombre} 
+                              onError={() => setImgErrors(prev => ({ ...prev, [dolciSelectionProducts[0].id]: true }))}
                             />
                           ) : (
-                            <span className="dolci-selection-card__emoji">🧁</span>
+                            <span className="dolci-selection-card__emoji text-4xl">
+                              {getCategoryIcon(dolciSelectionProducts[0].categoria) || '🧁'}
+                            </span>
                           )}
                         </span>
                         <span className="dolci-selection-card__content">
@@ -945,11 +966,18 @@ export const PublicCartaView = ({ onNavigate }) => {
                         type="button"
                         onClick={() => setSelectedProductModal(prod)}
                       >
-                        <span className="dolci-selection-mini__media" aria-hidden="true">
-                          {resolveProductImg(prod) ? (
-                            <img className="dolci-selection-mini__image is-loaded" src={resolveProductImg(prod)} alt={prod.nombre} />
+                        <span className="dolci-selection-mini__media bg-[#FDFBF7]" aria-hidden="true">
+                          {resolveProductImg(prod) && !imgErrors[prod.id] ? (
+                            <img 
+                              className="dolci-selection-mini__image is-loaded object-contain w-full h-full p-1" 
+                              src={resolveProductImg(prod)} 
+                              alt={prod.nombre} 
+                              onError={() => setImgErrors(prev => ({ ...prev, [prod.id]: true }))}
+                            />
                           ) : (
-                            <span className="dolci-selection-mini__emoji">🍰</span>
+                            <span className="dolci-selection-mini__emoji text-2xl">
+                              {getCategoryIcon(prod.categoria) || '🍰'}
+                            </span>
                           )}
                         </span>
                         <span className="dolci-selection-mini__info">
@@ -1038,74 +1066,88 @@ export const PublicCartaView = ({ onNavigate }) => {
                   const price = getProductPrice(p, 'BA');
                   const isAgotado = !p.esPedidoGrande && stockBA <= 0;
                   const isUltimas = !p.esPedidoGrande && stockBA > 0 && stockBA <= 3;
-                  const resolvedImg = resolveProductImg(p);
+                  const resolvedImg = !imgErrors[p.id] ? resolveProductImg(p) : null;
+                  const categoryIcon = getCategoryIcon(p.categoria);
 
                   return (
                     <div 
                       key={p.id} 
-                      className="c-wrap" 
+                      className="c-wrap h-full flex flex-col" 
                       style={{ animationDelay: `${Math.min(i * 0.04, 0.32)}s` }}
                     >
                       <div 
-                        className={`card card-luxury-hover cursor-pointer ${isAgotado ? 'opacity-75' : ''}`}
+                        className={`card card-luxury-hover cursor-pointer h-full flex flex-col justify-between bg-white rounded-2xl border border-amber-900/15 overflow-hidden shadow-xs hover:shadow-lg transition-all ${
+                          isAgotado ? 'opacity-75' : ''
+                        }`}
                         onClick={() => setSelectedProductModal(p)}
                       >
-                        {/* Imagen del Producto */}
-                        <div className="card__img relative">
-                          <div className="card__img-bg" style={{ background: 'linear-gradient(145deg,#F3E9DD 0%,#E8D9C7 100%)' }}></div>
-                          
-                          {resolvedImg ? (
-                            <img 
-                              className="card__img-real is-loaded" 
-                              src={resolvedImg} 
-                              alt={p.nombre} 
-                              loading="lazy" 
-                            />
-                          ) : (
-                            <div className="card__img-placeholder" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 2, background: 'linear-gradient(145deg,#F5ECE2 0%,#EBDDD0 100%)' }}>
-                              <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'rgba(255,252,248,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(90,50,31,0.1)', border: '1px solid rgba(198,162,114,0.35)' }}>
-                                <span style={{ fontSize: '24px', lineHeight: 1 }}>🧁</span>
-                              </div>
-                              <span style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '12px', fontWeight: 600, color: '#5A3825', marginTop: '8px', letterSpacing: '0.03em' }}>
-                                Dolciangel
-                              </span>
-                            </div>
-                          )}
-
-                          <div className="card__img-fade"></div>
-
-                          {/* Badges de Stock */}
-                          <div className="card__tags">
-                            {isAgotado ? (
-                              <span className="card__tag" style={{ background: '#FEE2E2', color: '#991B1B', borderColor: '#F87171' }}>
-                                🛑 Agotado hoy en vitrina
-                              </span>
-                            ) : isUltimas ? (
-                              <span className="card__tag" style={{ background: '#FEF3C7', color: '#92400E', borderColor: '#FCD34D' }}>
-                                ⚡ ¡Últimas {stockBA} porciones!
-                              </span>
-                            ) : !p.esPedidoGrande ? (
-                              <span className="card__tag">
-                                ✨ En Vitrina ({stockBA})
-                              </span>
+                        {/* 1. Contenedor Superior: Imagen / Fallback con aspecto consistente 4:3 y fondo neutro suave */}
+                        <div className="w-full">
+                          <div className="card__img relative w-full aspect-[4/3] bg-[#FDFBF7] overflow-hidden flex items-center justify-center p-2 rounded-t-2xl">
+                            {resolvedImg ? (
+                              <img 
+                                className="card__img-real is-loaded w-full h-full object-contain p-2 transition-transform duration-300 hover:scale-105 select-none" 
+                                src={resolvedImg} 
+                                alt={p.nombre} 
+                                loading="lazy"
+                                onError={() => setImgErrors(prev => ({ ...prev, [p.id]: true }))}
+                              />
                             ) : (
-                              <span className="card__tag" style={{ background: '#E0F2FE', color: '#0369A1' }}>
-                                🎂 A Pedido
-                              </span>
+                              /* 2. Fallback Estilizado para productos sin foto (ej. Café Mocca) */
+                              <div className="card__img-fallback w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-[#FFFDF9] via-[#FDFBF7] to-[#F5ECE0] rounded-xl select-none">
+                                <span className="text-4xl sm:text-5xl select-none filter drop-shadow-xs transition-transform duration-300 hover:scale-110">
+                                  {categoryIcon || '🧁'}
+                                </span>
+                                <span className="font-serif font-bold text-xs sm:text-sm text-[#4A2D19] mt-2 line-clamp-2 max-w-[90%] text-center leading-snug">
+                                  {p.nombre}
+                                </span>
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800/60 mt-1">
+                                  {p.categoria || 'Dolciangel'}
+                                </span>
+                              </div>
                             )}
+
+                            {/* Badges de Stock */}
+                            <div className="card__tags pointer-events-none">
+                              {isAgotado ? (
+                                <span className="card__tag" style={{ background: '#FEE2E2', color: '#991B1B', borderColor: '#F87171' }}>
+                                  🛑 Agotado hoy en vitrina
+                                </span>
+                              ) : isUltimas ? (
+                                <span className="card__tag" style={{ background: '#FEF3C7', color: '#92400E', borderColor: '#FCD34D' }}>
+                                  ⚡ ¡Últimas {stockBA} porciones!
+                                </span>
+                              ) : !p.esPedidoGrande ? (
+                                <span className="card__tag">
+                                  ✨ En Vitrina ({stockBA})
+                                </span>
+                              ) : (
+                                <span className="card__tag" style={{ background: '#E0F2FE', color: '#0369A1' }}>
+                                  🎂 A Pedido
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        {/* Cuerpo de la Tarjeta */}
-                        <div className="card__body">
-                          <div className="card__name">{p.nombre}</div>
-                          <div className="card__desc">
-                            {p.descripcion || 'Horneado artesanal con ingredientes de primera calidad.'}
+                        {/* 3. Cuerpo de la Tarjeta: Alineación vertical perfecta (flex-1 flex flex-col justify-between) */}
+                        <div className="card__body flex-1 flex flex-col justify-between p-3.5 sm:p-4">
+                          {/* Título y descripción arriba */}
+                          <div>
+                            <div className="card__name font-serif font-bold text-base sm:text-lg text-[#1C0C04] line-clamp-2 leading-snug">
+                              {p.nombre}
+                            </div>
+                            <div className="card__desc text-xs text-[#5B3920]/80 line-clamp-2 mt-1">
+                              {p.descripcion || 'Horneado artesanal con ingredientes de primera calidad.'}
+                            </div>
                           </div>
 
-                          <div className="card__foot">
-                            <span className="card__price">S/ {price.toFixed(2)}</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {/* Precio, botón + Añadir y enlace Ver anclados en la parte inferior */}
+                          <div className="card__foot pt-3 mt-3 border-t border-amber-900/10 flex items-center justify-between gap-2">
+                            <span className="card__price font-serif text-lg font-black text-[#1C0C04] tracking-tight">
+                              S/ {price.toFixed(2)}
+                            </span>
+                            <div className="flex items-center gap-2">
                               <button 
                                 className={`btn-card-add ${isAgotado ? 'opacity-40 pointer-events-none' : ''}`}
                                 type="button" 
@@ -1118,7 +1160,9 @@ export const PublicCartaView = ({ onNavigate }) => {
                               >
                                 {isAgotado ? 'Agotado' : '+ Añadir'}
                               </button>
-                              <span className="card__pedir">Ver →</span>
+                              <span className="card__pedir text-xs font-semibold text-amber-900/70 hover:text-amber-950 transition-colors">
+                                Ver →
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1151,15 +1195,26 @@ export const PublicCartaView = ({ onNavigate }) => {
               </svg>
             </button>
 
-            <div className="pmodal__img relative">
-              {resolveProductImg(selectedProductModal) ? (
+            <div className="pmodal__img relative aspect-[4/3] bg-[#FDFBF7] flex items-center justify-center p-3 rounded-2xl overflow-hidden">
+              {resolveProductImg(selectedProductModal) && !imgErrors[selectedProductModal.id] ? (
                 <img 
-                  className="pmodal__img-real is-loaded" 
+                  className="pmodal__img-real is-loaded w-full h-full object-contain p-2" 
                   src={resolveProductImg(selectedProductModal)} 
                   alt={selectedProductModal.nombre} 
+                  onError={() => setImgErrors(prev => ({ ...prev, [selectedProductModal.id]: true }))}
                 />
               ) : (
-                <span className="pmodal__emoji" aria-hidden="true">🧁</span>
+                <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-[#FFF9F2] via-[#FDFBF7] to-[#F5ECE0] rounded-xl">
+                  <span className="text-5xl select-none filter drop-shadow-xs">
+                    {getCategoryIcon(selectedProductModal.categoria) || '🧁'}
+                  </span>
+                  <span className="font-serif font-bold text-sm text-[#4A2D19] mt-2 text-center line-clamp-2">
+                    {selectedProductModal.nombre}
+                  </span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800/60 mt-0.5">
+                    {selectedProductModal.categoria || 'Dolciangel'}
+                  </span>
+                </div>
               )}
             </div>
 

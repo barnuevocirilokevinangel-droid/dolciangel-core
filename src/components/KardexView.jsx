@@ -651,10 +651,10 @@ export const KardexView = () => {
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200 shadow-sm">
                                 <ProductImage 
-                                  src={prod.imagen || prod.foto} 
+                                  src={prod.foto_url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.imagen || prod.foto || prod.img} 
                                   alt={prod.nombre} 
                                   categoria={prod.categoria} 
-                                  className="w-full h-full object-cover" 
+                                  objectFit="object-contain p-1"
                                 />
                               </div>
                               <div>
@@ -911,10 +911,10 @@ export const KardexView = () => {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200 shadow-sm">
                   <ProductImage 
-                    src={editingStockProd.imagen || editingStockProd.foto} 
+                    src={editingStockProd.foto_url || editingStockProd.fotoUrl || editingStockProd.imagenUrl || editingStockProd.imagen_url || editingStockProd.imagen || editingStockProd.foto || editingStockProd.img} 
                     alt={editingStockProd.nombre} 
                     categoria={editingStockProd.categoria} 
-                    className="w-full h-full object-cover" 
+                    objectFit="object-contain p-1"
                   />
                 </div>
                 <div>

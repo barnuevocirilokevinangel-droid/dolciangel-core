@@ -326,14 +326,15 @@ export const CartaWebView = () => {
                   }`}
                 >
                   <div>
-                    {/* Contenedor de Imagen (rounded-2xl, h-40 o aspect-square) con Skeleton Loading */}
-                    <div className="w-full h-40 sm:aspect-square rounded-2xl overflow-hidden mb-2.5 relative bg-slate-50 shadow-inner">
+                    {/* Contenedor de Imagen (rounded-2xl, aspect-[4/3]) con Skeleton Loading y fondo neutro */}
+                    <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden mb-2.5 relative bg-[#FDFBF7] border border-amber-900/10 shadow-inner flex items-center justify-center">
                       <ProductImage
-                        src={prod.imagenUrl || prod.imagen || prod.img}
+                        src={prod.foto_url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.imagen || prod.foto || prod.img}
                         alt={prod.nombre}
                         categoria={prod.categoria}
-                        aspectRatio="h-40 sm:aspect-square"
+                        aspectRatio="aspect-[4/3]"
                         rounded="rounded-2xl"
+                        objectFit="object-contain p-2 hover:scale-105 transition-transform duration-300"
                       />
 
                       {/* Badges Flotantes sobre la Imagen */}
@@ -512,10 +513,11 @@ export const CartaWebView = () => {
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0 shadow-inner bg-slate-50 border border-pink-100/60">
                               <ProductImage
-                                src={prod.imagenUrl || prod.imagen || prod.img}
+                                src={prod.foto_url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.imagen || prod.foto || prod.img}
                                 alt={prod.nombre}
                                 categoria={prod.categoria}
                                 rounded="rounded-2xl"
+                                objectFit="object-contain p-1"
                               />
                             </div>
                             <div>

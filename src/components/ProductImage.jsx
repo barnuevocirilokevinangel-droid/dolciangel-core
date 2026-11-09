@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Cake, Sparkles, AlertCircle } from 'lucide-react';
+import { getCategoryIcon } from '../services/productUtils';
 
 /**
  * ProductImage Component
  * 
  * Implementa Skeleton Loading profesional con Tailwind CSS:
- * - Contenedor con animate-pulse en tonos pasteles suaves (#FDF2F8 / #FCE7F3) mientras la imagen descarga.
+ * - Contenedor con animate-pulse en tonos pasteles suaves mientras la imagen descarga.
  * - loading="lazy" para optimizar ancho de banda móvil y cargar solo fotos visibles en viewport.
  * - Transición de opacidad suave (transition-opacity duration-300) al dispararse onLoad.
- * - Placeholder elegante de Dolciangel con ícono de postre estilizado si la imagen falla (onError) o es inválida.
- * - Respeta los contenedores de las tarjetas (rounded-2xl, aspect-square, h-40).
+ * - Placeholder editorial boutique si la imagen falla (onError) o es inválida (emoji grande, fondo crema, serif).
+ * - Respeta los contenedores de las tarjetas (rounded-2xl, aspect-[4/3], aspect-square).
  */
 export const ProductImage = ({
   src,
@@ -18,9 +19,9 @@ export const ProductImage = ({
   categoria,
   className = '',
   containerClassName = '',
-  aspectRatio = '', // e.g. 'aspect-square', 'h-40', etc.
+  aspectRatio = '', // e.g. 'aspect-[4/3]', 'aspect-square', etc.
   rounded = 'rounded-2xl',
-  objectFit = 'object-cover'
+  objectFit = 'object-contain'
 }) => {
   const [imageStatus, setImageStatus] = useState('loading'); // 'loading' | 'loaded' | 'error'
 
@@ -71,28 +72,24 @@ export const ProductImage = ({
         />
       )}
 
-      {/* 3. PLACEHOLDER ELEGANTE DE DOLCIANGEL (OnError o Sin Imagen) */}
+      {/* 3. PLACEHOLDER EDITORIAL DE DOLCIANGEL (OnError o Sin Imagen) */}
       {(!hasValidSrc || imageStatus === 'error') && (
         <div 
-          className={`w-full h-full flex flex-col items-center justify-center p-3 text-center bg-gradient-to-br from-[#FFF5F7] via-[#FDF2F8] to-[#FEF3C7]/40 border border-pink-100/80 transition-all ${className}`}
+          className={`w-full h-full flex flex-col items-center justify-center p-3 text-center bg-gradient-to-br from-[#FFFDF9] via-[#FDFBF7] to-[#F5ECE0] border border-amber-900/10 transition-all ${className}`}
         >
-          {/* Emblema central de postre estilizado */}
-          <div className="relative group">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-pink-200/70 flex items-center justify-center text-brand-700 transition-transform group-hover:scale-105">
-              <Cake className="w-6 h-6 text-brand-600 stroke-[1.8]" />
-            </div>
-            {/* Destello dorado */}
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-gold-400 to-amber-400 text-slate-950 flex items-center justify-center shadow-xs">
-              <Sparkles className="w-3 h-3 text-amber-950" />
-            </div>
+          {/* Emoji de categoría grande */}
+          <div className="relative group mb-1">
+            <span className="text-3xl sm:text-4xl select-none filter drop-shadow-xs transition-transform group-hover:scale-110">
+              {fallbackIcon || getCategoryIcon(categoria) || '🧁'}
+            </span>
           </div>
 
-          {/* Nombre / Marca sutil */}
-          <span className="font-serif font-bold text-[11px] text-slate-700 mt-2 line-clamp-1">
+          {/* Nombre / Marca en serif bold */}
+          <span className="font-serif font-bold text-xs sm:text-sm text-[#4A2D19] mt-1 line-clamp-1 max-w-[90%]">
             {alt || 'Dolciangel'}
           </span>
           {categoria && (
-            <span className="text-[9px] uppercase tracking-wider font-extrabold text-pink-600/80 bg-pink-100/60 px-2 py-0.5 rounded-full mt-0.5">
+            <span className="text-[9px] uppercase tracking-wider font-extrabold text-amber-800/80 bg-amber-100/60 px-2 py-0.5 rounded-full mt-0.5">
               {categoria}
             </span>
           )}

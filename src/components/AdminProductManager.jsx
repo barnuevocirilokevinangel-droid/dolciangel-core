@@ -409,10 +409,11 @@ export const AdminProductManager = () => {
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0 shadow-inner bg-slate-50 border border-pink-100/60">
                             <ProductImage
-                              src={p.imagenUrl || p.imagen || p.img}
+                              src={p.foto_url || p.fotoUrl || p.imagenUrl || p.imagen_url || p.imagen || p.foto || p.img}
                               alt={p.nombre}
                               categoria={p.categoria}
                               rounded="rounded-2xl"
+                              objectFit="object-contain p-1"
                             />
                           </div>
                           <div>

@@ -862,8 +862,8 @@ section, footer { scroll-margin-top: var(--nav-h); }
 .card:active { transform: scale(0.97); box-shadow: var(--shadow-card); transition-duration: 0.12s; }
 
 .card__img {
-  position: relative; aspect-ratio: 1; overflow: hidden; flex-shrink: 0;
-  background: var(--card-h);
+  position: relative; aspect-ratio: 4/3; overflow: hidden; flex-shrink: 0;
+  background: #FDFBF7;
 }
 .card__img-bg {
   position: absolute; inset: 0;
@@ -911,8 +911,9 @@ section, footer { scroll-margin-top: var(--nav-h); }
    el placeholder de abajo queda visible sin que se note el hueco. */
 .card__img-real {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; z-index: 2;
-  opacity: 0; transition: opacity 0.45s ease;
+  object-fit: contain; z-index: 2;
+  padding: 8px;
+  opacity: 0; transition: opacity 0.45s ease, transform 0.3s ease;
 }
 .card__img-real.is-loaded { opacity: 1; }
 
@@ -3620,16 +3621,24 @@ body:has(.hero-boutique) .nav__wa:hover,
   align-items: stretch;
 }
 
-.carta-page #productsGrid .c-wrap { height: 100%; }
+.carta-page #productsGrid .c-wrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
 .carta-page #productsGrid .card {
-  height: 550px;
-  padding: 15px;
+  height: 100% !important;
+  min-height: 440px;
+  padding: 14px;
   overflow: hidden;
-  border: 1px solid rgba(91, 57, 32, 0.105);
-  border-radius: 26px;
-  background: rgba(255, 251, 242, 0.86);
-  box-shadow: 0 12px 34px rgba(55, 28, 12, 0.065), 0 2px 7px rgba(55, 28, 12, 0.035);
+  border: 1px solid rgba(91, 57, 32, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 252, 247, 0.95);
+  box-shadow: 0 10px 30px rgba(55, 28, 12, 0.05);
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
   transition:
     transform 280ms cubic-bezier(.22, .61, .36, 1),
     box-shadow 280ms cubic-bezier(.22, .61, .36, 1),
@@ -3640,8 +3649,8 @@ body:has(.hero-boutique) .nav__wa:hover,
 .carta-page #productsGrid .card:hover {
   transform: translateY(-6px);
   border-color: rgba(145, 105, 48, 0.2);
-  background: rgba(255, 252, 245, 0.96);
-  box-shadow: 0 24px 54px rgba(55, 28, 12, 0.105), 0 4px 12px rgba(55, 28, 12, 0.045);
+  background: rgba(255, 252, 245, 0.98);
+  box-shadow: 0 20px 48px rgba(55, 28, 12, 0.09), 0 4px 12px rgba(55, 28, 12, 0.045);
 }
 
 .carta-page #productsGrid .card:active {
@@ -3651,12 +3660,30 @@ body:has(.hero-boutique) .nav__wa:hover,
 }
 
 .carta-page #productsGrid .card__img {
-  height: 62%;
-  min-height: 0;
-  aspect-ratio: auto;
-  overflow: hidden;
-  border-radius: 17px;
-  background: #eee3cf;
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 4 / 3 !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+  background: #FDFBF7 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+}
+
+.carta-page #productsGrid .card__img-real {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  padding: 8px !important;
+  transition: transform 280ms cubic-bezier(.22, .61, .36, 1) !important;
+}
+
+.carta-page #productsGrid .card:hover .card__img-real {
+  transform: scale(1.05) !important;
 }
 
 .carta-page #productsGrid .card__img::before {
@@ -3802,7 +3829,9 @@ body:has(.hero-boutique) .nav__wa:hover,
 }
 
 .carta-page #productsGrid .card__pedir {
-  gap: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 0 1px;
   border: 0;
   border-bottom: 1px solid rgba(31,107,74,.24);
@@ -3810,7 +3839,7 @@ body:has(.hero-boutique) .nav__wa:hover,
   background: transparent;
   box-shadow: none;
   color: var(--green);
-  font-size: 0;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: .01em;
@@ -3818,14 +3847,11 @@ body:has(.hero-boutique) .nav__wa:hover,
 }
 
 .carta-page #productsGrid .card__pedir::before {
-  content: 'Ver producto';
-  font-size: 11px;
+  display: none;
 }
 
 .carta-page #productsGrid .card__pedir::after {
-  content: '\2192';
-  font-size: 13px;
-  transition: transform 270ms cubic-bezier(.22,.61,.36,1);
+  display: none;
 }
 
 .carta-page #productsGrid .card__pedir:hover {
@@ -3835,20 +3861,22 @@ body:has(.hero-boutique) .nav__wa:hover,
   transform: translateX(2px);
 }
 
-.carta-page #productsGrid .card:hover .card__pedir::after { transform: translateX(2px); }
-
 @media (min-width: 640px) {
   .carta-page #productsGrid.products {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 26px 22px;
   }
   .carta-page #productsGrid .card {
-    height: 590px;
+    height: 100% !important;
+    min-height: 460px;
     padding: 16px;
     border-radius: 28px;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
   }
-  .carta-page #productsGrid .card__img { border-radius: 18px; }
-  .carta-page #productsGrid .card__body { padding: 24px 10px 9px; }
+  .carta-page #productsGrid .card__img { border-radius: 18px; aspect-ratio: 4 / 3 !important; }
+  .carta-page #productsGrid .card__body { padding: 20px 10px 9px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
   .carta-page #productsGrid .card__name { font-size: clamp(21px, 3.1vw, 25px); }
 }
 
@@ -3858,23 +3886,31 @@ body:has(.hero-boutique) .nav__wa:hover,
     gap: 32px 26px;
   }
   .carta-page #productsGrid .card {
-    height: 620px;
+    height: 100% !important;
+    min-height: 480px;
     padding: 17px;
     border-radius: 30px;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
   }
-  .carta-page #productsGrid .card__img { border-radius: 20px; }
-  .carta-page #productsGrid .card__body { padding: 27px 11px 10px; }
+  .carta-page #productsGrid .card__img { border-radius: 20px; aspect-ratio: 4 / 3 !important; }
+  .carta-page #productsGrid .card__body { padding: 22px 11px 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
   .carta-page #productsGrid .card__name { font-size: 25px; }
   .carta-page #productsGrid .card__desc { font-size: 12.5px; }
 }
 
 @media (max-width: 380px) {
   .carta-page #productsGrid .card {
-    height: 526px;
+    height: 100% !important;
+    min-height: 430px;
     padding: 13px;
     border-radius: 23px;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
   }
-  .carta-page #productsGrid .card__body { padding: 19px 7px 7px; }
+  .carta-page #productsGrid .card__body { padding: 16px 7px 7px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
   .carta-page #productsGrid .card__name { font-size: 20px; }
   .carta-page #productsGrid .card__price { font-size: 20px; }
 }
@@ -3995,18 +4031,27 @@ body:has(.hero-boutique) .nav__wa:hover,
     gap: 24px 20px;
   }
   .carta-page #productsGrid .card {
-    height: 460px;
+    height: 100% !important;
+    min-height: 440px;
     padding: 14px;
     border-radius: 22px;
     border: 1px solid #DFD2BE;
     background: #FBF8F3;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
   }
   .carta-page #productsGrid .card__img {
-    height: 220px;
+    height: auto !important;
+    aspect-ratio: 4 / 3 !important;
     border-radius: 14px;
   }
   .carta-page #productsGrid .card__body {
     padding: 16px 6px 6px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
   .carta-page #productsGrid .card__name {
     font-size: 20px;
