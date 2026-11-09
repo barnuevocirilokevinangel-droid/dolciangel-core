@@ -66,16 +66,19 @@ export const TicketPrint = ({ venta, id = "ticket-print-root", className = "" })
           DOLCIANGEL
         </h1>
         <p className="text-[10px] uppercase font-bold tracking-wider">
-          Pastelería Fina & Café
+          PASTELERÍA FINA & CAFÉ
         </p>
-        <p className="text-[10px] font-bold mt-1">
-          RUC: {NUBEFACT_CONFIG.EMPRESA_RUC}
+        <p className="text-[9px] uppercase font-semibold text-gray-800">
+          De: {sedeInfo.razonSocial || NUBEFACT_CONFIG.EMPRESA_RAZON_SOCIAL || 'RUTH PATRICIA CIRILO JARA'}
+        </p>
+        <p className="text-[10px] font-black mt-0.5">
+          RUC: {sedeInfo.ruc || NUBEFACT_CONFIG.EMPRESA_RUC || '10427321351'}
         </p>
         <p className="text-[10px]">
           Sede: {sedeInfo.nombre} - {sedeInfo.ciudad}
         </p>
         <p className="text-[9px] text-gray-700">
-          {NUBEFACT_CONFIG.EMPRESA_DIRECCION}
+          {sedeInfo.direccion || NUBEFACT_CONFIG.EMPRESA_DIRECCION}
         </p>
       </div>
 

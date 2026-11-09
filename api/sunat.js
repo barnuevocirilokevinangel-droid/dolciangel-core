@@ -69,7 +69,7 @@ export default async function handler(req, res) {
         links: {
           pdf: null
         },
-        cadena_para_codigo_qr: `${serie}|${numero}|${payload.total_igv || 0}|${payload.total || 0}`,
+        cadena_para_codigo_qr: `10427321351|${payload.tipo_de_comprobante || (esFactura ? '01' : '03')}|${serie}|${numero}|${payload.total_igv || 0}|${payload.total || 0}`,
         mensaje: "Comprobante generado y registrado en modo contingencia SUNAT"
       },
       message: "Comprobante emitido con éxito en SUNAT"

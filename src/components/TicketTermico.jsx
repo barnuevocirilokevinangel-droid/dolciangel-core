@@ -86,16 +86,19 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
             DOLCIANGEL
           </h2>
           <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
-            Pastelería Fina & Café
+            PASTELERÍA FINA & CAFÉ
           </p>
-          <p className="text-[10px] text-slate-600 font-bold">
-            RUC: {NUBEFACT_CONFIG.EMPRESA_RUC}
+          <p className="text-[9px] uppercase font-semibold text-slate-600">
+            De: {sedeInfo.razonSocial || NUBEFACT_CONFIG.EMPRESA_RAZON_SOCIAL || 'RUTH PATRICIA CIRILO JARA'}
+          </p>
+          <p className="text-[10px] text-slate-800 font-black">
+            RUC: {sedeInfo.ruc || NUBEFACT_CONFIG.EMPRESA_RUC || '10427321351'}
           </p>
           <p className="text-[9px] text-slate-500">
             Sede: {sedeInfo.nombre} ({sedeInfo.ciudad})
           </p>
           <p className="text-[9px] text-slate-400">
-            {NUBEFACT_CONFIG.EMPRESA_DIRECCION}
+            {sedeInfo.direccion || NUBEFACT_CONFIG.EMPRESA_DIRECCION}
           </p>
         </div>
 

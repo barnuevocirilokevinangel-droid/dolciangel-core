@@ -29,7 +29,11 @@ export const SEDES = {
     ciudad: 'Nuevo Chimbote',
     icon: '🏪',
     color: 'from-pink-600 to-rose-700',
-    stockKey: 'stock_BA'
+    stockKey: 'stock_BA',
+    ruc: '10427321351',
+    razonSocial: 'RUTH PATRICIA CIRILO JARA',
+    nombreComercial: 'DOLCIANGEL - PASTELERÍA FINA & CAFÉ',
+    direccion: 'Av. Pacífico Mz. B Lt. 12 - Nuevo Chimbote'
   },
   VE: {
     id: 'VE',
@@ -37,7 +41,11 @@ export const SEDES = {
     ciudad: 'Chimbote',
     icon: '🏪',
     color: 'from-amber-500 to-rose-600',
-    stockKey: 'stock_VE'
+    stockKey: 'stock_VE',
+    ruc: '10427321351',
+    razonSocial: 'RUTH PATRICIA CIRILO JARA',
+    nombreComercial: 'DOLCIANGEL - PASTELERÍA FINA & CAFÉ',
+    direccion: 'Villa España - Chimbote'
   }
 };
 
