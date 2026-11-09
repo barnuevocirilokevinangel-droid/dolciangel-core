@@ -1,5 +1,6 @@
 // src/services/sunatService.js
-const API_URL = "https://app.apiperu.dev/api/cpe";
+// Endpoint proxy serverless en Vercel para evitar bloqueos de CORS
+const API_URL = import.meta.env?.VITE_API_SUNAT_PROXY || "/api/sunat";
 const API_TOKEN = "2def7b1448e04c9763445c648197b71d7852c21deaafa1a937772798ff81254b";
 
 export const SUNAT_CONFIG = {
