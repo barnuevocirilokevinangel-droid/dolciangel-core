@@ -1887,15 +1887,18 @@ section, footer { scroll-margin-top: var(--nav-h); }
   transform: translateY(0);
 }
 
-/* ── 5. Stage Central: Postres Laterales 3D + Postre Central + Satélites ── */
+/* ── 5. Stage Central: Postres Laterales 3D + Postre Central + Satélites Contenidos ── */
 .hero-showcase__stage {
-  position: absolute;
-  inset: 0;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
   z-index: 10;
+  width: 100%;
+  max-width: 500px;
+  max-height: 480px;
+  margin: 0 auto;
 }
 
 /* Postres secundarios laterales desenfocados (efecto carrusel 3D) */
@@ -1903,21 +1906,21 @@ section, footer { scroll-margin-top: var(--nav-h); }
   position: absolute;
   pointer-events: none;
   z-index: 8;
-  opacity: 0.55;
+  opacity: 0.35;
   filter: blur(4px);
-  transform: scale(0.75);
+  transform: scale(0.65);
   transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .hero-side-cake--left {
-  left: 8%;
-  max-width: 190px;
-  max-height: 190px;
+  left: -20px;
+  max-width: 160px;
+  max-height: 160px;
 }
 .hero-side-cake--right {
-  right: 18%;
-  max-width: 190px;
-  max-height: 190px;
+  right: -20px;
+  max-width: 160px;
+  max-height: 160px;
 }
 .hero-side-cake__img {
   width: 100%;
@@ -2142,32 +2145,42 @@ section, footer { scroll-margin-top: var(--nav-h); }
   }
 }
 
-/* ── 6. Satélites Fotográficos Limpios (Z-20) ── */
+/* ── 6. Satélites Fotográficos Limpios (Z-10, siempre bajo los textos Z-20) ── */
 .hero-satellites {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  z-index: 20;
+  pointer-events: none !important;
+  z-index: 10;
+  overflow: hidden;
 }
 .hero-sat {
   position: absolute;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: clamp(38px, 4vw, 54px);
+  height: clamp(38px, 4vw, 54px);
+  max-width: 54px;
+  max-height: 54px;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   will-change: transform;
+  pointer-events: none !important;
 }
-.hero-sat__img {
-  width: clamp(48px, 4.5vw, 64px);
-  height: clamp(48px, 4.5vw, 64px);
+.hero-sat__img,
+.hero-sat img,
+img.hero-sat {
+  width: 100%;
+  height: 100%;
+  max-width: 54px;
+  max-height: 54px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.22));
   background: transparent !important;
   border: none !important;
   user-select: none;
-  pointer-events: none;
+  pointer-events: none !important;
 }
 .hero-sat:nth-child(1) { animation: heroSatFloat 4.5s ease-in-out infinite; }
 .hero-sat:nth-child(2) { animation: heroSatFloat 5.2s ease-in-out infinite; animation-delay: -0.8s; }
@@ -2371,12 +2384,13 @@ section, footer { scroll-margin-top: var(--nav-h); }
   .hero-showcase {
     min-height: auto;
     max-height: none;
-    padding-bottom: 24px;
+    padding-bottom: 20px;
+    overflow: hidden !important;
   }
   .hero-showcase__container {
-    padding: 16px 20px;
+    padding: 12px 16px 8px;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
   }
   .hero-info {
     align-items: center;
@@ -2389,28 +2403,40 @@ section, footer { scroll-margin-top: var(--nav-h); }
   .hero-showcase__stage {
     position: relative;
     inset: auto;
-    min-height: 280px;
-    margin: 12px 0;
+    width: 100%;
+    max-width: 320px;
+    height: 260px;
+    max-height: 280px;
+    margin: 4px auto;
   }
   .hero-side-cake {
-    display: none;
+    display: none !important;
+  }
+  .hero-satellites {
+    display: none !important;
   }
   .hero-cake-box,
   .hero-product-img {
     max-width: 270px;
-    max-height: 250px;
+    max-height: 240px;
+    object-fit: contain;
   }
   .hero-bg-text {
-    font-size: clamp(3.5rem, 18vw, 7rem);
+    font-size: clamp(3rem, 16vw, 6rem);
   }
   .hero-controls {
+    width: 100%;
     align-items: center;
+    justify-content: center;
+    margin-top: 4px;
   }
   .hero-vertical-dock {
     flex-direction: row;
+    gap: 8px;
   }
   .hero-thumbs-col {
     flex-direction: row;
+    gap: 8px;
   }
   .hero-thumb-pointer {
     display: none;

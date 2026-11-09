@@ -52,11 +52,11 @@ const HERO_DESSERTS = [
     src: '/assets/hero/red-velvet.png',
     thumb: '/assets/hero/thumb-red-velvet.png',
     satellites: [
-      { name: 'Fresa rebanada', src: '/assets/hero/strawberry-top.png', style: { top: '14%', left: '14%', animationDuration: '4.5s' } },
-      { name: 'Menta fresca', src: '/assets/hero/mint-left.png', style: { top: '52%', left: '10%', animationDuration: '5.2s' } },
-      { name: 'Menta tope', src: '/assets/hero/mint-top.png', style: { top: '16%', right: '16%', animationDuration: '4.8s' } },
-      { name: 'Arándano', src: '/assets/hero/blueberry-right.png', style: { top: '42%', right: '12%', animationDuration: '5.8s' } },
-      { name: 'Fresa entera', src: '/assets/hero/strawberry-small.png', style: { top: '66%', right: '15%', animationDuration: '4.2s' } }
+      { name: 'Fresa rebanada', src: '/assets/hero/strawberry-top.png', style: { top: '8%', left: '8%', animationDuration: '4.5s' } },
+      { name: 'Menta fresca', src: '/assets/hero/mint-left.png', style: { top: '55%', left: '4%', animationDuration: '5.2s' } },
+      { name: 'Menta tope', src: '/assets/hero/mint-top.png', style: { top: '10%', right: '8%', animationDuration: '4.8s' } },
+      { name: 'Arándano', src: '/assets/hero/blueberry-right.png', style: { top: '48%', right: '6%', animationDuration: '5.8s' } },
+      { name: 'Fresa entera', src: '/assets/hero/strawberry-small.png', style: { top: '72%', right: '10%', animationDuration: '4.2s' } }
     ]
   },
   {
@@ -73,10 +73,10 @@ const HERO_DESSERTS = [
     src: '/assets/hero/cheesecake-maracuya.png',
     thumb: '/assets/hero/thumb-cheesecake-maracuya.png',
     satellites: [
-      { name: 'Mitad maracuyá', src: '/assets/hero/maracuya-half.svg', style: { top: '14%', left: '14%', animationDuration: '4.6s' } },
-      { name: 'Menta fresca', src: '/assets/hero/mint-left.png', style: { top: '50%', left: '10%', animationDuration: '5.4s' } },
-      { name: 'Menta tope', src: '/assets/hero/mint-top.png', style: { top: '16%', right: '16%', animationDuration: '4.9s' } },
-      { name: 'Pulpa maracuyá', src: '/assets/hero/maracuya-half.svg', style: { top: '62%', right: '14%', animationDuration: '5.7s' } }
+      { name: 'Mitad maracuyá', src: '/assets/hero/maracuya-half.svg', style: { top: '8%', left: '8%', animationDuration: '4.6s' } },
+      { name: 'Menta fresca', src: '/assets/hero/mint-left.png', style: { top: '52%', left: '4%', animationDuration: '5.4s' } },
+      { name: 'Menta tope', src: '/assets/hero/mint-top.png', style: { top: '10%', right: '8%', animationDuration: '4.9s' } },
+      { name: 'Pulpa maracuyá', src: '/assets/hero/maracuya-half.svg', style: { top: '65%', right: '8%', animationDuration: '5.7s' } }
     ]
   },
   {
@@ -93,10 +93,10 @@ const HERO_DESSERTS = [
     src: '/assets/hero/torta-chocolate.png',
     thumb: '/assets/hero/thumb-torta-chocolate.png',
     satellites: [
-      { name: 'Frambuesa', src: '/assets/hero/raspberry.svg', style: { top: '14%', left: '14%', animationDuration: '4.4s' } },
-      { name: 'Menta fresca', src: '/assets/hero/mint-left.png', style: { top: '50%', left: '10%', animationDuration: '5.2s' } },
-      { name: 'Fresa lámina', src: '/assets/hero/strawberry-top.png', style: { top: '16%', right: '16%', animationDuration: '4.8s' } },
-      { name: 'Frambuesa', src: '/assets/hero/raspberry.svg', style: { top: '62%', right: '14%', animationDuration: '5.6s' } }
+      { name: 'Frambuesa', src: '/assets/hero/raspberry.svg', style: { top: '8%', left: '8%', animationDuration: '4.4s' } },
+      { name: 'Menta fresca', src: '/assets/hero/mint-left.png', style: { top: '52%', left: '4%', animationDuration: '5.2s' } },
+      { name: 'Fresa lámina', src: '/assets/hero/strawberry-top.png', style: { top: '10%', right: '8%', animationDuration: '4.8s' } },
+      { name: 'Frambuesa', src: '/assets/hero/raspberry.svg', style: { top: '65%', right: '8%', animationDuration: '5.6s' } }
     ]
   }
 ];
@@ -510,11 +510,11 @@ export const PublicCartaView = ({ onNavigate }) => {
 
       {/* 2. NAV CARTA BOUTIQUE (1:1 de dolciangel-carta-web) */}
       <nav className="carta-nav" aria-label="Navegación carta">
-        <div className="container carta-nav__inner">
+        <div className="container carta-nav__inner mx-auto px-4 flex items-center justify-between h-full">
           <button 
             type="button" 
             onClick={() => onNavigate && onNavigate('landing')} 
-            className="carta-nav__back" 
+            className="carta-nav__back flex items-center gap-1.5" 
             aria-label="Volver al inicio"
           >
             <span className="carta-nav__back-icon" aria-hidden="true">
@@ -522,34 +522,34 @@ export const PublicCartaView = ({ onNavigate }) => {
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
             </span>
-            <span className="carta-nav__back-label">Inicio</span>
+            <span className="carta-nav__back-label hidden sm:inline">Inicio</span>
           </button>
 
           <a 
             href="#carta" 
             onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
-            className="carta-nav__logo" 
+            className="carta-nav__logo flex-1 text-center" 
             aria-label="Dolciangel, volver al inicio"
           >
-            <span className="carta-nav__wordmark font-serif">Dolciangel</span>
-            <span className="carta-nav__descriptor">Carta artesanal</span>
+            <span className="carta-nav__wordmark font-serif text-lg sm:text-xl font-bold tracking-tight text-[#2D1609]">Dolciangel</span>
+            <span className="carta-nav__descriptor text-[10px] uppercase tracking-widest text-[#5A3A25]/70 hidden sm:block">Carta artesanal</span>
           </a>
 
-          <div className="carta-nav__actions flex items-center gap-2">
+          <div className="carta-nav__actions flex items-center gap-1.5 sm:gap-2">
             <button 
-              className="nav__cart-btn carta-nav__cart" 
+              className="nav__cart-btn carta-nav__cart relative" 
               id="cartBtn" 
               type="button"
               onClick={() => setIsCartOpen(true)} 
               aria-label="Ver carrito" 
               style={{ color: 'var(--ink-2, #5A3A25)' }}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="22" height="22" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="20" height="20" aria-hidden="true">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-              <span className="carta-nav__cart-label">Carrito</span>
+              <span className="carta-nav__cart-label hidden sm:inline">Carrito</span>
               {cartCount > 0 && (
                 <span className={`cart-badge ${cartBadgePulse ? 'is-pulse' : ''}`} id="cartCount" aria-live="polite">
                   {cartCount}
@@ -566,7 +566,7 @@ export const PublicCartaView = ({ onNavigate }) => {
               <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
-              <span className="carta-nav__order-label">Pedir</span>
+              <span className="carta-nav__order-label hidden sm:inline">Pedir</span>
             </button>
 
             {onNavigate && (
@@ -574,10 +574,10 @@ export const PublicCartaView = ({ onNavigate }) => {
                 type="button"
                 onClick={() => onNavigate('core')}
                 title="Acceso Colaboradores / POS"
-                className="p-1.5 rounded-full text-amber-950/40 hover:text-amber-950 hover:bg-amber-100/50 transition-colors ml-1"
+                className="p-1.5 rounded-full text-amber-950/40 hover:text-amber-950 hover:bg-amber-100/50 transition-colors ml-0.5"
                 aria-label="Acceso colaborador"
               >
-                <Lock className="w-4 h-4" />
+                <Lock className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -586,7 +586,7 @@ export const PublicCartaView = ({ onNavigate }) => {
 
       {/* 3. HERO SHOWCASE EDITORIAL PREMIUM (1:1 de dolciangel-carta-web) */}
       <section 
-        className="hero-showcase hero-section" 
+        className="hero-showcase hero-section relative overflow-hidden" 
         id="heroShowcase" 
         aria-label="Portada interactiva Dolciangel"
         style={{ backgroundColor: currentHero.bgColor }}
@@ -600,28 +600,40 @@ export const PublicCartaView = ({ onNavigate }) => {
         </div>
 
         {/* Contenedor principal con layout editorial */}
-        <div className="hero-showcase__container">
+        <div className="hero-showcase__container flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-4 md:pt-8 pb-3 md:pb-6 relative z-20">
           
           {/* Columna Izquierda: Información editorial, precio y CTA */}
-          <div className="hero-info">
-            <div className="hero-tagline-badge" id="heroTaglineBadge">
+          <div className="hero-info w-full md:w-1/2 lg:w-5/12 z-30 flex flex-col items-center md:items-start text-center md:text-left">
+            <div className="hero-tagline-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase border border-pink-700/20 bg-pink-100/90 text-pink-800 mb-2 sm:mb-3 backdrop-blur-md" id="heroTaglineBadge">
               {currentHero.tagline}
             </div>
-            <h1 className="hero-title" id="heroDessertTitle">
+            
+            <h1 className="hero-title font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold uppercase tracking-tight text-[#1C0C04] leading-tight mb-2" id="heroDessertTitle">
               {currentHero.title.split('\n').map((line, idx) => (
                 <React.Fragment key={idx}>
                   {line}
-                  {idx === 0 && <br />}
+                  {idx === 0 && <br className="hidden md:inline" />}
+                  {idx === 0 && <span className="inline md:hidden"> </span>}
                 </React.Fragment>
               ))}
             </h1>
-            <p className="hero-subtitle" id="heroDessertSubtitle">
+            
+            <p className="hero-subtitle font-sans text-xs sm:text-sm text-[#5B3920]/80 max-w-md mb-2 md:mb-5" id="heroDessertSubtitle">
               {currentHero.subtitle}
             </p>
-            <div className="hero-actions">
-              <span className="hero-price" id="heroDessertPrice">{currentHero.price}</span>
+
+            {/* Precio en Móvil (Visible solo en mobile < 768px, justo antes de la torta) */}
+            <div className="md:hidden flex items-center justify-center my-1">
+              <span className="text-2xl font-black font-serif text-[#1C0C04] tracking-tight">{currentHero.price}</span>
+            </div>
+
+            {/* Acciones en Desktop: Precio destacado y botón en una sola línea elegante */}
+            <div className="hero-actions hidden md:flex items-center gap-5 mt-2">
+              <span className="hero-price font-serif text-3xl font-extrabold text-[#1C0C04] tracking-tight" id="heroDessertPrice">
+                {currentHero.price}
+              </span>
               <button 
-                className="btn-hero-order" 
+                className="btn-hero-order flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border-1.5 border-[#1C0C04] text-[#1C0C04] font-medium text-sm hover:bg-[#1C0C04] hover:text-[#FFF9ED] transition-all shadow-sm active:scale-95 cursor-pointer" 
                 id="heroOrderBtn" 
                 type="button"
                 onClick={handleAddHeroToCart}
@@ -631,12 +643,12 @@ export const PublicCartaView = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Stage Central: Postres laterales 3D + Postre central activo + Satélites */}
-          <div className="hero-showcase__stage" id="heroStage">
+          {/* Columna Derecha / Centro: Stage Central (Postre activo + Satélites) */}
+          <div className="hero-showcase__stage relative flex items-center justify-center w-full md:w-1/2 lg:w-6/12 h-[260px] sm:h-[280px] md:h-[400px] lg:h-[480px] my-1 md:my-0" id="heroStage">
             
-            {/* Postre lateral izquierdo desenfocado */}
+            {/* Postre lateral izquierdo desenfocado (Solo Desktop) */}
             <div 
-              className="hero-side-cake hero-side-cake--left cursor-pointer" 
+              className="hero-side-cake hero-side-cake--left cursor-pointer hidden md:block" 
               id="heroSideLeft"
               onClick={handlePrevFlavor}
               title={`Ver ${leftHero.titlePlain}`}
@@ -644,12 +656,12 @@ export const PublicCartaView = ({ onNavigate }) => {
               <img className="hero-side-cake__img" src={leftHero.src} alt={leftHero.titlePlain} />
             </div>
 
-            {/* Satélites flotantes fotográficos en capas */}
-            <div className="hero-satellites" id="heroSatellites">
+            {/* Satélites flotantes fotográficos en capas (Z-10, solo Desktop para evitar desbordes en móvil) */}
+            <div className="hero-satellites hidden md:block" id="heroSatellites">
               {currentHero.satellites.map((sat, sIdx) => (
                 <img 
                   key={sIdx}
-                  className="hero-sat" 
+                  className="hero-sat hero-sat__img" 
                   src={sat.src} 
                   alt={sat.name}
                   style={sat.style}
@@ -658,10 +670,10 @@ export const PublicCartaView = ({ onNavigate }) => {
             </div>
 
             {/* Postre héroe central activo con sombra y microinteracción */}
-            <div className="hero-product-stage hero-interactive" id="heroProductStage">
-              <div className="hero-cake-box hero-dessert" id="heroCakeBox">
+            <div className="hero-product-stage hero-interactive flex flex-col items-center justify-center" id="heroProductStage">
+              <div className="hero-cake-box hero-dessert relative flex items-center justify-center" id="heroCakeBox">
                 <img 
-                  className={`hero-product-img hero-main-img hero-cake-transition ${isCakeTransitioning ? 'slide-exit' : ''}`} 
+                  className={`hero-product-img hero-main-img hero-cake-transition max-h-[220px] sm:max-h-[250px] md:max-h-[380px] lg:max-h-[460px] max-w-full object-contain ${isCakeTransitioning ? 'slide-exit' : ''}`} 
                   id="heroDessertImg" 
                   src={currentHero.src} 
                   alt={currentHero.titlePlain} 
@@ -671,9 +683,9 @@ export const PublicCartaView = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Postre lateral derecho desenfocado */}
+            {/* Postre lateral derecho desenfocado (Solo Desktop) */}
             <div 
-              className="hero-side-cake hero-side-cake--right cursor-pointer" 
+              className="hero-side-cake hero-side-cake--right cursor-pointer hidden md:block" 
               id="heroSideRight"
               onClick={handleNextFlavor}
               title={`Ver ${rightHero.titlePlain}`}
@@ -682,60 +694,89 @@ export const PublicCartaView = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Columna Derecha: Dock vertical de miniaturas y controles */}
-          <aside className="hero-controls" aria-label="Seleccionar postre">
-            <div className="hero-vertical-dock">
+          {/* Columna Derecha Desktop: Dock vertical de miniaturas */}
+          <aside className="hero-controls hidden md:flex flex-col items-center z-30" aria-label="Seleccionar postre">
+            <div className="hero-vertical-dock flex flex-col items-center gap-3">
               <button 
-                className="hero-dock-arrow" 
+                className="hero-dock-arrow w-8 h-8 rounded-full flex items-center justify-center border border-amber-900/15 bg-white/70 hover:bg-white text-amber-950 transition-colors shadow-xs" 
                 id="heroPrevBtn" 
                 type="button" 
                 aria-label="Postre anterior"
                 onClick={handlePrevFlavor}
               >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="18 15 12 9 6 15"/>
-                </svg>
+                <ChevronUp className="w-4 h-4" />
               </button>
 
-              <div className="hero-thumbs-col" id="heroThumbsCol">
-                <div 
-                  className="hero-thumb-pointer" 
-                  id="heroThumbPointer" 
-                  aria-hidden="true"
-                  style={{ top: `${activeFlavor * 56 + 18}px` }}
-                >
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                    <polygon points="6,12 18,6 18,18"/>
-                  </svg>
-                </div>
-
+              <div className="hero-thumbs-col flex flex-col gap-2.5 relative" id="heroThumbsCol">
                 {HERO_DESSERTS.map((d, idx) => (
                   <button
                     key={d.id}
                     type="button"
-                    className={`hero-thumb ${idx === activeFlavor ? 'is-active' : ''}`}
+                    className={`hero-thumb w-12 h-12 rounded-full overflow-hidden border-2 transition-all p-0.5 ${
+                      idx === activeFlavor 
+                        ? 'border-amber-900 scale-110 shadow-md ring-2 ring-amber-900/20' 
+                        : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'
+                    }`}
                     onClick={() => handleSelectFlavor(idx)}
                     aria-label={`Ver ${d.titlePlain}`}
                   >
-                    <img src={d.thumb} alt={d.titlePlain} onError={(e) => { e.currentTarget.src = d.src; }} />
+                    <img className="w-full h-full object-cover rounded-full" src={d.thumb} alt={d.titlePlain} onError={(e) => { e.currentTarget.src = d.src; }} />
                   </button>
                 ))}
               </div>
 
               <button 
-                className="hero-dock-arrow" 
+                className="hero-dock-arrow w-8 h-8 rounded-full flex items-center justify-center border border-amber-900/15 bg-white/70 hover:bg-white text-amber-950 transition-colors shadow-xs" 
                 id="heroNextBtn" 
                 type="button" 
                 aria-label="Postre siguiente"
                 onClick={handleNextFlavor}
               >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+                <ChevronDown className="w-4 h-4" />
               </button>
             </div>
           </aside>
 
+        </div>
+
+        {/* Sección inferior exclusivamente para Móvil (< 768px):
+            4. Carrusel / selector de sabores horizontal compacto
+            5. Botón + Añadir a mi Pedido centrado y accesible
+        */}
+        <div className="md:hidden flex flex-col items-center gap-3 w-full px-4 pt-1 pb-4 relative z-20">
+          {/* 4. Carrusel Horizontal de Miniaturas */}
+          <div className="flex items-center justify-center gap-3 bg-white/50 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-amber-900/10 shadow-xs">
+            {HERO_DESSERTS.map((d, idx) => (
+              <button
+                key={d.id}
+                type="button"
+                className={`w-12 h-12 rounded-full overflow-hidden border-2 transition-all p-0.5 ${
+                  idx === activeFlavor 
+                    ? 'border-[#1C0C04] scale-110 shadow-md ring-2 ring-[#1C0C04]/25' 
+                    : 'border-transparent opacity-50 hover:opacity-90'
+                }`}
+                onClick={() => handleSelectFlavor(idx)}
+                aria-label={`Ver ${d.titlePlain}`}
+              >
+                <img 
+                  className="w-full h-full object-cover rounded-full" 
+                  src={d.thumb} 
+                  alt={d.titlePlain} 
+                  onError={(e) => { e.currentTarget.src = d.src; }} 
+                />
+              </button>
+            ))}
+          </div>
+
+          {/* 5. Botón + Añadir a mi Pedido */}
+          <button 
+            className="w-full max-w-xs h-12 rounded-full font-bold text-sm tracking-wide bg-[#1C0C04] text-[#FFF9ED] hover:bg-[#381E12] transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 mt-1" 
+            type="button"
+            onClick={handleAddHeroToCart}
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Añadir a mi Pedido</span>
+          </button>
         </div>
 
         {/* 4. Marquee continuo inferior (20s boutique dorado) */}
@@ -1567,7 +1608,9 @@ export const PublicCartaView = ({ onNavigate }) => {
       {/* FAB WhatsApp Flotante */}
       <button 
         type="button"
-        className="fab" 
+        className={`fab fixed z-40 transition-all duration-300 shadow-2xl active:scale-95 ${
+          cartCount > 0 ? '!bottom-[92px] sm:!bottom-6 !right-4 sm:!right-6' : '!bottom-20 sm:!bottom-6 !right-4 sm:!right-6'
+        }`}
         id="fabWa" 
         onClick={() => handleOpenDirectChat()} 
         aria-label="Pedir por WhatsApp"
