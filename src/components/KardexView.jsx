@@ -87,15 +87,16 @@ export const KardexView = () => {
   // Categorías extraídas dinámicamente
   const categories = useMemo(() => extractCategories(productos), [productos]);
 
-  // Métricas Consolidadas de Stock
+  // Métricas Consolidadas de Stock (Solo productos con control de stock activo)
   const stockStats = useMemo(() => {
-    let totalItems = productos.length;
+    const controlledProds = (productos || []).filter(p => p && p.controla_stock !== false && p.en_inventario !== false);
+    let totalItems = controlledProds.length;
     let totalUnitsBA = 0;
     let totalUnitsVE = 0;
     let agotadosBA = 0;
     let agotadosVE = 0;
 
-    productos.forEach(p => {
+    controlledProds.forEach(p => {
       const ba = getProductStock(p, 'BA');
       const ve = getProductStock(p, 'VE');
       totalUnitsBA += ba;
@@ -110,6 +111,9 @@ export const KardexView = () => {
   // Filtrado de productos para la vista "Stock Actual"
   const filteredStockProducts = useMemo(() => {
     return productos.filter(p => {
+      // Excluir productos sin control de stock / fuera de vitrina
+      if (p.controla_stock === false || p.en_inventario === false) return false;
+
       const matchSearch = (p.nombre || '').toLowerCase().includes(stockSearch.toLowerCase()) ||
                           (p.categoria || '').toLowerCase().includes(stockSearch.toLowerCase()) ||
                           (p.id || '').toLowerCase().includes(stockSearch.toLowerCase());
@@ -481,7 +485,7 @@ export const KardexView = () => {
           }`}
         >
           <Boxes className="w-4 h-4 text-brand-700" />
-          <span>Stock Actual ({productos.length})</span>
+          <span>Stock Actual ({stockStats.totalItems})</span>
         </button>
 
         <button
@@ -1113,7 +1117,7 @@ export const KardexView = () => {
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500 bg-white"
                 >
                   <option value="">-- Selecciona el producto --</option>
-                  {productos.map((p) => (
+                  {productos.filter(p => p.controla_stock !== false && p.en_inventario !== false).map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.nombre} (Stock actual: {getProductStock(p, sede)})
                     </option>
@@ -1215,7 +1219,7 @@ export const KardexView = () => {
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500 bg-white"
                 >
                   <option value="">-- Selecciona el producto --</option>
-                  {productos.map((p) => (
+                  {productos.filter(p => p.controla_stock !== false && p.en_inventario !== false).map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.nombre} (Stock actual: {getProductStock(p, sede)})
                     </option>

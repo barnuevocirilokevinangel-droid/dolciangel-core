@@ -595,8 +595,11 @@ export const AppProvider = ({ children }) => {
     };
     batch.set(ventaRef, ventaDocData);
 
-    // 2. Descontar stock atómicamente y registrar en kardex
+    // 2. Descontar stock atómicamente y registrar en kardex (solo para productos con control de stock activo)
     for (const item of itemsToProcess) {
+      const controlsStock = item.product?.controla_stock !== false && item.product?.en_inventario !== false;
+      if (!controlsStock) continue;
+
       const prodRef = doc(collections.productos, item.product.id);
       const stockFieldLegacy = SEDES[sede].stockKey;
       const stockFieldNested = sede === 'VE' ? 'stock.villaEspana' : 'stock.buenosAires';

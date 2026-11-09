@@ -55,8 +55,15 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     showToast
   } = useApp();
 
+  // 1. Filtrar productos autorizados para el Punto de Venta (POS):
+  // Solo renderizar productos con controla_stock === true (o fallback seguro prod.controla_stock !== false)
+  // Productos con controla_stock: false (ej. servicios, empaques, productos fuera de vitrina) no se muestran en ventas.
+  const productosPOS = useMemo(() => {
+    return (productos || []).filter(p => p && p.controla_stock !== false && p.en_inventario !== false);
+  }, [productos]);
+
   // Categorías derivadas dinámicamente de Firestore (Antifrágil)
-  const dynamicCategories = useMemo(() => extractCategories(productos), [productos]);
+  const dynamicCategories = useMemo(() => extractCategories(productosPOS), [productosPOS]);
 
   // Buscador Rápido de Productos
   const [searchTerm, setSearchTerm] = useState('');
@@ -111,27 +118,27 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   const isSearching = searchTerm.trim().length > 0;
   
   const matchingProducts = useMemo(() => {
-    if (!isSearching) return productos;
+    if (!isSearching) return productosPOS;
     const term = searchTerm.toLowerCase().trim();
-    return productos.filter(p => 
+    return productosPOS.filter(p => 
       p.nombre.toLowerCase().includes(term) ||
       (p.descripcion && p.descripcion.toLowerCase().includes(term)) ||
       (p.categoria && p.categoria.toLowerCase().includes(term))
     );
-  }, [productos, searchTerm, isSearching]);
+  }, [productosPOS, searchTerm, isSearching]);
 
   // Agrupado por categoría para vista normal de acordeones
   const productsByCategory = useMemo(() => {
     const groups = {};
     (dynamicCategories || []).forEach(c => { if (c && c.id) groups[c.id] = []; });
-    (productos || []).forEach(p => {
+    (productosPOS || []).forEach(p => {
       if (!p) return;
       const catKey = (p.categoria || 'otros').trim().toLowerCase();
       if (!groups[catKey]) groups[catKey] = [];
       groups[catKey].push(p);
     });
     return groups;
-  }, [productos, dynamicCategories]);
+  }, [productosPOS, dynamicCategories]);
 
   // Autocompletar cliente por celular
   const handlePhoneChange = (e) => {
@@ -428,7 +435,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Todos ({productos.length})
+              Todos ({productosPOS.length})
             </button>
             {dynamicCategories.map((cat) => {
               const count = (productsByCategory[cat.id] || []).length;

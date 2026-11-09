@@ -64,6 +64,7 @@ export const AdminProductManager = () => {
   const [formEsPedidoGrande, setFormEsPedidoGrande] = useState(false);
   const [formVisibleBA, setFormVisibleBA] = useState(true);
   const [formVisibleVE, setFormVisibleVE] = useState(true);
+  const [formControlaStock, setFormControlaStock] = useState(true);
 
   const isDueno = perfil?.isDueno ?? false;
   const dynamicCategories = useMemo(() => extractCategories(productos), [productos]);
@@ -128,6 +129,7 @@ export const AdminProductManager = () => {
     setFormEsPedidoGrande(false);
     setFormVisibleBA(true);
     setFormVisibleVE(true);
+    setFormControlaStock(true);
     setShowCreateModal(true);
   };
 
@@ -149,6 +151,7 @@ export const AdminProductManager = () => {
     setFormEsPedidoGrande(Boolean(p.esPedidoGrande));
     setFormVisibleBA(p.visible_BA ?? p.mostrar_en_carta ?? true);
     setFormVisibleVE(p.visible_VE ?? p.mostrar_en_carta ?? true);
+    setFormControlaStock(p.controla_stock !== false && p.en_inventario !== false);
   };
 
   // Guardar (Crear o Actualizar)
@@ -201,6 +204,8 @@ export const AdminProductManager = () => {
         },
         stock_BA: sBA, // compatibilidad legacy
         stock_VE: sVE,
+        controla_stock: Boolean(formControlaStock),
+        en_inventario: Boolean(formControlaStock),
         esPedidoGrande: Boolean(formEsPedidoGrande),
         visible_BA: Boolean(formVisibleBA),
         visible_VE: Boolean(formVisibleVE),
@@ -415,6 +420,11 @@ export const AdminProductManager = () => {
                               <span className="font-bold text-slate-900 text-xs block">
                                 {p.nombre}
                               </span>
+                              {p.controla_stock === false && (
+                                <span className="text-[9px] bg-slate-100 text-slate-600 border border-slate-200 font-extrabold px-1.5 py-0.2 rounded-md">
+                                  🚫 Sin Inventario/POS
+                                </span>
+                              )}
                               {p.esPedidoGrande && (
                                 <span className="text-[9px] bg-purple-100 text-purple-800 font-extrabold px-1.5 py-0.2 rounded-md">
                                   📦 Catering
@@ -711,29 +721,80 @@ export const AdminProductManager = () => {
                 )}
               </div>
 
-              {/* Stock Inicial por Sede */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Stock Inicial Buenos Aires</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formStockBA}
-                    onChange={(e) => setFormStockBA(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono font-bold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Stock Inicial Villa España</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formStockVE}
-                    onChange={(e) => setFormStockVE(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono font-bold focus:outline-none"
-                  />
-                </div>
+              {/* Switch de Control de Inventario / Vitrina */}
+              <div className={`p-4 rounded-2xl border transition-all ${
+                formControlaStock 
+                  ? 'bg-gradient-to-r from-amber-50/90 via-orange-50/50 to-pink-50/40 border-amber-300 shadow-xs' 
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
+                <label className="flex items-start justify-between cursor-pointer gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-base">📦</span>
+                      <span className="font-extrabold text-slate-900 text-sm">
+                        Incluir en Control de Inventario / Vitrina
+                      </span>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                        formControlaStock 
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                          : 'bg-slate-200 text-slate-600 border border-slate-300'
+                      }`}>
+                        {formControlaStock ? 'Activo' : 'Excluido'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-1 leading-snug">
+                      Si está activo, el producto descuenta stock físico y se gestiona en el Kardex e Inventario.
+                    </p>
+                    {!formControlaStock && (
+                      <p className="text-[10px] font-semibold text-rose-700 mt-1">
+                        ⚠️ Al desactivarlo, este producto se ocultará de la cuadrícula de ventas del Punto de Venta (POS).
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Switch Toggle */}
+                  <div className="relative inline-flex items-center cursor-pointer flex-shrink-0 pt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={formControlaStock}
+                      onChange={(e) => setFormControlaStock(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-700"></div>
+                  </div>
+                </label>
               </div>
+
+              {/* Stock Inicial por Sede */}
+              {formControlaStock ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Stock Inicial Buenos Aires</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formStockBA}
+                      onChange={(e) => setFormStockBA(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono font-bold focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Stock Inicial Villa España</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formStockVE}
+                      onChange={(e) => setFormStockVE(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono font-bold focus:outline-none"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 text-xs flex items-center gap-2">
+                  <span>ℹ️</span>
+                  <span>Control de stock físico inactivo para este producto. No descuenta inventario ni se muestra en POS.</span>
+                </div>
+              )}
 
               {/* Switches: Catering y Visibilidad por Sede */}
               <div className="space-y-2 pt-1 border-t border-slate-100">
