@@ -17,7 +17,7 @@ import {
   limit
 } from '../services/firebase';
 import { INITIAL_PRODUCTS } from '../data/initialCatalog';
-import { emitirComprobante } from '../services/sunatService';
+import { emitirComprobante, obtenerSiguienteCorrelativo } from '../services/sunatService';
 import { getProductPrice, getProductStock } from '../services/productUtils';
 
 const AppContext = createContext();
@@ -506,12 +506,18 @@ export const AppProvider = ({ children }) => {
     const effectiveTipoComprobante = isVE ? 'NOTA_VENTA' : (tipoComprobante || 'NOTA_VENTA');
     const tipoDocLabel = effectiveTipoComprobante === 'FACTURA' ? 'Factura' : effectiveTipoComprobante === 'BOLETA' ? 'Boleta' : 'Nota de Venta';
 
+    // 1. Obtener correlativo oficial atómico en Firestore (B002 desde 1264 para Boletas, F001 para Facturas)
+    const correlativoInfo = await obtenerSiguienteCorrelativo(effectiveTipoComprobante, sede);
+
     // Emisión hacia ApiPeru (Buenos Aires) o Control Interno (Villa España)
     const comprobanteData = await emitirComprobante({
       id: saleId,
       sede: isVE ? 'villaEspana' : 'buenosAires',
       tipoDocumento: tipoDocLabel,
       tipoComprobante: effectiveTipoComprobante,
+      serie: correlativoInfo.serie,
+      numero: correlativoInfo.numero,
+      correlativo: correlativoInfo.numero,
       total: totalToPay,
       metodoPago,
       items: itemsSummary,
@@ -555,13 +561,14 @@ export const AppProvider = ({ children }) => {
       tipoComprobante: effectiveTipoComprobante, // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
       comprobante: {
         tipo: comprobanteData.tipo || effectiveTipoComprobante,
-        serie: comprobanteData.serie || (effectiveTipoComprobante === 'FACTURA' ? 'F001' : effectiveTipoComprobante === 'BOLETA' ? 'B001' : 'NV01'),
-        numero: comprobanteData.numero || 1,
-        codigoCompleto: comprobanteData.codigoCompleto || `${comprobanteData.serie || 'B001'}-${comprobanteData.numero || 1}`,
+        serie: comprobanteData.serie || correlativoInfo.serie,
+        numero: comprobanteData.numero || correlativoInfo.numero,
+        codigoCompleto: comprobanteData.codigoCompleto || correlativoInfo.codigoCompleto,
         estado: comprobanteData.estado || (isVE ? 'CONTROL_INTERNO' : 'ACEPTADO_SUNAT'),
         enlace_del_pdf: comprobanteData.url_comprobante_sunat || comprobanteData.enlace_del_pdf || null,
         url_comprobante_sunat: comprobanteData.url_comprobante_sunat || null,
         cadena_para_codigo_qr: comprobanteData.cadena_para_codigo_qr || null,
+        hash: comprobanteData.hash || null,
         fecha: new Date().toISOString()
       },
       cliente: {

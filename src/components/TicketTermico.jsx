@@ -1,4 +1,5 @@
 import React from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { SEDES } from '../context/AppContext';
 import { NUBEFACT_CONFIG } from '../services/sunatService';
 import { Printer, CheckCircle, Sparkles } from 'lucide-react';
@@ -14,8 +15,12 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
   const isVE = venta.sede === 'VE' || venta.sede === 'villaEspana' || venta.sede === 'Villa España';
   const tipo = venta.tipoComprobante || 'NOTA_VENTA';
   const comprobante = venta.comprobante || {};
+
+  const serieDefecto = isVE ? 'NV01' : (tipo === 'FACTURA' ? 'F001' : tipo === 'BOLETA' ? 'B002' : 'NV01');
+  const serieComprobante = comprobante.serie || serieDefecto;
+  const numComprobante = comprobante.numero || venta.correlativo || venta.id || 1;
   const codigoComprobante = comprobante.codigoCompleto || 
-    `${comprobante.serie || (tipo === 'FACTURA' ? 'F001' : tipo === 'BOLETA' ? 'B001' : 'NV01')}-${comprobante.numero || venta.id}`;
+    `${serieComprobante}-${String(numComprobante).padStart(6, '0')}`;
 
   const tituloComprobante = isVE
     ? 'TICKET DE CONTROL INTERNO'
@@ -30,6 +35,22 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
   const igv = venta.igv !== undefined ? Number(venta.igv) : Number((total - opGravada).toFixed(2));
   const recibido = Number(venta.montoRecibido) || total;
   const vuelto = Number(venta.vuelto) || 0;
+
+  // Composición de valor QR oficial bajo estándar SUNAT:
+  // ${ruc}|${tipoDoc}|${serie}|${numero}|${totalIgv}|${total}|${fecha}|${tipoDocCliente}|${numDocCliente}|
+  const rucEmisor = NUBEFACT_CONFIG.EMPRESA_RUC || '10427321351';
+  const codTipoDoc = tipo === 'FACTURA' ? '01' : tipo === 'BOLETA' ? '03' : '00';
+  const totIgv = igv.toFixed(2);
+  const totVenta = total.toFixed(2);
+  const fechaYMD = venta.fecha ? new Date(venta.fecha).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+  const docCliente = (venta.cliente?.documento || '').trim();
+  const tipoDocCli = docCliente ? (tipo === 'FACTURA' ? '6' : '1') : '-';
+  const numDocCli = docCliente || '-';
+
+  const qrValue = comprobante.cadena_para_codigo_qr || 
+    `${rucEmisor}|${codTipoDoc}|${serieComprobante}|${numComprobante}|${totIgv}|${totVenta}|${fechaYMD}|${tipoDocCli}|${numDocCli}|`;
+
+  const hashComprobante = comprobante.hash || comprobante.codigo_hash || comprobante.digest_value || null;
 
   const fechaFormateada = venta.fecha 
     ? new Date(venta.fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'medium' })
@@ -229,7 +250,39 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
         </div>
 
         {/* Pie de Ticket & Estado SUNAT */}
-        <div className="pt-3 text-center space-y-1 text-[9px] text-slate-400">
+        <div className="pt-2 text-center space-y-1.5 text-[9px] text-slate-600">
+          {/* Código QR Oficial SUNAT centrado */}
+          <div className="flex flex-col items-center justify-center my-2 pt-1">
+            <div className="bg-white p-1 border border-slate-300 rounded shadow-sm inline-block">
+              <QRCodeSVG
+                value={qrValue}
+                size={92}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+
+            {/* Hash del comprobante */}
+            {hashComprobante && (
+              <p className="text-[7.5px] font-mono mt-1 text-center max-w-[210px] break-all leading-tight text-slate-500">
+                Hash: <span className="font-bold text-slate-700">{hashComprobante}</span>
+              </p>
+            )}
+
+            <p className="text-[7px] text-slate-400 mt-0.5">
+              Consulte su comprobante en: www.sunat.gob.pe
+            </p>
+          </div>
+
+          {/* Leyenda Oficial SUNAT */}
+          <p className="font-extrabold text-[8px] uppercase tracking-tight block text-slate-800">
+            {tipo === 'FACTURA' 
+              ? 'Representación impresa de la Factura Electrónica' 
+              : tipo === 'BOLETA' 
+              ? 'Representación impresa de la Boleta de Venta Electrónica' 
+              : 'Representación impresa de Nota de Venta de Control Interno'}
+          </p>
+
           {isVE ? (
             <p className="font-bold text-amber-800 text-[8px] uppercase">
               ** TICKET DE CONTROL INTERNO (SIN VALOR FISCAL) **
@@ -238,11 +291,7 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
             <p className="font-bold text-emerald-600">
               ✓ Comprobante autorizado por SUNAT
             </p>
-          ) : (
-            <p className="text-[8px] text-slate-400">
-              Comprobante emitido electrónicamente
-            </p>
-          )}
+          ) : null}
 
           <p className="font-bold text-slate-700 pt-1">
             ¡Gracias por endulzar tu día con Dolciangel!

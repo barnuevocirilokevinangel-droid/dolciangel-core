@@ -17,7 +17,8 @@ import {
   limit, 
   serverTimestamp, 
   writeBatch,
-  increment
+  increment,
+  runTransaction
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -73,5 +74,6 @@ export {
   limit,
   serverTimestamp,
   writeBatch,
-  increment
+  increment,
+  runTransaction
 };
