@@ -16,7 +16,43 @@ import { AdminView } from './components/AdminView';
 import { GestorHeroView } from './components/GestorHeroView';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 
-const MainLayout = () => {
+const checkIsCoreOrAdmin = () => {
+  if (typeof window === 'undefined') return false;
+
+  const hostname = window.location.hostname.toLowerCase();
+  // 1. Detección automática del dominio exclusivo del Core/Admin
+  if (hostname === 'core.dolciangel.com' || hostname.startsWith('core.') || hostname.startsWith('admin.')) {
+    return true;
+  }
+
+  const pathname = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+  const search = window.location.search.toLowerCase();
+
+  // 2. Rutas explícitas de administración / POS
+  if (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/core') ||
+    pathname.startsWith('/pos') ||
+    pathname.startsWith('/sistema') ||
+    hash.startsWith('#/admin') ||
+    hash.startsWith('#/core') ||
+    hash.startsWith('#/pos') ||
+    hash.startsWith('#admin') ||
+    hash.startsWith('#core') ||
+    search.includes('route=admin') ||
+    search.includes('route=core') ||
+    search.includes('admin=true') ||
+    search.includes('core=true')
+  ) {
+    return true;
+  }
+
+  // 3. La raíz '/' o '/carta' es por defecto la vista pública de cara al cliente
+  return false;
+};
+
+const MainLayout = ({ onGoToPublic }) => {
   const { 
     sede, 
     perfil, 
@@ -32,7 +68,6 @@ const MainLayout = () => {
   // Auto-siembra de catálogo inicial si la base de datos está vacía al cargar
   useEffect(() => {
     if (productos.length === 0) {
-      // Pequeño timeout para no interferir con la primera lectura de Firestore
       const timer = setTimeout(() => {
         if (productos.length === 0) {
           seedInitialProducts();
@@ -57,6 +92,7 @@ const MainLayout = () => {
       <Header 
         onOpenCart={() => setIsCartOpen(true)}
         onOpenSwitchModal={() => setIsSwitchModalOpen(true)}
+        onGoToPublic={onGoToPublic}
       />
 
       {/* Contenido Dinámico de la Pestaña Activa */}
@@ -110,19 +146,47 @@ const MainLayout = () => {
 };
 
 export default function App() {
-  const isCartaRoute = typeof window !== 'undefined' && (
-    window.location.pathname.toLowerCase().startsWith('/carta') ||
-    window.location.hash.toLowerCase().startsWith('#/carta') ||
-    window.location.search.toLowerCase().includes('route=carta')
-  );
+  const [isCoreMode, setIsCoreMode] = useState(checkIsCoreOrAdmin);
 
-  if (isCartaRoute) {
-    return <PublicCartaView />;
+  // Escuchar cambios de URL, historial o hash en el navegador
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setIsCoreMode(checkIsCoreOrAdmin());
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
+
+  const handleGoToAdmin = () => {
+    window.location.hash = '/admin';
+    setIsCoreMode(true);
+  };
+
+  const handleGoToPublic = () => {
+    window.location.hash = '';
+    try {
+      window.history.pushState({}, '', '/');
+    } catch (e) {
+      // Ignorar si el navegador restringe pushState
+    }
+    setIsCoreMode(false);
+  };
+
+  // Si no está en modo Core/Admin, muestra la web pública de clientes (/) sin login ni PIN
+  if (!isCoreMode) {
+    return <PublicCartaView onGoToAdmin={handleGoToAdmin} />;
   }
 
+  // Si está en /admin, /core o core.dolciangel.com, carga el POS/Admin protegido por PIN
   return (
     <AppProvider>
-      <MainLayout />
+      <MainLayout onGoToPublic={handleGoToPublic} />
     </AppProvider>
   );
 }

@@ -1,8 +1,8 @@
 import React from 'react';
 import { useApp, SEDES } from '../context/AppContext';
-import { Store, User, LogOut, Wifi, WifiOff, ShoppingBag, Sparkles } from 'lucide-react';
+import { Store, User, LogOut, Wifi, WifiOff, ShoppingBag, Sparkles, Globe } from 'lucide-react';
 
-export const Header = ({ onOpenCart, onOpenSwitchModal }) => {
+export const Header = ({ onOpenCart, onOpenSwitchModal, onGoToPublic }) => {
   const { sede, perfil, syncStatus, isOnline, activeAccount, cartCount, cartTotal } = useApp();
 
   const currentSedeInfo = sede ? SEDES[sede] : null;
@@ -92,6 +92,18 @@ export const Header = ({ onOpenCart, onOpenSwitchModal }) => {
               </span>
             )}
           </button>
+
+          {/* Botón Ver Web Clientes */}
+          {onGoToPublic && (
+            <button
+              onClick={onGoToPublic}
+              title="Ir a la Web Pública de Clientes"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-50 hover:bg-pink-100 border border-pink-200 text-brand-800 text-xs font-bold transition-all shadow-xs"
+            >
+              <Globe className="w-3.5 h-3.5 text-brand-700" />
+              <span>Web Clientes</span>
+            </button>
+          )}
 
           {/* Botón Salir / Cambiar sesión */}
           <button
