@@ -20,11 +20,11 @@ export const TicketPrint = ({ venta, id = "ticket-print-root", className = "" })
   const tipo = venta.tipoComprobante || 'NOTA_VENTA';
   const comprobante = venta.comprobante || {};
 
-  const serieDefecto = isVE ? 'NV01' : (tipo === 'FACTURA' ? 'F001' : tipo === 'BOLETA' ? 'B002' : 'NV01');
-  const serieComprobante = comprobante.serie || serieDefecto;
-  const numComprobante = comprobante.numero || venta.correlativo || venta.id || 1;
-  const codigoComprobante = comprobante.codigoCompleto || 
-    `${serieComprobante}-${String(numComprobante).padStart(6, '0')}`;
+  const serieDefecto = isVE ? 'NV01' : (tipo === 'FACTURA' ? 'F001' : 'B002');
+  const serieComprobante = isVE ? 'NV01' : (comprobante.serie || (tipo === 'FACTURA' ? 'F001' : 'B002'));
+  const numComprobante = comprobante.numero || venta.correlativo || (tipo === 'BOLETA' ? 1264 : 1);
+  // Requisito oficial: Mostrar explícitamente B002-${String(numero).padStart(8, '0')} (Ejemplo: B002-00001264)
+  const codigoComprobante = `${serieComprobante}-${String(numComprobante).padStart(8, '0')}`;
 
   const tituloComprobante = isVE
     ? 'TICKET DE CONTROL INTERNO'

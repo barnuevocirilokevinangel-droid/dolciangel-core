@@ -1,5 +1,5 @@
 // src/services/sunatService.js
-import { db, doc, runTransaction, serverTimestamp } from './firebase';
+import { db, doc, getDoc, runTransaction, serverTimestamp } from './firebase';
 
 // Endpoint proxy serverless en Vercel para evitar bloqueos de CORS
 const API_URL = import.meta.env?.VITE_API_SUNAT_PROXY || "/api/sunat";
@@ -14,7 +14,7 @@ export const SUNAT_CONFIG = {
   EMPRESA_DIRECCION: 'Av. Pacífico Mz. B Lt. 12 - Nuevo Chimbote',
   SERIES: {
     FACTURA: 'F001',
-    BOLETA: 'B002', // Sincronizado oficialmente con Arisale (último emitido 1263 -> siguiente 1264)
+    BOLETA: 'B002', // Sincronizado oficialmente con Arisale (último emitido 1263 -> arranca en 1264)
     NOTA_VENTA: 'NV01'
   }
 };
@@ -40,20 +40,15 @@ export function validarRUC(ruc) {
 }
 
 /**
- * Obtiene e incrementa de forma atómica en Firestore el siguiente correlativo oficial.
- * - Boletas Buenos Aires: Serie "B002", arranca en 1264 e incrementa de 1 en 1.
+ * Consulta el siguiente correlativo oficial en Firestore sin quemarlo previamente.
+ * - Boletas Buenos Aires: Serie "B002", arranca en 1264.
  * - Facturas Buenos Aires: Serie "F001", arranca en 1.
  * - Tickets Internos (Villa España / NV): Serie "NV01", arranca en 1.
  */
 export async function obtenerSiguienteCorrelativo(tipoComprobante = 'BOLETA', sede = 'BA') {
   const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
-  const serie = isVE 
-    ? 'NV01' 
-    : tipoComprobante === 'FACTURA' 
-    ? 'F001' 
-    : tipoComprobante === 'BOLETA' 
-    ? 'B002' 
-    : 'NV01';
+  const esFactura = !isVE && (tipoComprobante === 'FACTURA' || tipoComprobante === 'Factura');
+  const serie = isVE ? 'NV01' : (esFactura ? 'F001' : 'B002');
 
   const defaultStarts = {
     'B002': 1264,
@@ -64,43 +59,60 @@ export async function obtenerSiguienteCorrelativo(tipoComprobante = 'BOLETA', se
   const correlativoRef = doc(db, 'config', 'correlativos');
 
   try {
-    const numeroAsignado = await runTransaction(db, async (transaction) => {
-      const snap = await transaction.get(correlativoRef);
-      let current = defaultStarts[serie] || 1;
+    const snap = await getDoc(correlativoRef);
+    let current = defaultStarts[serie] || 1;
 
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data && typeof data[serie] === 'number') {
-          current = Math.max(data[serie], defaultStarts[serie] || 1);
-        }
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data && typeof data[serie] === 'number') {
+        current = Math.max(data[serie], defaultStarts[serie] || 1);
       }
+    }
 
-      const next = current + 1;
-      transaction.set(correlativoRef, {
-        [serie]: next,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-
-      return current;
-    });
-
-    const codigoCompleto = `${serie}-${String(numeroAsignado).padStart(6, '0')}`;
-    return {
-      serie,
-      numero: numeroAsignado,
-      codigoCompleto
-    };
-  } catch (error) {
-    console.warn("Fallo en transacción atómica de correlativo Firestore, usando fallback local:", error);
-    const storageKey = `dolciangel_correlativo_${serie}`;
-    let current = parseInt(localStorage.getItem(storageKey) || defaultStarts[serie] || 1, 10);
-    localStorage.setItem(storageKey, (current + 1).toString());
-    const codigoCompleto = `${serie}-${String(current).padStart(6, '0')}`;
+    const codigoCompleto = `${serie}-${String(current).padStart(8, '0')}`;
     return {
       serie,
       numero: current,
       codigoCompleto
     };
+  } catch (error) {
+    console.warn("Fallo en lectura de correlativo Firestore, usando fallback local:", error);
+    const storageKey = `dolciangel_correlativo_${serie}`;
+    let current = parseInt(localStorage.getItem(storageKey) || defaultStarts[serie] || 1, 10);
+    const codigoCompleto = `${serie}-${String(current).padStart(8, '0')}`;
+    return {
+      serie,
+      numero: current,
+      codigoCompleto
+    };
+  }
+}
+
+/**
+ * Incrementa atómicamente en Firestore el correlativo tras una emisión confirmada exitosa.
+ * Así, si se emite la 1264, la siguiente venta será automáticamente la 1265.
+ */
+export async function incrementarCorrelativo(serie = 'B002', numeroEmitido = 1264) {
+  const correlativoRef = doc(db, 'config', 'correlativos');
+  try {
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(correlativoRef);
+      const currentInDb = snap.exists() && typeof snap.data()[serie] === 'number'
+        ? snap.data()[serie]
+        : numeroEmitido;
+      const nextNumber = Math.max(currentInDb, numeroEmitido) + 1;
+      transaction.set(correlativoRef, {
+        [serie]: nextNumber,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    });
+
+    const storageKey = `dolciangel_correlativo_${serie}`;
+    localStorage.setItem(storageKey, (numeroEmitido + 1).toString());
+  } catch (err) {
+    console.warn("Fallo al incrementar correlativo en Firestore:", err);
+    const storageKey = `dolciangel_correlativo_${serie}`;
+    localStorage.setItem(storageKey, (numeroEmitido + 1).toString());
   }
 }
 
@@ -116,7 +128,7 @@ export const emitirComprobante = async (ventaData) => {
       comprobante_simulado: true,
       serie,
       numero: correlativo,
-      codigoCompleto: `${serie}-${String(correlativo).padStart(6, '0')}`,
+      codigoCompleto: `${serie}-${String(correlativo).padStart(8, '0')}`,
       estado_sunat: 'no_aplica',
       estado: 'CONTROL_INTERNO',
       enlace_del_pdf: null,
@@ -135,7 +147,7 @@ export const emitirComprobante = async (ventaData) => {
       comprobante_simulado: true,
       serie,
       numero: correlativo,
-      codigoCompleto: `${serie}-${String(correlativo).padStart(6, '0')}`,
+      codigoCompleto: `${serie}-${String(correlativo).padStart(8, '0')}`,
       estado_sunat: 'no_aplica',
       estado: 'CONTROL_INTERNO',
       enlace_del_pdf: null,
@@ -151,8 +163,12 @@ export const emitirComprobante = async (ventaData) => {
     const totalIgv = total - totalGravada;
 
     const esFactura = ventaData.tipoDocumento === 'Factura' || ventaData.tipoComprobante === 'FACTURA';
-    const serie = ventaData.serie || (esFactura ? "F001" : "B002");
-    const numero = ventaData.correlativo || ventaData.numero || (esFactura ? 1 : 1264);
+    // Forzado estricto: B002 para Boletas en Buenos Aires arrancando en 1264
+    const serie = esFactura ? "F001" : "B002";
+    const numero = esFactura 
+      ? (ventaData.correlativo || ventaData.numero || 1) 
+      : (ventaData.correlativo || 1264);
+
     const docCliente = (ventaData.clienteDoc || ventaData.cliente?.documento || '').trim();
     const nombreCliente = (ventaData.clienteNombre || ventaData.cliente?.nombre || "CLIENTES VARIOS").trim();
     const direccionCliente = (ventaData.clienteDireccion || ventaData.cliente?.direccion || "").trim();
@@ -214,13 +230,20 @@ export const emitirComprobante = async (ventaData) => {
     const qrCalculado = `${rucEmisor}|${codTipoDoc}|${serie}|${numero}|${totalIgv.toFixed(2)}|${total.toFixed(2)}|${fechaHoy}|${tipoDocCli}|${numDocCli}|`;
 
     if (data.success) {
+      // Incrementar contador en Firestore con éxito
+      await incrementarCorrelativo(serie, numero);
+
       const pdfLink = data.data?.links?.pdf || data.data?.pdf || null;
+      const finalSerie = data.data?.serie || serie;
+      const finalNumero = data.data?.numero || numero;
+      const finalCodigo = `${finalSerie}-${String(finalNumero).padStart(8, '0')}`;
+
       return {
         exito: true,
         success: true,
-        serie: data.data?.serie || serie,
-        numero: data.data?.numero || numero,
-        codigoCompleto: `${data.data?.serie || serie}-${data.data?.numero || numero}`,
+        serie: finalSerie,
+        numero: finalNumero,
+        codigoCompleto: finalCodigo,
         url_comprobante_sunat: pdfLink,
         enlace_del_pdf: pdfLink,
         hash: data.data?.hash || data.data?.codigo_hash || null,
@@ -236,7 +259,7 @@ export const emitirComprobante = async (ventaData) => {
         success: false,
         serie,
         numero,
-        codigoCompleto: `${serie}-${numero}`,
+        codigoCompleto: `${serie}-${String(numero).padStart(8, '0')}`,
         hash: null,
         cadena_para_codigo_qr: qrCalculado,
         error: data.message || "Error al emitir en SUNAT. Revisa los datos." 

@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     const esFactura = payload.tipo_de_comprobante === "1" || payload.tipoDocumento === 'Factura';
     const serie = payload.serie || (esFactura ? "F001" : "B002");
     const numero = payload.numero || (esFactura ? 1 : 1264);
-    const codigoCompleto = `${serie}-${String(numero).padStart(6, '0')}`;
+    const codigoCompleto = `${serie}-${String(numero).padStart(8, '0')}`;
     const rucEmisor = "10427321351";
     const tipoDoc = esFactura ? "01" : "03";
     const fecha = new Date().toISOString().split('T')[0];
