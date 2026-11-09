@@ -7,11 +7,10 @@
  * NUBEFACT_URL y NUBEFACT_TOKEN.
  */
 
-export const NUBEFACT_CONFIG = {
-  // Cuando se conecte Nubefact en producción, colocar las credenciales en .env
-  // o configurar en la base de datos de administración
-  API_URL: import.meta.env?.VITE_NUBEFACT_URL || '',
-  TOKEN: import.meta.env?.VITE_NUBEFACT_TOKEN || '',
+export const SUNAT_CONFIG = {
+  // Credenciales para endpoint genérico JSON (compatible con Nubefact u otro proveedor económico)
+  API_URL: import.meta.env?.VITE_API_SUNAT_URL || import.meta.env?.VITE_NUBEFACT_URL || '',
+  TOKEN: import.meta.env?.VITE_API_SUNAT_TOKEN || import.meta.env?.VITE_NUBEFACT_TOKEN || '',
   EMPRESA_RUC: '20609876543',
   EMPRESA_RAZON_SOCIAL: 'DOLCIANGEL PASTELERÍA & CAFÉ S.A.C.',
   EMPRESA_DIRECCION: 'Av. Pacífico Mz. B Lt. 12 - Nuevo Chimbote',
@@ -21,6 +20,9 @@ export const NUBEFACT_CONFIG = {
     NOTA_VENTA: 'NV01'
   }
 };
+
+// Alias de retrocompatibilidad
+export const NUBEFACT_CONFIG = SUNAT_CONFIG;
 
 /**
  * Valida un DNI peruano (exactamente 8 dígitos numéricos)
@@ -134,56 +136,104 @@ export function generarPayloadNubefact(venta) {
 }
 
 /**
- * Emite el comprobante electrónico hacia Nubefact / SUNAT
- * Si no hay API Key configurada, simula localmente la emisión con éxito,
- * generando los datos listos para el ticket y guardando el estado en Firestore.
+ * Emite el comprobante electrónico hacia el proveedor SUNAT (Nubefact o endpoint genérico JSON)
+ * REGLAS DE NEGOCIO ESTRICTAS:
+ * 1. Sede Villa España opera 100% bajo control interno sin valor fiscal; aborta la llamada API y retorna éxito local inmediato.
+ * 2. Solo las ventas de Buenos Aires con tipo "BOLETA" o "FACTURA" disparan el consumo de la API externa.
+ * 3. Si no hay API Key o falla la conexión, opera en simulación local para no trabar el mostrador.
  */
 export async function emitirComprobante(venta) {
-  const payload = generarPayloadNubefact(venta);
-  const tipo = venta.tipoComprobante || 'NOTA_VENTA';
+  const sede = venta?.sede || '';
+  const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
 
-  // Si hay credenciales activas de Nubefact, hacer la llamada HTTP real
-  if (NUBEFACT_CONFIG.API_URL && NUBEFACT_CONFIG.TOKEN) {
+  // 1. REGLA ESTRICTA VILLA ESPAÑA: abortar la API y retornar inmediatamente un éxito local
+  if (isVE) {
+    const correlativo = venta.correlativo || Math.floor(1000 + (Date.now() % 9000));
+    const serie = SUNAT_CONFIG.SERIES.NOTA_VENTA;
+    const numero = correlativo.toString().padStart(6, '0');
+    return {
+      exito: true,
+      tipo: 'interno',
+      comprobante_simulado: true,
+      serie,
+      numero,
+      codigoCompleto: `${serie}-${numero}`,
+      estado_sunat: 'no_aplica',
+      estado: 'CONTROL_INTERNO',
+      enlace_del_pdf: null,
+      mensaje: 'Ticket de control interno emitido en Villa España (sin valor fiscal)'
+    };
+  }
+
+  const tipo = venta.tipoComprobante || 'NOTA_VENTA';
+  const esFiscal = tipo === 'BOLETA' || tipo === 'FACTURA';
+
+  // 2. REGLA ESTRICTA NOTA DE VENTA BUENOS AIRES: uso interno, no consume API
+  if (!esFiscal) {
+    const correlativo = venta.correlativo || Math.floor(1000 + (Date.now() % 9000));
+    const serie = SUNAT_CONFIG.SERIES.NOTA_VENTA;
+    const numero = correlativo.toString().padStart(6, '0');
+    return {
+      exito: true,
+      tipo: 'interno',
+      comprobante_simulado: true,
+      serie,
+      numero,
+      codigoCompleto: `${serie}-${numero}`,
+      estado_sunat: 'no_aplica',
+      estado: 'CONTROL_INTERNO',
+      enlace_del_pdf: null,
+      mensaje: 'Nota de venta interna emitida en Buenos Aires'
+    };
+  }
+
+  // 3. SOLO VENTAS DE BUENOS AIRES MARCADAS EXPLÍCITAMENTE COMO BOLETA O FACTURA:
+  const payload = generarPayloadNubefact(venta);
+
+  // Consumir endpoint genérico JSON (usando VITE_API_SUNAT_URL / VITE_API_SUNAT_TOKEN)
+  if (SUNAT_CONFIG.API_URL && SUNAT_CONFIG.TOKEN) {
     try {
-      const response = await fetch(NUBEFACT_CONFIG.API_URL, {
+      const response = await fetch(SUNAT_CONFIG.API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Token token="${NUBEFACT_CONFIG.TOKEN}"`
+          'Authorization': SUNAT_CONFIG.TOKEN.startsWith('Bearer ') || SUNAT_CONFIG.TOKEN.startsWith('Token ')
+            ? SUNAT_CONFIG.TOKEN
+            : `Bearer ${SUNAT_CONFIG.TOKEN}`,
+          'token': SUNAT_CONFIG.TOKEN
         },
         body: JSON.stringify(payload)
       });
 
       const data = await response.json();
 
-      if (!response.ok || data.errors) {
-        throw new Error(data.errors || 'Error en respuesta de Nubefact/SUNAT');
+      if (!response.ok || data.errors || data.error) {
+        throw new Error(data.errors || data.error || 'Error en respuesta del proveedor de facturación SUNAT');
       }
 
       return {
+        exito: true,
         success: true,
         tipo,
         serie: data.serie || payload.serie,
         numero: data.numero || payload.numero,
-        enlace_del_pdf: data.enlace_del_pdf || null,
-        enlace_del_xml: data.enlace_del_xml || null,
-        cadena_para_codigo_qr: data.cadena_para_codigo_qr || null,
+        codigoCompleto: `${data.serie || payload.serie}-${data.numero || payload.numero}`,
+        enlace_del_pdf: data.enlace_del_pdf || data.pdf || null,
+        enlace_del_xml: data.enlace_del_xml || data.xml || null,
+        cadena_para_codigo_qr: data.cadena_para_codigo_qr || data.qr || null,
         estado: 'ACEPTADO_SUNAT',
+        estado_sunat: 'aceptado',
         fechaEmision: new Date().toISOString(),
         payload: payload
       };
     } catch (err) {
-      console.warn('Fallo en conexión en vivo con Nubefact, pasando a modo contingencia:', err);
-      // En caso de corte de internet o credencial temporal, no bloquear la venta en mostrador
+      console.warn('Fallo en conexión con API SUNAT externa, pasando a contingencia/simulación local:', err);
     }
   }
 
-  // SIMULADOR PERFECTO DE SUNAT (Ready for Nubefact)
-  // Como aún no tenemos la API Key configurada en producción, simulamos la emisión
-  // con un delay realista de 1 segundo para la experiencia de usuario y persistimos el estado.
+  // Simulación local de 1 segundo (Ready for Nubefact / Proveedor Económico)
   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  // GENERACIÓN OFICIAL LOCAL CON PROTOCOLO SUNAT
   const correlativo = venta.correlativo || Math.floor(1000 + (Date.now() % 9000));
   const serie = payload.serie;
   const numero = correlativo.toString().padStart(6, '0');
@@ -191,7 +241,7 @@ export async function emitirComprobante(venta) {
 
   // Cadena oficial QR SUNAT
   const qrString = [
-    NUBEFACT_CONFIG.EMPRESA_RUC,
+    SUNAT_CONFIG.EMPRESA_RUC,
     payload.tipo_de_comprobante.toString().padStart(2, '0'),
     serie,
     numero,
@@ -215,7 +265,7 @@ export async function emitirComprobante(venta) {
     enlace_del_xml: null,
     cadena_para_codigo_qr: qrString,
     estado: 'EMITIDO',
-    mensaje: 'Comprobante simulado localmente con éxito (Ready for Nubefact)',
+    mensaje: 'Comprobante simulado localmente con éxito para Buenos Aires (Ready for SUNAT)',
     fechaEmision: new Date().toISOString(),
     payload: payload
   };

@@ -494,15 +494,19 @@ export const AppProvider = ({ children }) => {
       };
     });
 
-    // Emisión / Simulación SUNAT - Nubefact
+    const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
+    const effectiveTipoComprobante = isVE ? 'NOTA_VENTA' : (tipoComprobante || 'NOTA_VENTA');
+
+    // Emisión / Simulación SUNAT (Buenos Aires) o Control Interno (Villa España)
     const comprobanteData = await emitirComprobante({
       id: saleId,
-      tipoComprobante,
+      sede,
+      tipoComprobante: effectiveTipoComprobante,
       total: totalToPay,
       metodoPago,
       items: itemsSummary,
       cliente: {
-        documento: clienteDoc || '',
+        documento: isVE ? '' : (clienteDoc || ''),
         nombre: clienteNombre || 'Público General',
         telefono: clienteTelefono || ''
       }
@@ -520,7 +524,7 @@ export const AppProvider = ({ children }) => {
       sedeNombre: SEDES[sede].nombre,
       vendedor: perfil.nombre,
       vendedorRol: perfil.rol,
-      estado_sunat: 'simulado_local',
+      estado_sunat: isVE ? 'no_aplica' : (comprobanteData.estado_sunat || 'simulado_local'),
       cuenta: {
         id: targetAccount.id,
         nombre: targetAccount.name,
@@ -531,7 +535,7 @@ export const AppProvider = ({ children }) => {
       opGravada,
       igv,
       metodoPago, // 'EFECTIVO' | 'YAPE_PLIN' | 'TARJETA'
-      tipoComprobante, // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
+      tipoComprobante: effectiveTipoComprobante, // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
       comprobante: {
         tipo: comprobanteData.tipo,
         serie: comprobanteData.serie,
@@ -544,7 +548,7 @@ export const AppProvider = ({ children }) => {
         fecha: new Date().toISOString()
       },
       cliente: {
-        documento: clienteDoc || '',
+        documento: isVE ? '' : (clienteDoc || ''),
         nombre: clienteNombre || 'Público General',
         telefono: clienteTelefono || ''
       },

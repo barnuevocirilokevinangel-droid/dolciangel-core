@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp, SEDES } from '../context/AppContext';
 import { validarDNI, validarRUC } from '../services/sunatService';
 import { getProductPrice, getProductStock, extractCategories } from '../services/productUtils';
@@ -71,7 +71,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState('mesa');
 
-  // Modal de Cobro (Ready for SUNAT)
+  // Modal de Cobro (Ready for SUNAT / Control Interno)
   const [showCheckout, setShowCheckout] = useState(false);
   const [metodoPago, setMetodoPago] = useState('EFECTIVO');
   const [tipoComprobante, setTipoComprobante] = useState('NOTA_VENTA'); // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
@@ -80,6 +80,18 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   const [clienteTelefono, setClienteTelefono] = useState('');
   const [montoRecibido, setMontoRecibido] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Regla estricta por sede: Villa España opera 100% con tickets de control interno sin valor fiscal SUNAT
+  // Buenos Aires mantiene habilitadas Boleta Electrónica, Factura Electrónica y Nota de Venta
+  const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
+
+  // Forzar siempre NOTA_VENTA si la sede activa es Villa España
+  useEffect(() => {
+    if (isVE && tipoComprobante !== 'NOTA_VENTA') {
+      setTipoComprobante('NOTA_VENTA');
+      setClienteDoc('');
+    }
+  }, [isVE, tipoComprobante]);
 
   // Feedback y Ticket Térmico de la última venta
   const [lastSaleReceipt, setLastSaleReceipt] = useState(null);
@@ -185,8 +197,11 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
       return;
     }
 
-    // Validar Boleta
-    if (tipoComprobante === 'BOLETA') {
+    // Forzar NOTA_VENTA en Villa España (Control Interno estricto)
+    const finalTipoComprobante = isVE ? 'NOTA_VENTA' : tipoComprobante;
+
+    // Validar Boleta (solo aplicable si es Buenos Aires)
+    if (!isVE && finalTipoComprobante === 'BOLETA') {
       if (!esDniValido) {
         showToast('Para Boleta, el DNI debe tener exactamente 8 dígitos numéricos', 'error');
         return;
@@ -197,8 +212,8 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
       }
     }
 
-    // Validar Factura
-    if (tipoComprobante === 'FACTURA') {
+    // Validar Factura (solo aplicable si es Buenos Aires)
+    if (!isVE && finalTipoComprobante === 'FACTURA') {
       if (!esRucValido) {
         showToast('Para Factura, el RUC debe tener 11 dígitos e iniciar con 10 o 20', 'error');
         return;
@@ -219,8 +234,8 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     try {
       const saleResult = await processSale({
         metodoPago,
-        tipoComprobante,
-        clienteDoc,
+        tipoComprobante: finalTipoComprobante,
+        clienteDoc: isVE ? '' : clienteDoc,
         clienteNombre,
         clienteTelefono,
         montoRecibido: metodoPago === 'EFECTIVO' ? montoRecibido : cartTotal,
@@ -1235,42 +1250,73 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                 </div>
               )}
 
-              {/* 2. Pestañas de Comprobante (Ready for SUNAT) */}
+              {/* 2. Pestañas de Comprobante (Bloqueo Estricto por Sede) */}
               <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
-                  2. Tipo de Comprobante (SUNAT) *
-                </label>
-                <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-2xl">
-                  {[
-                    { id: 'NOTA_VENTA', label: 'Nota de Venta' },
-                    { id: 'BOLETA', label: 'Boleta Electrónica' },
-                    { id: 'FACTURA', label: 'Factura Electrónica' },
-                  ].map((c) => {
-                    const isSelected = tipoComprobante === c.id;
-                    return (
-                      <button
-                        type="button"
-                        key={c.id}
-                        onClick={() => {
-                          setTipoComprobante(c.id);
-                          setClienteDoc('');
-                          if (c.id === 'NOTA_VENTA') setClienteNombre('');
-                        }}
-                        className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all text-center ${
-                          isSelected
-                            ? 'bg-white text-brand-800 shadow-sm border border-pink-100'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        {c.label}
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    {isVE ? '2. Comprobante de Venta *' : '2. Tipo de Comprobante (SUNAT) *'}
+                  </label>
+                  {isVE && (
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                      Villa España: Control Interno
+                    </span>
+                  )}
                 </div>
+
+                {isVE ? (
+                  /* En Villa España se ocultan por completo Boleta y Factura */
+                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center text-sm font-bold shadow-xs">
+                        🧾
+                      </div>
+                      <div>
+                        <span className="font-extrabold text-xs text-amber-950 block">
+                          Nota de Venta / Ticket Interno
+                        </span>
+                        <span className="text-[10px] text-amber-700 block">
+                          Comprobante de control interno sin valor fiscal SUNAT
+                        </span>
+                      </div>
+                    </div>
+                    <span className="bg-amber-200 text-amber-900 text-[10px] font-extrabold px-2.5 py-1 rounded-xl border border-amber-300">
+                      Exclusivo VE
+                    </span>
+                  </div>
+                ) : (
+                  /* En Buenos Aires se mantienen las 3 opciones disponibles */
+                  <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-2xl">
+                    {[
+                      { id: 'NOTA_VENTA', label: 'Nota de Venta' },
+                      { id: 'BOLETA', label: 'Boleta Electrónica' },
+                      { id: 'FACTURA', label: 'Factura Electrónica' },
+                    ].map((c) => {
+                      const isSelected = tipoComprobante === c.id;
+                      return (
+                        <button
+                          type="button"
+                          key={c.id}
+                          onClick={() => {
+                            setTipoComprobante(c.id);
+                            setClienteDoc('');
+                            if (c.id === 'NOTA_VENTA') setClienteNombre('');
+                          }}
+                          className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all text-center ${
+                            isSelected
+                              ? 'bg-white text-brand-800 shadow-sm border border-pink-100'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          {c.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {/* Formulario para Boleta Electrónica */}
-              {tipoComprobante === 'BOLETA' && (
+              {/* Formulario para Boleta Electrónica (Exclusivo Buenos Aires) */}
+              {!isVE && tipoComprobante === 'BOLETA' && (
                 <div className="p-4 rounded-2xl bg-pink-50/60 border border-pink-200 space-y-3">
                   <div className="flex items-center justify-between text-xs font-bold text-brand-900">
                     <span className="flex items-center gap-1.5">
@@ -1318,8 +1364,8 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                 </div>
               )}
 
-              {/* Formulario para Factura Electrónica */}
-              {tipoComprobante === 'FACTURA' && (
+              {/* Formulario para Factura Electrónica (Exclusivo Buenos Aires) */}
+              {!isVE && tipoComprobante === 'FACTURA' && (
                 <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
                   <div className="flex items-center justify-between text-xs font-bold text-amber-950">
                     <span className="flex items-center gap-1.5">
@@ -1387,7 +1433,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                     placeholder="9XXXXXXXX (9 dígitos)"
                     className="flex-1 px-3 py-2 rounded-xl border border-purple-200 bg-white text-xs font-bold focus:outline-none focus:border-purple-500"
                   />
-                  {tipoComprobante === 'NOTA_VENTA' && (
+                  {(tipoComprobante === 'NOTA_VENTA' || isVE) && (
                     <input
                       type="text"
                       value={clienteNombre}

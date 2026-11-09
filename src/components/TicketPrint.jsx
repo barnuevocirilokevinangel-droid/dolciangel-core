@@ -15,12 +15,15 @@ export const TicketPrint = ({ venta, id = "ticket-print-root", className = "" })
     ciudad: 'Chimbote'
   };
 
+  const isVE = venta.sede === 'VE' || venta.sede === 'villaEspana' || venta.sede === 'Villa España';
   const tipo = venta.tipoComprobante || 'NOTA_VENTA';
   const comprobante = venta.comprobante || {};
   const codigoComprobante = comprobante.codigoCompleto || 
     `${comprobante.serie || (tipo === 'FACTURA' ? 'F001' : tipo === 'BOLETA' ? 'B001' : 'NV01')}-${comprobante.numero || venta.id}`;
 
-  const tituloComprobante = tipo === 'FACTURA'
+  const tituloComprobante = isVE
+    ? 'TICKET DE CONTROL INTERNO'
+    : tipo === 'FACTURA'
     ? 'FACTURA ELECTRÓNICA'
     : tipo === 'BOLETA'
     ? 'BOLETA DE VENTA ELECTRÓNICA'
@@ -175,6 +178,15 @@ export const TicketPrint = ({ venta, id = "ticket-print-root", className = "" })
 
       {/* 7. PIE DE TICKET */}
       <div className="text-center pt-1 text-[9px] space-y-1 text-gray-700">
+        {isVE ? (
+          <p className="font-extrabold text-[8px] uppercase tracking-wide text-black">
+            ** TICKET DE CONTROL INTERNO - SIN VALOR FISCAL **
+          </p>
+        ) : comprobante.estado === 'ACEPTADO_SUNAT' ? (
+          <p className="font-bold text-[8px] text-black">
+            ✓ Comprobante autorizado por SUNAT
+          </p>
+        ) : null}
         <p className="font-bold">
           ¡Gracias por endulzar tu momento con Dolciangel!
         </p>

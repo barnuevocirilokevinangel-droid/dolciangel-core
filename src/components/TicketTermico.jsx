@@ -11,12 +11,15 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
     ciudad: 'Chimbote'
   };
 
+  const isVE = venta.sede === 'VE' || venta.sede === 'villaEspana' || venta.sede === 'Villa España';
   const tipo = venta.tipoComprobante || 'NOTA_VENTA';
   const comprobante = venta.comprobante || {};
   const codigoComprobante = comprobante.codigoCompleto || 
     `${comprobante.serie || (tipo === 'FACTURA' ? 'F001' : tipo === 'BOLETA' ? 'B001' : 'NV01')}-${comprobante.numero || venta.id}`;
 
-  const tituloComprobante = tipo === 'FACTURA'
+  const tituloComprobante = isVE
+    ? 'TICKET DE CONTROL INTERNO'
+    : tipo === 'FACTURA'
     ? 'FACTURA ELECTRÓNICA'
     : tipo === 'BOLETA'
     ? 'BOLETA DE VENTA ELECTRÓNICA'
@@ -206,7 +209,11 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
 
         {/* Pie de Ticket & Estado SUNAT */}
         <div className="pt-3 text-center space-y-1 text-[9px] text-slate-400">
-          {comprobante.estado === 'ACEPTADO_SUNAT' ? (
+          {isVE ? (
+            <p className="font-bold text-amber-800 text-[8px] uppercase">
+              ** TICKET DE CONTROL INTERNO (SIN VALOR FISCAL) **
+            </p>
+          ) : comprobante.estado === 'ACEPTADO_SUNAT' ? (
             <p className="font-bold text-emerald-600">
               ✓ Comprobante autorizado por SUNAT
             </p>
