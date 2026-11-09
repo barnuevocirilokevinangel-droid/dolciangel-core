@@ -114,7 +114,9 @@ export const KardexView = () => {
                           (p.categoria || '').toLowerCase().includes(stockSearch.toLowerCase()) ||
                           (p.id || '').toLowerCase().includes(stockSearch.toLowerCase());
       
-      const matchCategory = stockCategory === 'todos' || p.categoria === stockCategory;
+      const matchCategory = stockCategory === 'todos' || 
+                            (p.categoria && p.categoria.toLowerCase() === stockCategory.toLowerCase()) ||
+                            p.categoria === stockCategory;
 
       const ba = getProductStock(p, 'BA');
       const ve = getProductStock(p, 'VE');
@@ -583,15 +585,16 @@ export const KardexView = () => {
               </button>
               {categories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setStockCategory(cat)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                    stockCategory === cat
+                  key={cat.id || cat.label}
+                  onClick={() => setStockCategory(cat.id || cat.label)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    stockCategory === (cat.id || cat.label)
                       ? 'bg-brand-700 text-white'
                       : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
                   }`}
                 >
-                  {cat}
+                  <span>{cat.icon || '🍰'}</span>
+                  <span>{cat.label}</span>
                 </button>
               ))}
             </div>
