@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/tables.css — Tablas de datos (.ds-table…)
+   Depende de: tokens.css, theme.css
+   Mobile-first: por defecto cada <tr> se apila como tarjeta (igual
+   de cómodo en celular que la lista de filas del CMS); a partir de
+   --ds-table-bp (768px) se vuelve tabla tradicional. Ningún archivo
+   existente usa <table> hoy (el CMS usa .admin-row), así que esto
+   queda listo para Stock/Producción/Finanzas/Estadísticas.
+═══════════════════════════════════════════════════════════ */
+
+.ds-table-wrap { width: 100%; overflow-x: auto; }
+
+.ds-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+  font-size: var(--ds-fs-sm);
+}
+
+.ds-table thead th {
+  text-align: left;
+  font-size: var(--ds-fs-xs);
+  font-weight: var(--ds-fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-text-tertiary);
+  padding: 0 var(--ds-space-md) var(--ds-space-xs);
+}
+
+.ds-table tbody tr {
+  background: var(--ds-surface);
+  transition: box-shadow var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-table tbody tr:hover { box-shadow: var(--ds-shadow-md); }
+.ds-table tbody td {
+  padding: var(--ds-space-sm) var(--ds-space-md);
+  border-top: 1px solid var(--ds-border);
+  border-bottom: 1px solid var(--ds-border);
+  color: var(--ds-text);
+}
+.ds-table tbody td:first-child { border-left: 1px solid var(--ds-border); border-radius: var(--ds-radius-md) 0 0 var(--ds-radius-md); }
+.ds-table tbody td:last-child  { border-right: 1px solid var(--ds-border); border-radius: 0 var(--ds-radius-md) var(--ds-radius-md) 0; }
+
+.ds-table td[data-num] { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Mobile: cada fila se convierte en tarjeta apilada ── */
+@media (max-width: 767px) {
+  .ds-table thead { display: none; }
+  .ds-table, .ds-table tbody, .ds-table tr, .ds-table td { display: block; width: 100%; }
+  .ds-table tr {
+    border: 1px solid var(--ds-border); border-radius: var(--ds-radius-md);
+    padding: var(--ds-space-sm) var(--ds-space-md); margin-bottom: var(--ds-space-sm);
+    box-shadow: var(--ds-shadow-sm);
+  }
+  .ds-table td {
+    display: flex; justify-content: space-between; align-items: center; gap: var(--ds-space-sm);
+    border: none !important; padding: 6px 0; border-radius: 0 !important;
+  }
+  .ds-table td::before {
+    content: attr(data-label);
+    font-size: var(--ds-fs-xs); font-weight: var(--ds-fw-bold);
+    color: var(--ds-text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+}

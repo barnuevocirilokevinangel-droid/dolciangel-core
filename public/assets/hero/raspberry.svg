@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <radialGradient id="raspDrop" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FB7185"/>
+      <stop offset="40%" stop-color="#E11D48"/>
+      <stop offset="80%" stop-color="#9F1239"/>
+      <stop offset="100%" stop-color="#4C0519"/>
+    </radialGradient>
+    <filter id="berryShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#4C0519" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <g filter="url(#berryShadow)" transform="translate(10, 8)">
+    <circle cx="28" cy="55" r="14" fill="url(#raspDrop)"/>
+    <circle cx="52" cy="55" r="14" fill="url(#raspDrop)"/>
+    <circle cx="40" cy="40" r="14" fill="url(#raspDrop)"/>
+    <circle cx="22" cy="38" r="13" fill="url(#raspDrop)"/>
+    <circle cx="58" cy="38" r="13" fill="url(#raspDrop)"/>
+    <circle cx="40" cy="22" r="12" fill="url(#raspDrop)"/>
+    <!-- Brillos jugosos -->
+    <circle cx="26" cy="52" r="3.5" fill="#FFE4E6" opacity="0.7"/>
+    <circle cx="48" cy="52" r="3.5" fill="#FFE4E6" opacity="0.7"/>
+    <circle cx="38" cy="18" r="3.5" fill="#FFE4E6" opacity="0.8"/>
+  </g>
+</svg>

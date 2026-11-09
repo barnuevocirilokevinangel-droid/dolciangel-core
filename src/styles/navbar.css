@@ -1,0 +1,48 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/navbar.css — Barra de navegación superior (.ds-navbar…)
+   Depende de: tokens.css, theme.css
+   Generaliza .carta-nav / .nav / .admin-topbar ya existentes —
+   aditivo, esas clases no se modificaron (ver informe).
+═══════════════════════════════════════════════════════════ */
+
+.ds-navbar {
+  position: sticky; top: 0; z-index: var(--ds-z-nav);
+  height: var(--ds-nav-h);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-md);
+  padding: 0 var(--ds-space-md);
+  background: rgba(244,234,213,0.96);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 rgba(40,20,5,0.09), 0 4px 18px rgba(40,20,5,0.06);
+}
+.ds-navbar--transparent {
+  background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+
+.ds-navbar__brand { font-family: var(--ds-font-serif); font-size: 20px; font-weight: var(--ds-fw-bold); color: var(--ds-gold-dark); }
+.ds-navbar__links { display: none; align-items: center; gap: 28px; }
+.ds-navbar__link {
+  font-size: var(--ds-fs-md); font-weight: var(--ds-fw-medium); color: var(--ds-text-secondary);
+  transition: color var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-navbar__link:hover { color: var(--ds-success); }
+.ds-navbar__actions { display: flex; align-items: center; gap: var(--ds-space-sm); flex-shrink: 0; }
+
+@media (min-width: 720px) { .ds-navbar__links { display: flex; } }
+
+/* ── Botón hamburguesa (para abrir un .ds-sidebar en mobile) ── */
+.ds-navbar__burger {
+  width: 34px; height: 34px; border-radius: var(--ds-radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ds-text-secondary); background: rgba(40,20,5,0.05);
+  transition: background var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-navbar__burger:hover { background: rgba(40,20,5,0.09); }
+
+/* ── Botón "volver" (patrón usado en la carta y CMS) ── */
+.ds-navbar__back {
+  display: flex; align-items: center; gap: 5px;
+  font-size: var(--ds-fs-sm); font-weight: var(--ds-fw-medium); color: var(--ds-text-secondary);
+  padding: 8px 6px; border-radius: var(--ds-radius-sm);
+  transition: color var(--ds-duration-normal) var(--ds-ease-standard), background var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-navbar__back:hover { color: var(--ds-success); background: rgba(31,107,74,0.07); }

@@ -1,0 +1,23 @@
+ASSETS — Dolciangel Carta Web
+══════════════════════════════
+
+Aquí van las imágenes del proyecto.
+
+IMÁGENES RECOMENDADAS:
+  logo.png        → Logo de Dolciangel (preferible SVG o PNG con fondo transparente)
+  favicon.ico     → Ícono del sitio (32×32 px)
+  og-image.jpg    → Imagen para redes sociales al compartir el link (1200×630 px)
+  hero-bg.jpg     → Fondo opcional del hero (si se quiere reemplazar el gradiente)
+
+FOTOS DE PRODUCTOS:
+  Si se agregan fotos reales, renombrarlas como:
+  torta-chocolate.jpg, cheesecake-maracuya.jpg, etc.
+  Luego actualizar el campo "img" en cada producto dentro de script.js.
+
+TAMAÑOS RECOMENDADOS PARA PRODUCTOS:
+  600×600 px (cuadrada) o 4:3 — WebP para mejor rendimiento.
+
+FORMATO SUGERIDO:
+  Usar WebP siempre que sea posible.
+  JPG como fallback.
+  Comprimir con https://squoosh.app antes de subir.

@@ -1,0 +1,148 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/tokens.css — Design tokens (capa 1: primitivos)
+   ───────────────────────────────────────────────────────────
+   Estos son los ÚNICOS valores "crudos" (hex, px, ms) de todo el
+   sistema. Ningún componente debería usar un color o medida hardcoded
+   — todo pasa por aquí o por theme.css (capa semántica, ver ese
+   archivo). Los mismos hex de la paleta Dolciangel ya en uso en
+   styles.css/admin.css: NO se inventó una paleta nueva, se le dio
+   arquitectura a la que ya existía.
+
+   Prefijo --ds- (Design System) para no colisionar nunca con las
+   variables ya existentes (--gold, --ink, --card, etc.) usadas en
+   styles.css / admin.css. Nada de lo que carga hoy la Carta o el CMS
+   se ve afectado por cargar este archivo.
+
+   Orden de carga recomendado (ver styles/README al final del repo o
+   el informe del chat): tokens.css → theme.css → el resto.
+═══════════════════════════════════════════════════════════ */
+
+:root {
+
+  /* ── Color primitivo: escala espresso/tinta (oscuros) ── */
+  --ds-color-espresso-900: #1A0A04;
+  --ds-color-espresso-800: #2C1208;
+  --ds-color-espresso-700: #3A2412;
+
+  --ds-color-ink-900: #1C0C04;
+  --ds-color-ink-700: #5A3A20;
+  --ds-color-ink-400: #9A7040;
+
+  /* ── Color primitivo: escala crema/arena (claros) ── */
+  --ds-color-cream-50:  #FEFAF3;   /* superficie de tarjeta */
+  --ds-color-cream-100: #F5EDDA;   /* superficie elevada / hover */
+  --ds-color-cream-200: #F4EAD5;   /* fondo principal de página */
+  --ds-color-cream-300: #ECE0C8;   /* fondo secundario */
+  --ds-color-cream-400: #F4E8D0;   /* texto sobre fondo oscuro */
+
+  --ds-color-sand-300: #D8C3A5;
+  --ds-color-sand-500: #B09070;    /* texto secundario sobre oscuro */
+  --ds-color-sand-700: #7A5838;
+
+  /* ── Color primitivo: dorado Dolciangel (marca) ── */
+  --ds-color-gold-300: #DEC07A;
+  --ds-color-gold-500: #C0933E;
+  --ds-color-gold-700: #8A6018;
+
+  /* ── Color primitivo: verde (éxito / acción principal) ── */
+  --ds-color-green-300: #3DA675;
+  --ds-color-green-500: #2E8B62;
+  --ds-color-green-700: #1F6B4A;
+
+  /* ── Color primitivo: rojo (error / peligro) ── */
+  --ds-color-red-500: #C03030;
+  --ds-color-red-700: #A82828;
+
+  /* ── Color primitivo: ámbar (advertencia) ── */
+  --ds-color-amber-300: #E0B23C;
+  --ds-color-amber-500: #C9930A;
+  --ds-color-amber-700: #966D06;
+
+  /* ── Color primitivo: azul (información) ── */
+  --ds-color-blue-300: #5C9BC9;
+  --ds-color-blue-500: #2971A8;
+  --ds-color-blue-700: #1D537D;
+
+  /* ── Color primitivo: WhatsApp (utilitario, no semántico) ── */
+  --ds-color-whatsapp:    #25D366;
+  --ds-color-whatsapp-lt: #4DDD80;
+
+  /* ── Neutros absolutos ── */
+  --ds-white: #FFFFFF;
+  --ds-black: #0A0704;
+
+  /* ── Tipografía: familias ── */
+  --ds-font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+  --ds-font-serif: 'Playfair Display', Georgia, serif;
+
+  /* ── Tipografía: escala de tamaños (1.25 type scale aprox.) ── */
+  --ds-fs-2xs: 10px;
+  --ds-fs-xs:  11px;
+  --ds-fs-sm:  12.5px;
+  --ds-fs-md:  14px;   /* tamaño base de párrafo */
+  --ds-fs-lg:  16px;
+  --ds-fs-xl:  19px;
+  --ds-fs-2xl: 23px;
+  --ds-fs-3xl: 28px;
+  --ds-fs-4xl: 36px;
+
+  /* ── Tipografía: pesos ── */
+  --ds-fw-light:    300;
+  --ds-fw-regular:  400;
+  --ds-fw-medium:   500;
+  --ds-fw-semibold: 600;
+  --ds-fw-bold:     700;
+
+  /* ── Tipografía: alturas de línea ── */
+  --ds-lh-tight:   1.15;
+  --ds-lh-snug:    1.3;
+  --ds-lh-normal:  1.5;
+  --ds-lh-relaxed: 1.7;
+
+  /* ── Espaciado (escala base 4px) ── */
+  --ds-space-3xs: 2px;
+  --ds-space-2xs: 4px;
+  --ds-space-xs:  8px;
+  --ds-space-sm:  12px;
+  --ds-space-md:  16px;
+  --ds-space-lg:  24px;
+  --ds-space-xl:  32px;
+  --ds-space-2xl: 48px;
+  --ds-space-3xl: 64px;
+
+  /* ── Border radius ── */
+  --ds-radius-sm:   10px;
+  --ds-radius-md:   16px;
+  --ds-radius-lg:   22px;
+  --ds-radius-xl:   30px;
+  --ds-radius-pill: 999px;
+  --ds-radius-circle: 50%;
+
+  /* ── Sombras (elevación) ── */
+  --ds-shadow-sm: 0 1px 3px rgba(40,20,5,0.06), 0 1px 2px rgba(40,20,5,0.08);
+  --ds-shadow-md: 0 2px 6px rgba(40,20,5,0.06), 0 6px 20px rgba(40,20,5,0.09);
+  --ds-shadow-lg: 0 4px 8px rgba(40,20,5,0.07), 0 16px 44px rgba(40,20,5,0.14);
+  --ds-shadow-xl: 0 12px 28px rgba(20,10,4,0.18), 0 30px 70px rgba(20,10,4,0.28);
+  --ds-shadow-focus: 0 0 0 3px rgba(31,107,74,0.16);
+
+  /* ── Duraciones de animación ── */
+  --ds-duration-fast:   120ms;
+  --ds-duration-normal: 220ms;
+  --ds-duration-slow:   400ms;
+
+  /* ── Curvas de animación (easing) ── */
+  --ds-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);   /* uso general */
+  --ds-ease-enter:    cubic-bezier(0.16, 1, 0.3, 1);   /* desacelera al entrar */
+  --ds-ease-exit:     cubic-bezier(0.4, 0, 1, 1);      /* acelera al salir */
+  --ds-ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1); /* rebote sutil (chips, FAB) */
+
+  /* ── Layout ── */
+  --ds-nav-h:      64px;
+  --ds-sidebar-w:  232px;
+  --ds-container:  980px;
+  --ds-z-nav:      800;
+  --ds-z-overlay:  850;
+  --ds-z-modal:    900;
+  --ds-z-modal-top: 950;
+  --ds-z-toast:    1000;
+}

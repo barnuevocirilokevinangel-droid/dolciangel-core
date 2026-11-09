@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, doc, onSnapshot } from '../services/firebase';
+import { LegalModals } from './LegalModals';
 import { 
   Sparkles, 
   MapPin, 
@@ -12,50 +13,33 @@ import {
   ChevronRight, 
   Lock,
   ArrowRight,
-  Cake,
-  Coffee,
-  CheckCircle2,
-  Bell
+  BookOpen,
+  FileText,
+  Share2
 } from 'lucide-react';
 
 const DEFAULT_CONFIG = {
   titulo: 'Hay momentos que\nmerecen quedarse.',
   subtitulo: 'Elaboración diaria con ingredientes seleccionados.\nEncuéntranos en Villa España y Nuevo Chimbote.',
-  imagenUrl: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80',
+  imagenUrl: 'assets/hero/cheesecake-maracuya.png',
   avisoSuperior: '✨ Atención hoy en Buenos Aires de 3:00 PM a 10:00 PM • Pedidos y delivery vía WhatsApp',
   telefonoWhatsapp: '51963810237'
 };
 
-const ESPECIALIDADES = [
-  {
-    titulo: 'Cheesecakes Horneados',
-    descripcion: 'Cremosa base de queso crema horneada lentamente sobre masa crocante con coulis natural de maracuyá o frutos rojos.',
-    imagen: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80',
-    tag: 'Favorito de la Casa'
-  },
-  {
-    titulo: 'Torta Húmeda de Chocolate',
-    descripcion: 'Bizcocho húmedo e intenso de cacao puro bañado en abundante fudge artesanal hecho en olla de cobre.',
-    imagen: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80',
-    tag: 'Clásico Imperdible'
-  },
-  {
-    titulo: 'Red Velvet Artesanal',
-    descripcion: 'Suave terciopelo rojo con sutil toque de cacao y relleno con frosting suave de queso crema.',
-    imagen: 'https://images.unsplash.com/photo-1586788680434-30d324b2d46f?auto=format&fit=crop&w=600&q=80',
-    tag: 'Especial'
-  },
-  {
-    titulo: 'Pies & Tartaletas Clásicas',
-    descripcion: 'Pies de limón con merengue suizo dorado y tartaletas crocantes con fresas frescas seleccionadas.',
-    imagen: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
-    tag: 'Receta Tradicional'
-  }
-];
-
 export const LandingPageView = ({ onNavigate }) => {
   const [webConfig, setWebConfig] = useState(DEFAULT_CONFIG);
 
+  // Estados de Modales Legales
+  const [isLibroOpen, setIsLibroOpen] = useState(false);
+  const [isTerminosOpen, setIsTerminosOpen] = useState(false);
+  const [isPrivacidadOpen, setIsPrivacidadOpen] = useState(false);
+
+  // Club Dolciangel Form
+  const [clubName, setClubName] = useState('');
+  const [clubPhone, setClubPhone] = useState('');
+  const [clubJoined, setClubJoined] = useState(false);
+
+  // 1. Suscripción en tiempo real a 'configuracion/web_publica'
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'configuracion', 'web_publica'), (docSnap) => {
       if (docSnap.exists()) {
@@ -70,7 +54,7 @@ export const LandingPageView = ({ onNavigate }) => {
         }));
       }
     }, (err) => {
-      console.warn('Aviso leyendo configuracion/web_publica:', err);
+      console.warn('Aviso leyendo configuracion/web_publica en Landing:', err);
     });
 
     return () => unsub();
@@ -82,431 +66,518 @@ export const LandingPageView = ({ onNavigate }) => {
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   };
 
+  const handleClubSubmit = (e) => {
+    e.preventDefault();
+    if (!clubName.trim() || !clubPhone.trim()) return;
+    setClubJoined(true);
+  };
+
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#FFFDF9] text-slate-800 font-sans selection:bg-brand-500 selection:text-white">
-      {/* 1. BARRA DE AVISO SUPERIOR */}
+    <div className="landing-body selection:bg-amber-800 selection:text-white" style={{ background: 'var(--page)', color: 'var(--ink)' }}>
+      
+      {/* 0. Noise texture background */}
+      <div className="noise" aria-hidden="true"></div>
+
+      {/* 1. BARRA DE AVISO / TICKER SUPERIOR */}
       {webConfig.avisoSuperior && (
-        <div className="bg-gradient-to-r from-amber-600 via-rose-700 to-brand-800 text-white text-xs font-bold py-2 px-4 shadow-sm text-center flex items-center justify-center gap-2">
-          <Bell className="w-3.5 h-3.5 text-gold-300 shrink-0 animate-bounce" />
-          <span className="tracking-wide">{webConfig.avisoSuperior}</span>
+        <div className="bg-gradient-to-r from-[#2C1810] via-[#4A2411] to-[#2C1810] text-[#FFFDF8] text-xs font-semibold py-2 px-4 shadow-sm text-center flex items-center justify-center gap-2 border-b border-amber-900/20">
+          <span className="text-amber-400">✨</span>
+          <span className="tracking-wide text-xs">{webConfig.avisoSuperior}</span>
         </div>
       )}
 
-      {/* 2. NAVBAR PRINCIPAL */}
-      <nav className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-pink-100 shadow-xs px-4 py-3.5">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          {/* Logo y Nombre */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-700 to-rose-600 flex items-center justify-center text-white shadow-md shadow-brand-700/20 text-xl font-bold">
-              🧁
-            </div>
-            <div>
-              <span className="font-serif font-black text-xl tracking-tight text-slate-900 block leading-tight">
-                DOLCIANGEL
-              </span>
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-700 block -mt-0.5">
-                Pastelería Fina & Café
-              </span>
-            </div>
-          </div>
+      {/* 2. NAV LANDING BOUTIQUE (1:1 de dolciangel-carta-web) */}
+      <nav className="nav" id="mainNav" aria-label="Navegación principal">
+        <div className="container nav__inner">
+          <a href="#top" className="nav__logo font-serif">Dolciangel</a>
 
-          {/* Enlaces y Acciones */}
-          <div className="flex items-center gap-3">
-            <a
-              href="#locales"
-              className="text-xs font-bold text-slate-700 hover:text-brand-700 px-3 py-1.5 rounded-full hover:bg-pink-50 transition-colors hidden md:inline"
-            >
-              Nuestros Locales
-            </a>
-            <a
-              href="#concepto"
-              className="text-xs font-bold text-slate-700 hover:text-brand-700 px-3 py-1.5 rounded-full hover:bg-pink-50 transition-colors hidden md:inline"
-            >
-              Filosofía Artesanal
-            </a>
+          <ul className="nav__links">
+            <li><a href="#historia" onClick={(e) => { e.preventDefault(); scrollToSection('historia'); }} className="nav__link">Historia</a></li>
+            <li><a href="#destacados" onClick={(e) => { e.preventDefault(); scrollToSection('destacados'); }} className="nav__link">Favoritos</a></li>
+            <li><a href="#fidelidad" onClick={(e) => { e.preventDefault(); scrollToSection('fidelidad'); }} className="nav__link">Club</a></li>
+            <li><a href="#sedes" onClick={(e) => { e.preventDefault(); scrollToSection('sedes'); }} className="nav__link">Visítanos</a></li>
+          </ul>
 
-            {/* CTA a /carta */}
+          <div className="nav__actions flex items-center gap-2">
             <button
-              onClick={() => onNavigate('carta')}
-              className="px-4 py-2 rounded-full bg-gradient-to-r from-brand-700 to-rose-600 hover:from-brand-800 hover:to-rose-700 text-white text-xs font-extrabold shadow-md shadow-brand-700/25 transition-all flex items-center gap-1.5 active:scale-95"
+              onClick={() => onNavigate && onNavigate('carta')}
+              className="btn btn--outline btn--sm hidden sm:inline-flex"
             >
-              <span>Ver Carta Digital</span>
-              <span>🍰</span>
+              Carta Digital 🍰
             </button>
-
-            {/* WhatsApp */}
-            <button
+            <button 
+              className="btn btn--wa btn--sm nav__wa" 
               onClick={handleOpenWhatsApp}
-              className="p-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-all hidden sm:flex items-center justify-center"
-              title="Escríbenos por WhatsApp"
             >
-              <MessageCircle className="w-4 h-4 fill-white" />
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              <span>Pedir</span>
             </button>
           </div>
         </div>
       </nav>
 
-      {/* 3. SECCIÓN HERO */}
-      <header className="relative overflow-hidden bg-gradient-to-b from-[#2C1810] via-[#3a2015] to-[#1f100a] text-[#FFFDF8] pt-14 pb-20 px-4">
-        {/* Glows decorativos */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-brand-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-10 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative z-10">
-          {/* Textos y Acciones (7 cols) */}
-          <div className="md:col-span-7 space-y-5 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold text-amber-300 border border-white/15 shadow-inner">
-              <Sparkles className="w-3.5 h-3.5 text-gold-400" />
-              <span>Pastelería Fina Artesanal • Chimbote & Nuevo Chimbote</span>
+      {/* 3. HERO EDITORIAL BOUTIQUE — DOLCIANGEL (1:1 de dolciangel-carta-web) */}
+      <section className="hero hero-boutique" id="top" aria-label="Portada boutique Dolciangel">
+        <div className="hero-boutique__container">
+          
+          {/* Lado Izquierdo: Copy Editorial */}
+          <div className="hero-boutique__left">
+            <div className="hero-boutique__badge">
+              🍰 BOUTIQUE DE POSTRES ARTESANALES
             </div>
-
-            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black leading-tight text-[#F8E7C8] whitespace-pre-line drop-shadow-sm">
-              {webConfig.titulo}
+            <h1 className="hero-boutique__title">
+              <em>{webConfig.titulo}</em>
             </h1>
-
-            <p className="text-sm sm:text-base text-amber-100/80 leading-relaxed whitespace-pre-line max-w-xl mx-auto md:mx-0">
+            <p className="hero-boutique__sub">
               {webConfig.subtitulo}
             </p>
-
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
-              <button
-                onClick={() => onNavigate('carta')}
-                className="px-6 py-3.5 rounded-full bg-gradient-to-r from-brand-600 via-rose-600 to-pink-600 hover:from-brand-700 hover:to-pink-700 text-white font-black text-sm shadow-xl shadow-brand-700/30 transition-all flex items-center gap-2 active:scale-95"
+            <div className="hero-boutique__actions">
+              <button 
+                className="btn-boutique-gold" 
+                onClick={() => onNavigate && onNavigate('carta')}
               >
-                <span>Explorar Carta Digital</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Explorar Carta Web</span>
+                <span aria-hidden="true">👉</span>
               </button>
-              <button
-                onClick={handleOpenWhatsApp}
-                className="px-5 py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-sm transition-all flex items-center gap-2 backdrop-blur-sm"
+              <button 
+                className="btn-boutique-outline" 
+                type="button" 
+                onClick={() => scrollToSection('sedes')}
               >
-                <PhoneCall className="w-4 h-4 text-emerald-400" />
-                <span>Pedir por WhatsApp</span>
-              </button>
-            </div>
-
-            {/* Badges de Calidad */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-4 text-xs text-amber-200/80 border-t border-white/10">
-              <span className="flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-gold-400" />
-                <span>Insumos de Primera Calidad</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Heart className="w-4 h-4 text-rose-400" />
-                <span>100% Sin Preservantes</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Horneado Diario</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Imagen Protagonista (5 cols) */}
-          <div className="md:col-span-5 flex justify-center">
-            <div className="relative group max-w-sm w-full">
-              <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-rose-500 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition duration-500" />
-              <div className="relative rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-[#1a0d07] aspect-square flex items-center justify-center p-3">
-                <img
-                  src={webConfig.imagenUrl}
-                  alt="Postres Artesanales Dolciangel"
-                  className="w-full h-full object-cover rounded-2xl transform group-hover:scale-105 transition-transform duration-700"
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80';
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* 4. SECCIÓN DE NUESTROS LOCALES (CHIMBOTE & NUEVO CHIMBOTE) */}
-      <section id="locales" className="max-w-6xl mx-auto px-4 -mt-10 relative z-20">
-        <div className="text-center mb-6 hidden md:block">
-          <span className="bg-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider text-brand-800 shadow-md border border-pink-100">
-            Nuestros Locales & Puntos de Atención
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* LOCAL 1: NUEVO CHIMBOTE (Sede Buenos Aires) */}
-          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-pink-950/5 border border-pink-100 transition-all hover:border-pink-300 flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-2xl bg-pink-100 text-brand-800 flex items-center justify-center text-xl font-bold">
-                    ☕
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-brand-700 bg-pink-50 px-2 py-0.5 rounded-full">
-                      Sede Principal & Cafetería
-                    </span>
-                    <h3 className="font-serif font-black text-slate-900 text-lg mt-0.5">
-                      Nuevo Chimbote (Buenos Aires)
-                    </h3>
-                  </div>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1 border border-emerald-200">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Abierto Hoy
-                </span>
-              </div>
-
-              <div className="space-y-2 pt-2 text-xs text-slate-600">
-                <p className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
-                  <span className="font-medium">
-                    Av. Pacífico Mz. B Lt. 12 - Nuevo Chimbote (Frente a la Av. Principal)
-                  </span>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span className="font-semibold text-slate-800">
-                    Lunes a Domingo: 3:00 PM – 10:00 PM
-                  </span>
-                </p>
-                <p className="flex items-center gap-2 text-slate-500">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Cafetería, vitrina diaria, consumo en salón y delivery a domicilio.</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-5 mt-4 border-t border-slate-100 flex items-center gap-2">
-              <button
-                onClick={() => onNavigate('carta')}
-                className="flex-1 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5"
-              >
-                <span>Ver Carta de Buenos Aires</span>
-                <ChevronRight className="w-4 h-4" />
+                <span aria-hidden="true">📍</span>
+                <span>Nuestras Sedes</span>
               </button>
             </div>
           </div>
 
-          {/* LOCAL 2: CHIMBOTE (Sede Villa España) */}
-          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-pink-950/5 border border-pink-100 transition-all hover:border-pink-300 flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center text-xl font-bold">
-                    🏪
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">
-                      Taller Central & Despacho
-                    </span>
-                    <h3 className="font-serif font-black text-slate-900 text-lg mt-0.5">
-                      Chimbote (Villa España)
-                    </h3>
-                  </div>
-                </div>
-                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
-                  Chimbote
-                </span>
-              </div>
-
-              <div className="space-y-2 pt-2 text-xs text-slate-600">
-                <p className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
-                  <span className="font-medium">
-                    Villa España Mz. A Lt. 8 - Chimbote
-                  </span>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span className="font-semibold text-slate-800">
-                    Lunes a Sábado: 3:30 PM – 9:30 PM
-                  </span>
-                </p>
-                <p className="flex items-center gap-2 text-slate-500">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Taller de producción artesanal, vitrina del día y recojo de tortas enteras.</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-5 mt-4 border-t border-slate-100 flex items-center gap-2">
-              <button
-                onClick={handleOpenWhatsApp}
-                className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5"
-              >
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>Consultar Disponibilidad en Villa España</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. NUESTRA FILOSOFÍA ARTESANAL */}
-      <section id="concepto" className="max-w-6xl mx-auto px-4 py-16 space-y-10">
-        <div className="text-center space-y-2 max-w-xl mx-auto">
-          <span className="text-xs font-bold uppercase tracking-widest text-brand-700 bg-pink-50 px-3 py-1 rounded-full border border-pink-200">
-            Tradición Pastelera
-          </span>
-          <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900">
-            El verdadero sabor de lo hecho con amor
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-            En Dolciangel creemos que cada porción de torta o cheesecake debe ser una experiencia inolvidable. Cuidamos cada detalle desde el batido hasta la presentación.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-3xl border border-pink-100 shadow-sm text-center space-y-3 hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-pink-50 text-brand-700 rounded-2xl flex items-center justify-center text-2xl mx-auto">
-              🥣
-            </div>
-            <h3 className="font-serif font-bold text-slate-900 text-base">Insumos Seleccionados</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Mantequilla pura, quesos crema de primera línea, cacao peruano y frutas frescas de temporada. Sin sustitutos baratos ni premezclas industriales.
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded-3xl border border-pink-100 shadow-sm text-center space-y-3 hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-amber-50 text-amber-700 rounded-2xl flex items-center justify-center text-2xl mx-auto">
-              🔥
-            </div>
-            <h3 className="font-serif font-bold text-slate-900 text-base">Horneado Diario</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Nuestra vitrina se abastece fresca cada mañana. Garantizamos esponjosidad, aroma irresistible y la frescura que mereces.
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded-3xl border border-pink-100 shadow-sm text-center space-y-3 hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-rose-50 text-rose-700 rounded-2xl flex items-center justify-center text-2xl mx-auto">
-              🎂
-            </div>
-            <h3 className="font-serif font-bold text-slate-900 text-base">Tortas & Celebraciones</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Tortas enteras para cumpleaños, bocaditos gourmet y pedidos especiales preparados con la dedicación de un taller de alta pastelería.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. GALERÍA DE ESPECIALIDADES DESTACADAS */}
-      <section className="bg-gradient-to-b from-pink-50/40 via-pink-50/20 to-transparent py-16 px-4 border-t border-pink-100/60">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-700 block">
-                Nuestras Joyas
-              </span>
-              <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900 mt-1">
-                Especialidades de la Casa
-              </h2>
-            </div>
-            <button
-              onClick={() => onNavigate('carta')}
-              className="px-5 py-2.5 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-xs shadow-md shadow-brand-700/20 flex items-center gap-1.5 transition-all"
+          {/* Lado Derecho: Composición 2.5D con postres y frutas flotantes */}
+          <div className="hero-boutique__right">
+            <div 
+              className="hero-boutique__stage hero-interactive" 
+              onClick={() => onNavigate && onNavigate('carta')} 
+              role="button" 
+              tabIndex={0} 
+              aria-label="Explorar postres en la Carta Web"
             >
-              <span>Ver Stock del Día en la Carta</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {ESPECIALIDADES.map((esp, i) => (
-              <div 
-                key={i}
-                className="bg-white rounded-3xl overflow-hidden border border-pink-100 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col justify-between"
-              >
-                <div>
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100 relative">
-                    <img 
-                      src={esp.imagen} 
-                      alt={esp.titulo} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                      {esp.tag}
-                    </span>
-                  </div>
-                  <div className="p-4 space-y-1.5">
-                    <h3 className="font-serif font-bold text-slate-900 text-sm group-hover:text-brand-700 transition-colors">
-                      {esp.titulo}
-                    </h3>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      {esp.descripcion}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-4 pt-0">
-                  <button
-                    onClick={() => onNavigate('carta')}
-                    className="w-full py-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-brand-800 font-bold text-xs transition-colors flex items-center justify-center gap-1"
-                  >
-                    <span>Ver disponibilidad</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                </div>
+              {/* Postre 1: Torta de Chocolate */}
+              <div className="boutique-cake boutique-cake--chocolate hero-interactive">
+                <img src="assets/hero/torta-chocolate.png" alt="Torta Suprema de Chocolate" draggable="false" />
+                <div className="boutique-cake__shadow"></div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* 7. BANNER LLAMADO A LA ACCIÓN FINAL */}
-      <section className="max-w-5xl mx-auto px-4 py-12">
-        <div className="rounded-3xl bg-gradient-to-r from-brand-900 via-rose-900 to-pink-800 p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="relative z-10 space-y-2 max-w-lg">
-            <span className="text-xs font-bold text-pink-200 tracking-wider uppercase block">
-              Atención hoy en Nuevo Chimbote
+              {/* Postre 2: Cheesecake de Maracuyá */}
+              <div className="boutique-cake boutique-cake--maracuya hero-interactive">
+                <img src={webConfig.imagenUrl || "assets/hero/cheesecake-maracuya.png"} alt="Cheesecake de Maracuyá" draggable="false" />
+                <div className="boutique-cake__shadow boutique-cake__shadow--large"></div>
+              </div>
+
+              {/* Frutas e ingredientes satélites flotantes */}
+              <div className="boutique-sat boutique-sat--berry">
+                <img src="assets/hero/strawberry-top.png" alt="" draggable="false" />
+              </div>
+              <div className="boutique-sat boutique-sat--mint">
+                <img src="assets/hero/mint-top.png" alt="" draggable="false" />
+              </div>
+              <div className="boutique-sat boutique-sat--blueberry">
+                <img src="assets/hero/blueberry-right.png" alt="" draggable="false" />
+              </div>
+              <div className="boutique-sat boutique-sat--whole-berry">
+                <img src="assets/hero/strawberry-small.png" alt="" draggable="false" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Borde Inferior: Marquee continuo animado de 20s */}
+        <div className="marquee-container py-3 border-t border-amber-900/10 bg-amber-50/40 select-none" aria-hidden="true">
+          <div className="marquee-content font-semibold tracking-widest text-xs uppercase text-amber-950/70">
+            <span className="inline-flex gap-8 px-4">
+              <span>✨ BOUTIQUE ARTESANAL</span> <span>•</span>
+              <span>🍰 HORNEADO DIARIO EN VILLA ESPAÑA Y BUENOS AIRES</span> <span>•</span>
+              <span>🍓 FRUTAS FRESCAS SELECCIONADAS</span> <span>•</span>
+              <span>🤎 HECHO CON AMOR Y PASIÓN</span> <span>•</span>
             </span>
-            <h2 className="font-serif font-black text-2xl sm:text-3xl text-white">
-              ¿Listo para endulzar tu tarde con Dolciangel?
-            </h2>
-            <p className="text-xs sm:text-sm text-pink-100/90 leading-relaxed">
-              Consulta nuestra carta digital en tiempo real con stock confirmado y realiza tu pedido directo a nuestro WhatsApp oficial.
-            </p>
+            <span className="inline-flex gap-8 px-4">
+              <span>✨ BOUTIQUE ARTESANAL</span> <span>•</span>
+              <span>🍰 HORNEADO DIARIO EN VILLA ESPAÑA Y BUENOS AIRES</span> <span>•</span>
+              <span>🍓 FRUTAS FRESCAS SELECCIONADAS</span> <span>•</span>
+              <span>🤎 HECHO CON AMOR Y PASIÓN</span> <span>•</span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. HISTORIA Y MOMENTOS (1:1 de dolciangel-carta-web) */}
+      <section className="momentos" id="historia" aria-label="Momentos Dolciangel">
+        <div className="container">
+          <div className="momentos__hd reveal-item">
+            <span className="momentos__eyebrow">✦ Momentos Dolciangel</span>
+            <h2 className="momentos__title">Lo que pasa cuando nos visitas</h2>
+            <p className="momentos__sub">Un dulce nunca es solo un dulce. Es una pausa, un reencuentro, una celebración o simplemente darte el gusto que te mereces.</p>
           </div>
 
-          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            <button
-              onClick={() => onNavigate('carta')}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-pink-50 text-brand-900 font-black text-xs sm:text-sm shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95"
+          <div className="momentos__quotes">
+            <blockquote className="momentos__quote reveal-item">
+              <p>"Nunca me habían atendido así. Salí pensando: tengo que traer a alguien especial."</p>
+              <cite>— Andrea M., cliente habitual</cite>
+            </blockquote>
+            <blockquote className="momentos__quote reveal-item">
+              <p>"El cheesecake de maracuyá es un antes y un después. Siempre fresco, siempre perfecto."</p>
+              <cite>— Sofía R., Villa España</cite>
+            </blockquote>
+            <blockquote className="momentos__quote reveal-item">
+              <p>"Un lugar que se siente como hogar pero con la elegancia de algo muy especial."</p>
+              <cite>— Miguel T., Buenos Aires</cite>
+            </blockquote>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. FAVORITOS DESTACADOS */}
+      <section className="featured" id="destacados">
+        <div className="container">
+          <div className="featured__hd reveal-item">
+            <h2 className="section-title">Nuestros favoritos</h2>
+            <p className="section-sub">Los postres más queridos de la familia Dolciangel</p>
+          </div>
+
+          <div className="feat-grid" id="featuredGrid">
+            {/* Card 1: Cheesecake Maracuyá */}
+            <div className="feat-card reveal-item" onClick={() => onNavigate && onNavigate('carta')}>
+              <div className="feat-card__img">
+                <div className="feat-card__bg" style={{ background: 'linear-gradient(135deg, #4A2010 0%, #8B4513 50%, #3A180A 100%)' }}></div>
+                <div className="feat-card__fade"></div>
+                <span className="feat-card__emoji">🌸</span>
+                <span className="feat-card__badge badge-popular">Popular</span>
+              </div>
+              <div className="feat-card__body">
+                <div className="feat-card__name">Cheesecake Maracuyá</div>
+                <div className="feat-card__desc">Base crujiente de galleta, relleno cremoso de queso y coulis de maracuyá fresco.</div>
+                <div className="feat-card__foot">
+                  <span className="feat-card__price">S/ 9.00</span>
+                  <span className="feat-card__wa">Ver en carta →</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Torta de Chocolate */}
+            <div className="feat-card reveal-item" onClick={() => onNavigate && onNavigate('carta')}>
+              <div className="feat-card__img">
+                <div className="feat-card__bg" style={{ background: 'linear-gradient(135deg, #3A1A08 0%, #6A2C12 50%, #2C1208 100%)' }}></div>
+                <div className="feat-card__fade"></div>
+                <span className="feat-card__emoji">🎂</span>
+                <span className="feat-card__badge badge-popular">Favorita</span>
+              </div>
+              <div className="feat-card__body">
+                <div className="feat-card__name">Torta Suprema Chocolate</div>
+                <div className="feat-card__desc">Bizcocho húmedo de cacao puro bañado en abundante fudge artesanal hecho en casa.</div>
+                <div className="feat-card__foot">
+                  <span className="feat-card__price">S/ 8.50</span>
+                  <span className="feat-card__wa">Ver en carta →</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Red Velvet */}
+            <div className="feat-card reveal-item" onClick={() => onNavigate && onNavigate('carta')}>
+              <div className="feat-card__img">
+                <div className="feat-card__bg" style={{ background: 'linear-gradient(135deg, #4A1020 0%, #8B2040 50%, #2C0810 100%)' }}></div>
+                <div className="feat-card__fade"></div>
+                <span className="feat-card__emoji">🍓</span>
+                <span className="feat-card__badge badge-popular">Especial</span>
+              </div>
+              <div className="feat-card__body">
+                <div className="feat-card__name">Red Velvet Artesanal</div>
+                <div className="feat-card__desc">Suave bizcocho terciopelo rojo relleno y cubierto con frosting artesanal de queso crema.</div>
+                <div className="feat-card__foot">
+                  <span className="feat-card__price">S/ 8.50</span>
+                  <span className="feat-card__wa">Ver en carta →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="featured__more reveal-item text-center mt-8">
+            <button 
+              className="btn btn--outline" 
+              onClick={() => onNavigate && onNavigate('carta')}
             >
-              <span>Explorar Carta Digital</span>
-              <span>🍰</span>
-            </button>
-            <button
-              onClick={handleOpenWhatsApp}
-              className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95"
-            >
-              <MessageCircle className="w-4 h-4 fill-white" />
-              <span>WhatsApp</span>
+              Ver carta completa →
             </button>
           </div>
         </div>
       </section>
 
-      {/* 8. FOOTER CORPORATIVO */}
-      <footer className="border-t border-pink-100 bg-white py-12 px-4 text-center text-xs text-slate-500 space-y-4">
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-2xl">🧁</span>
-          <span className="font-serif font-black text-slate-900 text-base">DOLCIANGEL</span>
-        </div>
-        <p className="max-w-md mx-auto text-xs text-slate-500 leading-relaxed">
-          Pastelería Fina & Café • Nuevo Chimbote (Av. Pacífico Mz. B Lt. 12) & Chimbote (Villa España Mz. A Lt. 8)
-        </p>
-        <p className="text-[11px] text-slate-400">
-          RUC: 10427321351 • RUTH PATRICIA CIRILO JARA • © {new Date().getFullYear()} Dolciangel.
-        </p>
+      {/* 6. CLUB DOLCIANGEL (1:1 de dolciangel-carta-web) */}
+      <section className="loyalty" id="fidelidad">
+        <div className="container">
+          <div className="loyalty__inner">
+            <div className="loyalty__copy reveal-item">
+              <span className="loyalty__badge-tag">✦ Club Dolciangel</span>
+              <h2 className="section-title">Únete a la familia</h2>
+              <p className="loyalty__text">Regístrate y sé parte de la comunidad Dolciangel. Los miembros del club reciben lo mejor antes que nadie: promociones exclusivas, sorpresas en tu cumpleaños y acceso anticipado a nuevas creaciones.</p>
+              <ul className="loyalty__perks">
+                <li className="loyalty__perk"><span className="loyalty__perk-ico">🎁</span>Promociones exclusivas para miembros</li>
+                <li className="loyalty__perk"><span className="loyalty__perk-ico">🎂</span>Regalo especial en tu cumpleaños</li>
+                <li className="loyalty__perk"><span className="loyalty__perk-ico">🌟</span>Acceso anticipado a novedades</li>
+                <li className="loyalty__perk"><span className="loyalty__perk-ico">💚</span>Descuentos especiales del club</li>
+              </ul>
+            </div>
 
-        {/* Acceso restringido al Core/POS */}
-        <div className="pt-4 border-t border-slate-100 max-w-xs mx-auto">
-          <button
-            onClick={() => onNavigate('core')}
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-brand-700 transition-colors py-1 px-3 rounded-full hover:bg-pink-50"
-          >
-            <Lock className="w-3 h-3" />
-            <span>Acceso Colaboradores / POS (Dolciangel Core)</span>
-          </button>
+            <div className="loyalty__form-wrap reveal-item">
+              {clubJoined ? (
+                <div className="loyalty-success p-6 text-center space-y-2">
+                  <span className="text-4xl">🎉</span>
+                  <h3 className="font-serif font-bold text-lg text-slate-900">¡Ya eres parte del club, {clubName}!</h3>
+                  <p className="text-xs text-slate-500">Te avisaremos de las mejores promociones y novedades vía WhatsApp.</p>
+                </div>
+              ) : (
+                <form className="loyalty-form" onSubmit={handleClubSubmit}>
+                  <div className="form-field">
+                    <label className="form-label" htmlFor="flName">Nombre completo *</label>
+                    <input 
+                      className="form-input" 
+                      id="flName" 
+                      type="text" 
+                      placeholder="Tu nombre" 
+                      required 
+                      value={clubName}
+                      onChange={(e) => setClubName(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label" htmlFor="flPhone">WhatsApp / Teléfono *</label>
+                    <input 
+                      className="form-input" 
+                      id="flPhone" 
+                      type="tel" 
+                      placeholder="+51 963 810 237" 
+                      required 
+                      value={clubPhone}
+                      onChange={(e) => setClubPhone(e.target.value)}
+                    />
+                  </div>
+                  <button className="btn btn--green btn--lg form-submit w-full" type="submit">
+                    Unirme al club ✦
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. SEDES / VISÍTANOS (CHIMBOTE & NUEVO CHIMBOTE) */}
+      <section className="sedes" id="sedes">
+        <div className="container">
+          <div className="text-center mb-8">
+            <h2 className="section-title">Dónde encontrarnos</h2>
+            <p className="section-sub">Locales en Chimbote y Nuevo Chimbote • Consulta disponibilidad antes de venir</p>
+          </div>
+
+          <div className="sedes__grid">
+            {/* Sede Villa España */}
+            <article className="sede reveal-item">
+              <div className="sede__pin">📍</div>
+              <h3 className="sede__name">Villa España</h3>
+              <p className="sede__city">Chimbote, Perú</p>
+              <div className="sede__hours">
+                <Clock className="w-3.5 h-3.5 mr-1" />
+                Lun–Sáb: 3:30pm – 9:30pm
+              </div>
+              <p className="sede__nota">Taller artesanal & despacho de pedidos para llevar</p>
+              <div className="sede__actions">
+                <button 
+                  className="btn btn--gold-outline btn--sm" 
+                  onClick={handleOpenWhatsApp}
+                >
+                  WhatsApp
+                </button>
+                <a 
+                  className="btn btn--map btn--sm" 
+                  href="https://maps.google.com/?q=Villa+Espana+Chimbote" 
+                  target="_blank" 
+                  rel="noopener"
+                >
+                  Ver en Maps
+                </a>
+              </div>
+            </article>
+
+            {/* Sede Buenos Aires */}
+            <article className="sede reveal-item">
+              <div className="sede__pin">📍</div>
+              <h3 className="sede__name">Buenos Aires</h3>
+              <p className="sede__city">Nuevo Chimbote, Perú</p>
+              <div className="sede__hours">
+                <Clock className="w-3.5 h-3.5 mr-1" />
+                Lun–Dom: 3:00pm – 10:00pm
+              </div>
+              <p className="sede__nota">Av. Pacífico Mz. B Lt. 12 • Cafetería, salón y delivery</p>
+              <div className="sede__actions">
+                <button 
+                  className="btn btn--gold-outline btn--sm" 
+                  onClick={handleOpenWhatsApp}
+                >
+                  WhatsApp
+                </button>
+                <a 
+                  className="btn btn--map btn--sm" 
+                  href="https://maps.google.com/?q=Av.+Pacifico+Mz.+B+Lt.+12+Nuevo+Chimbote" 
+                  target="_blank" 
+                  rel="noopener"
+                >
+                  Ver en Maps
+                </a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. CTA FINAL */}
+      <section className="cta-final">
+        <div className="container">
+          <div className="cta-final__inner reveal-item">
+            <span className="cta-final__em" aria-hidden="true">🍰</span>
+            <h2 className="cta-final__heading">Hoy también puede ser un buen día para un postre.</h2>
+            <p className="cta-final__sub">Hecho con amor, pensado para ti.</p>
+            <div className="cta-final__actions">
+              <button 
+                className="btn btn--ghost btn--lg" 
+                onClick={() => onNavigate && onNavigate('carta')}
+              >
+                Explorar la carta
+              </button>
+              <button 
+                className="btn btn--wa btn--lg" 
+                onClick={handleOpenWhatsApp}
+              >
+                Pedir por WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 9. FOOTER CORPORATIVO CON REQUISITOS LEGALES PERÚ (INDECOPI & LEY 29733) */}
+      <footer className="footer" id="footer">
+        <div className="container">
+          <div className="footer__top">
+            <div className="footer__brand">
+              <span className="footer__logo font-serif">Dolciangel</span>
+              <p className="footer__tagline">Postres artesanales hechos con amor</p>
+              <p className="text-[11px] text-amber-200/60 mt-1">
+                RUTH PATRICIA CIRILO JARA • RUC: 10427321351
+              </p>
+              <p className="text-[11px] text-amber-200/60">
+                Chimbote & Nuevo Chimbote, Áncash - Perú
+              </p>
+            </div>
+
+            <nav className="footer__nav" aria-label="Navegación footer">
+              <a href="#historia" onClick={(e) => { e.preventDefault(); scrollToSection('historia'); }} className="footer__nav-link">Historia</a>
+              <a href="#destacados" onClick={(e) => { e.preventDefault(); scrollToSection('destacados'); }} className="footer__nav-link">Favoritos</a>
+              <a href="#fidelidad" onClick={(e) => { e.preventDefault(); scrollToSection('fidelidad'); }} className="footer__nav-link">Club</a>
+              <a href="#sedes" onClick={(e) => { e.preventDefault(); scrollToSection('sedes'); }} className="footer__nav-link">Sedes</a>
+              <button onClick={() => onNavigate && onNavigate('carta')} className="footer__nav-link text-left">Carta</button>
+            </nav>
+
+            <div className="footer__right">
+              <p className="footer__hours-lbl">Horario</p>
+              <p className="footer__hours-txt">Lun–Dom · 3pm – 10pm</p>
+              
+              {/* Botón Libro de Reclamaciones Oficial */}
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsLibroOpen(true)}
+                  className="inline-flex items-center gap-2 bg-[#FFFDF8] hover:bg-amber-100/90 text-[#2C1810] px-3.5 py-1.5 rounded-xl border border-amber-300 font-bold text-xs shadow-sm transition-all active:scale-95 text-left"
+                >
+                  <span className="text-base">📖</span>
+                  <div>
+                    <span className="block leading-tight font-black text-[10px] uppercase tracking-wider text-brand-900">
+                      Libro de Reclamaciones
+                    </span>
+                    <span className="block text-[9px] text-slate-500 font-normal">
+                      Conforme al Código de Protección al Consumidor
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Enlaces Legales y Copyright */}
+          <div className="pt-6 mt-6 border-t border-amber-900/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-amber-200/70">
+            <p className="footer__copy m-0">
+              Dolciangel © {new Date().getFullYear()} · Hecho con amor · Todos los derechos reservados
+            </p>
+
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setIsTerminosOpen(true)}
+                className="hover:text-white underline transition-colors"
+              >
+                Términos y Condiciones
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => setIsPrivacidadOpen(true)}
+                className="hover:text-white underline transition-colors"
+              >
+                Política de Privacidad
+              </button>
+              <span>•</span>
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('core')}
+                  className="hover:text-white text-amber-300/80 transition-colors flex items-center gap-1"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>Acceso POS</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </footer>
+
+      {/* FAB WhatsApp Flotante */}
+      <button 
+        className="fab" 
+        id="fabWa" 
+        onClick={handleOpenWhatsApp} 
+        aria-label="Pedir por WhatsApp"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26" aria-hidden="true">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+        <span className="fab__ring"></span>
+      </button>
+
+      {/* Modales Legales Reutilizables */}
+      <LegalModals
+        isLibroOpen={isLibroOpen}
+        onCloseLibro={() => setIsLibroOpen(false)}
+        isTerminosOpen={isTerminosOpen}
+        onCloseTerminos={() => setIsTerminosOpen(false)}
+        isPrivacidadOpen={isPrivacidadOpen}
+        onClosePrivacidad={() => setIsPrivacidadOpen(false)}
+      />
     </div>
   );
 };

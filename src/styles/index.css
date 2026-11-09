@@ -1,0 +1,31 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/index.css — Design System Dolciangel — bundle de conveniencia
+   ───────────────────────────────────────────────────────────
+   Un solo <link rel="stylesheet" href="styles/index.css"> carga todo
+   el sistema en el orden correcto (fundamentos → componentes). Si
+   una pantalla solo necesita un par de piezas (ej. solo tokens +
+   theme, sin tablas ni sidebar), puede enlazar los archivos sueltos
+   en vez de este bundle — ambas formas conviven sin conflicto porque
+   todo vive bajo el prefijo --ds-/.ds-.
+
+   Nota técnica: @import tiene un costo de carga en cascada (bloquea
+   hasta resolver cada archivo). Para páginas ya en producción con
+   necesidad de velocidad máxima, preferir <link> individuales en el
+   <head>. Para uso interno del CMS (no indexado, no público) el costo
+   es despreciable.
+═══════════════════════════════════════════════════════════ */
+
+@import 'tokens.css';
+@import 'theme.css';
+@import 'typography.css';
+@import 'spacing.css';
+@import 'animations.css';
+@import 'buttons.css';
+@import 'forms.css';
+@import 'cards.css';
+@import 'badges.css';
+@import 'modal.css';
+@import 'tables.css';
+@import 'sidebar.css';
+@import 'navbar.css';
+@import 'utilities.css';

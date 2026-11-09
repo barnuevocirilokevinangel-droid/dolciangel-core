@@ -1,0 +1,109 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/forms.css — Campos de formulario (.ds-field / .ds-input…)
+   Depende de: tokens.css, theme.css
+   Namespace .ds-* distinto de .form-input/.form-field ya usados en
+   styles.css (loyalty form) y admin.css — aditivo, no reemplaza nada.
+═══════════════════════════════════════════════════════════ */
+
+.ds-field { display: flex; flex-direction: column; gap: 6px; }
+.ds-field--row { flex-direction: row; align-items: center; gap: var(--ds-space-sm); }
+
+.ds-label {
+  font-size: var(--ds-fs-sm);
+  font-weight: var(--ds-fw-semibold);
+  color: var(--ds-text-secondary);
+}
+.ds-label--req::after { content: ' *'; color: var(--ds-danger); }
+
+.ds-hint  { font-size: var(--ds-fs-xs); color: var(--ds-text-tertiary); }
+.ds-error { font-size: var(--ds-fs-xs); color: var(--ds-danger); min-height: 15px; }
+
+/* ── Base compartida por input/select/textarea ── */
+.ds-input,
+.ds-select,
+.ds-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--ds-surface);
+  border: 1.5px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-fs-md);
+  outline: none;
+  transition: border-color var(--ds-duration-normal) var(--ds-ease-standard),
+              box-shadow var(--ds-duration-normal) var(--ds-ease-standard),
+              background var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-input::placeholder,
+.ds-textarea::placeholder { color: var(--ds-text-tertiary); }
+
+.ds-input:focus,
+.ds-select:focus,
+.ds-textarea:focus {
+  border-color: var(--ds-success-soft);
+  box-shadow: var(--ds-focus-ring);
+  background: var(--ds-white);
+}
+.ds-input.is-invalid,
+.ds-select.is-invalid,
+.ds-textarea.is-invalid {
+  border-color: var(--ds-danger);
+  box-shadow: 0 0 0 3px var(--ds-danger-bg);
+}
+.ds-input:disabled,
+.ds-select:disabled,
+.ds-textarea:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.ds-textarea { resize: vertical; line-height: var(--ds-lh-normal); min-height: 80px; }
+
+/* ── Number: quita las flechitas nativas para un look más limpio,
+   consistente con el resto de inputs ── */
+.ds-input[type="number"]::-webkit-inner-spin-button,
+.ds-input[type="number"]::-webkit-outer-spin-button { opacity: 0.5; }
+
+/* ── Search: con ícono a la izquierda ── */
+.ds-search { position: relative; display: flex; align-items: center; }
+.ds-search svg {
+  position: absolute; left: 14px; color: var(--ds-text-tertiary); pointer-events: none;
+}
+.ds-search .ds-input { padding-left: 40px; border-radius: var(--ds-radius-pill); }
+
+/* ── Select: flecha custom sutil (sin cambiar el <select> nativo por JS) ── */
+.ds-select {
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%235A3A20' stroke-width='2'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  padding-right: 38px;
+}
+
+/* ── Checkbox / radio como "check card" (usado en tags, toggles) ── */
+.ds-check {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 14px;
+  background: rgba(40,20,5,0.03);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  font-size: var(--ds-fs-sm);
+  font-weight: var(--ds-fw-medium);
+  color: var(--ds-text-secondary);
+  cursor: pointer;
+}
+.ds-check input { width: 16px; height: 16px; accent-color: var(--ds-success); cursor: pointer; }
+
+/* ── Chip seleccionable (checkbox/radio oculto + <span> visual) ── */
+.ds-chip-check {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 13px; border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface); border: 1px solid var(--ds-border-strong);
+  font-size: var(--ds-fs-sm); color: var(--ds-text-secondary);
+  cursor: pointer; user-select: none;
+  transition: all var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-chip-check input { display: none; }
+.ds-chip-check:has(input:checked),
+.ds-chip-check.is-checked {
+  background: var(--ds-gold); border-color: var(--ds-gold); color: var(--ds-color-ink-900); font-weight: var(--ds-fw-bold);
+}

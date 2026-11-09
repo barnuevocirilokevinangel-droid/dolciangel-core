@@ -1,0 +1,95 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/buttons.css — Sistema de botones (.ds-btn)
+   Depende de: tokens.css, theme.css, animations.css
+   Namespace .ds-btn* deliberadamente distinto de .btn/.btn--* ya
+   usados en styles.css/admin.css — así este archivo es 100% aditivo
+   y no reemplaza ningún botón existente. La migración de botones
+   actuales a este sistema es un paso pendiente y deliberado (ver
+   informe), no automático.
+═══════════════════════════════════════════════════════════ */
+
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 22px;
+  border-radius: var(--ds-radius-pill);
+  border: 1.5px solid transparent;
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-fs-md);
+  font-weight: var(--ds-fw-semibold);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--ds-duration-normal) var(--ds-ease-standard),
+              color var(--ds-duration-normal) var(--ds-ease-standard),
+              border-color var(--ds-duration-normal) var(--ds-ease-standard),
+              box-shadow var(--ds-duration-normal) var(--ds-ease-standard),
+              transform var(--ds-duration-fast) var(--ds-ease-standard);
+}
+.ds-btn:active { transform: scale(0.96); }
+.ds-btn:disabled,
+.ds-btn[aria-disabled="true"] {
+  opacity: 0.45; cursor: not-allowed; pointer-events: none;
+}
+.ds-btn:focus-visible { outline: none; box-shadow: var(--ds-focus-ring); }
+
+/* ── Tamaños ── */
+.ds-btn--sm { padding: 8px 16px; font-size: var(--ds-fs-sm); }
+.ds-btn--lg { padding: 15px 28px; font-size: var(--ds-fs-lg); }
+.ds-btn--icon { padding: 10px; width: 40px; height: 40px; border-radius: var(--ds-radius-circle); }
+
+/* ── Primario: acción principal de la pantalla ── */
+.ds-btn--primary {
+  background: var(--ds-success);
+  color: var(--ds-white);
+  box-shadow: var(--ds-shadow-md);
+}
+.ds-btn--primary:hover  { background: var(--ds-success-soft); box-shadow: var(--ds-shadow-lg); transform: translateY(-2px); }
+.ds-btn--primary:active { transform: translateY(0) scale(0.97); }
+
+/* ── Secundario: acción alternativa, con presencia pero sin competir ── */
+.ds-btn--secondary {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-color: var(--ds-border-strong);
+  box-shadow: var(--ds-shadow-sm);
+}
+.ds-btn--secondary:hover { background: var(--ds-surface-elevated); border-color: var(--ds-gold); transform: translateY(-2px); }
+
+/* ── Ghost: sin fondo, para acciones terciarias / sobre superficies oscuras ── */
+.ds-btn--ghost {
+  background: transparent;
+  color: var(--ds-text-secondary);
+  border-color: var(--ds-border);
+}
+.ds-btn--ghost:hover { background: rgba(40,20,5,0.05); color: var(--ds-text); border-color: var(--ds-border-strong); }
+
+/* ── Danger: acciones destructivas (eliminar, restaurar de fábrica) ── */
+.ds-btn--danger {
+  background: var(--ds-danger);
+  color: var(--ds-white);
+  box-shadow: 0 4px 18px rgba(192,48,48,0.32);
+}
+.ds-btn--danger:hover { background: var(--ds-danger-dark); box-shadow: 0 8px 26px rgba(192,48,48,0.42); transform: translateY(-2px); }
+
+/* ── Success: confirmaciones positivas explícitas (distinto matiz que primary) ── */
+.ds-btn--success {
+  background: var(--ds-success-soft);
+  color: var(--ds-white);
+  box-shadow: 0 4px 18px rgba(46,139,98,0.3);
+}
+.ds-btn--success:hover { background: var(--ds-success); box-shadow: 0 8px 26px rgba(46,139,98,0.4); transform: translateY(-2px); }
+
+/* ── Grupo de botones (toolbar / footer de modal) ── */
+.ds-btn-group { display: flex; gap: var(--ds-space-sm); flex-wrap: wrap; }
+.ds-btn-group--end { justify-content: flex-end; }
+.ds-btn-group--stretch .ds-btn { flex: 1; justify-content: center; }
+
+@media (max-width: 480px) {
+  .ds-btn-group--responsive { flex-direction: column; align-items: stretch; }
+}

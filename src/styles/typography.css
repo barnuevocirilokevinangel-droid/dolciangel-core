@@ -1,0 +1,63 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/typography.css — Escala tipográfica reutilizable
+   Depende de: tokens.css
+   Prefijo .ds-* para no colisionar con .section-title, .card__name,
+   etc. ya existentes en styles.css/admin.css.
+═══════════════════════════════════════════════════════════ */
+
+.ds-font-serif { font-family: var(--ds-font-serif); }
+.ds-font-sans  { font-family: var(--ds-font-sans); }
+
+/* ── Encabezados (serif, como el resto de la marca) ── */
+.ds-h1, .ds-h2, .ds-h3, .ds-h4 {
+  font-family: var(--ds-font-serif);
+  font-weight: var(--ds-fw-bold);
+  color: var(--ds-text);
+  line-height: var(--ds-lh-tight);
+}
+.ds-h1 { font-size: clamp(28px, 6vw, var(--ds-fs-4xl)); }
+.ds-h2 { font-size: clamp(22px, 5vw, var(--ds-fs-3xl)); }
+.ds-h3 { font-size: var(--ds-fs-2xl); }
+.ds-h4 { font-size: var(--ds-fs-xl); }
+
+/* ── Cuerpo de texto (sans) ── */
+.ds-text {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-fs-md);
+  font-weight: var(--ds-fw-regular);
+  line-height: var(--ds-lh-normal);
+  color: var(--ds-text);
+}
+.ds-text-sm { font-size: var(--ds-fs-sm); }
+.ds-text-lg { font-size: var(--ds-fs-lg); }
+.ds-text-secondary { color: var(--ds-text-secondary); }
+.ds-text-tertiary  { color: var(--ds-text-tertiary); }
+
+/* ── Eyebrow / kicker (etiqueta pequeña antes de un título) ── */
+.ds-eyebrow {
+  display: inline-block;
+  font-size: var(--ds-fs-xs);
+  font-weight: var(--ds-fw-bold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ds-gold-dark);
+}
+
+/* ── Pesos y alturas de línea como utilidades sueltas ── */
+.ds-fw-light    { font-weight: var(--ds-fw-light); }
+.ds-fw-regular  { font-weight: var(--ds-fw-regular); }
+.ds-fw-medium   { font-weight: var(--ds-fw-medium); }
+.ds-fw-semibold { font-weight: var(--ds-fw-semibold); }
+.ds-fw-bold     { font-weight: var(--ds-fw-bold); }
+
+.ds-lh-tight   { line-height: var(--ds-lh-tight); }
+.ds-lh-snug    { line-height: var(--ds-lh-snug); }
+.ds-lh-normal  { line-height: var(--ds-lh-normal); }
+.ds-lh-relaxed { line-height: var(--ds-lh-relaxed); }
+
+.ds-truncate {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ds-clamp-2 {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}

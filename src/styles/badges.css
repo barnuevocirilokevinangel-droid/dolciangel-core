@@ -1,0 +1,57 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/badges.css — Sistema de badges/etiquetas (.ds-badge…)
+   Depende de: tokens.css, theme.css
+   Namespace .ds-badge* distinto de .card__tag/.card__badge (carta) y
+   .admin-row__badge-off/.gest-tag-* (CMS/sistema interno) — aditivo.
+   Los colores están alineados 1:1 con TAGS de js/config.js para que
+   "Nuevo/Promoción/Más vendido…" se vean igual en cualquier pantalla
+   futura que use este sistema.
+═══════════════════════════════════════════════════════════ */
+
+.ds-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--ds-radius-pill);
+  font-size: var(--ds-fs-xs);
+  font-weight: var(--ds-fw-bold);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+/* ── Neutral / estado genérico ── */
+.ds-badge--neutral { background: rgba(40,20,5,0.06); color: var(--ds-text-secondary); }
+
+/* ── Estado del sistema ── */
+.ds-badge--success { background: var(--ds-success-bg); color: var(--ds-success); }
+.ds-badge--warning  { background: var(--ds-warning-bg); color: var(--ds-warning); }
+.ds-badge--danger  { background: var(--ds-danger-bg);  color: var(--ds-danger); }
+.ds-badge--info    { background: var(--ds-info-bg);    color: var(--ds-info); }
+
+/* ── Visible / oculto (usado en listas de productos, CMS) ── */
+.ds-badge--visible { background: var(--ds-success-bg); color: var(--ds-success); }
+.ds-badge--hidden   { background: var(--ds-danger-bg);  color: var(--ds-danger); }
+
+/* ── Catálogo de producto (mismo lenguaje que TAGS en config.js) ── */
+.ds-badge--nuevo       { background: rgba(46,139,98,0.88);  color: #F0FFF5; }
+.ds-badge--recomendado { background: rgba(192,147,62,0.9);  color: #1A0C04; }
+.ds-badge--mas-vendido { background: rgba(31,107,74,0.86);  color: #E8FFE8; }
+.ds-badge--promocion   { background: rgba(190,50,50,0.86);  color: #fff; }
+.ds-badge--artesanal   { background: rgba(122,88,56,0.86);  color: #FBF3E7; }
+.ds-badge--destacado   { background: var(--ds-gold);        color: #2A1804; }
+
+/* ── Con "punto" indicador (ej. "● activo") ── */
+.ds-badge--dot::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+
+/* ── Contador (números en sidebar/nav, ej. carrito) ── */
+.ds-badge-count {
+  min-width: 18px; height: 18px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ds-success); color: var(--ds-white);
+  border-radius: var(--ds-radius-pill);
+  font-size: 10px; font-weight: var(--ds-fw-bold);
+  border: 2px solid var(--ds-bg);
+}

@@ -1,0 +1,95 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/theme.css — Capa semántica (capa 2: roles, no colores)
+   ───────────────────────────────────────────────────────────
+   Aquí un token deja de llamarse "gold-500" y pasa a llamarse "qué
+   hace" (--ds-bg, --ds-text, --ds-danger…). Los componentes (buttons,
+   cards, forms…) SOLO deben usar variables de este archivo, nunca las
+   de tokens.css directamente — así, cambiar de tema (o algún día
+   activar dark mode) es cambiar este archivo y nada más.
+
+   Depende de: tokens.css (debe cargarse antes o después da igual —
+   las custom properties se resuelven en cascada, no en orden de
+   archivo — pero por convención va justo después).
+
+   Tema por defecto = el look actual de Dolciangel (cálido, crema,
+   espresso). Incluye un bloque [data-theme="dark"] ya mapeado y listo
+   para el día que se active un selector de tema — hoy ningún HTML
+   activa data-theme="dark" ni respeta prefers-color-scheme todavía,
+   así que el look visible no cambia en absoluto.
+═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Superficies ── */
+  --ds-bg:               var(--ds-color-cream-200); /* fondo principal de página */
+  --ds-bg-secondary:     var(--ds-color-cream-300); /* fondo secundario / franjas alternas */
+  --ds-surface:          var(--ds-color-cream-50);  /* tarjetas, paneles */
+  --ds-surface-elevated: var(--ds-color-cream-100); /* hover de tarjeta, superficie "levantada" */
+  --ds-surface-inverted: var(--ds-color-espresso-800); /* sidebar, hero, nav oscuro */
+  --ds-surface-inverted-2: var(--ds-color-espresso-900);
+
+  /* ── Texto ── */
+  --ds-text:                 var(--ds-color-ink-900); /* títulos sobre fondo claro */
+  --ds-text-secondary:       var(--ds-color-ink-700);
+  --ds-text-tertiary:        var(--ds-color-ink-400);
+  --ds-text-on-dark:         var(--ds-color-cream-400); /* texto sobre fondo oscuro */
+  --ds-text-on-dark-secondary: var(--ds-color-sand-500);
+  --ds-text-on-dark-tertiary:  var(--ds-color-sand-700);
+
+  /* ── Bordes ── */
+  --ds-border:        rgba(192,147,62,0.16);
+  --ds-border-strong: rgba(192,147,62,0.28);
+  --ds-border-dark:   rgba(240,228,200,0.1); /* bordes sobre superficies oscuras */
+
+  /* ── Marca ── */
+  --ds-gold:       var(--ds-color-gold-500);
+  --ds-gold-light: var(--ds-color-gold-300);
+  --ds-gold-dark:  var(--ds-color-gold-700);
+
+  /* ── Semántica de estado ── */
+  --ds-success:      var(--ds-color-green-700);
+  --ds-success-soft: var(--ds-color-green-500);
+  --ds-success-bg:   rgba(31,107,74,0.09);
+
+  --ds-warning:    var(--ds-color-amber-500);
+  --ds-warning-bg: rgba(201,147,10,0.1);
+
+  --ds-danger:      var(--ds-color-red-500);
+  --ds-danger-dark: var(--ds-color-red-700);
+  --ds-danger-bg:   rgba(190,50,50,0.1);
+
+  --ds-info:    var(--ds-color-blue-500);
+  --ds-info-bg: rgba(41,113,168,0.1);
+
+  --ds-whatsapp:    var(--ds-color-whatsapp);
+  --ds-whatsapp-lt: var(--ds-color-whatsapp-lt);
+
+  /* ── Foco accesible ── */
+  --ds-focus-ring: var(--ds-shadow-focus);
+}
+
+/* ═══════════════════════════════════════════════════
+   TEMA OSCURO — preparado, no activo todavía.
+   Se activa poniendo data-theme="dark" en <html> o <body> (ningún
+   archivo del sitio lo hace hoy). Queda listo para cuando "Apariencia"
+   en el CMS tenga un selector de tema real.
+═══════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  --ds-bg:               var(--ds-color-espresso-900);
+  --ds-bg-secondary:     var(--ds-color-espresso-800);
+  --ds-surface:          #241207;
+  --ds-surface-elevated: #2E1810;
+  --ds-surface-inverted: #140903;
+  --ds-surface-inverted-2: #0A0502;
+
+  --ds-text:           var(--ds-color-cream-200);
+  --ds-text-secondary: var(--ds-color-sand-300);
+  --ds-text-tertiary:  var(--ds-color-sand-500);
+
+  --ds-border:        rgba(192,147,62,0.22);
+  --ds-border-strong: rgba(192,147,62,0.36);
+
+  --ds-success-bg: rgba(61,166,117,0.14);
+  --ds-warning-bg: rgba(224,178,60,0.14);
+  --ds-danger-bg:  rgba(224,90,90,0.16);
+  --ds-info-bg:    rgba(92,155,201,0.14);
+}

@@ -1,0 +1,109 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/animations.css — Vocabulario de movimiento
+   Depende de: tokens.css
+   Filosofía: fade, scale, slide, stagger, hover, active, focus.
+   Nada exagerado — todo dentro de duration-fast/normal/slow y
+   las curvas de tokens.css. Respeta prefers-reduced-motion.
+═══════════════════════════════════════════════════════════ */
+
+/* Nota: No bloquear globalmente animation-duration / transition-duration
+   con !important en Windows cuando prefers-reduced-motion está activo,
+   para preservar las animaciones del Hero 3D y microinteracciones. */
+
+/* ── Keyframes base ── */
+@keyframes ds-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ds-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ds-fade-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ds-scale-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes ds-scale-in-spring {
+  0%   { opacity: 0; transform: scale(0.9); }
+  60%  { opacity: 1; transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+@keyframes ds-slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes ds-slide-in-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes ds-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes ds-ripple {
+  from { transform: scale(0);   opacity: 0.35; }
+  to   { transform: scale(2.6); opacity: 0; }
+}
+@keyframes ds-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes ds-skeleton-wave {
+  0%   { background-position: -160% 0; }
+  100% { background-position: 160% 0; }
+}
+
+/* ── Clases utilitarias (aplicar directo en HTML) ── */
+.ds-anim-fade-in  { animation: ds-fade-in  var(--ds-duration-normal) var(--ds-ease-enter) both; }
+.ds-anim-fade-up  { animation: ds-fade-up  var(--ds-duration-normal) var(--ds-ease-enter) both; }
+.ds-anim-scale-in { animation: ds-scale-in var(--ds-duration-normal) var(--ds-ease-enter) both; }
+.ds-anim-slide-in-right { animation: ds-slide-in-right var(--ds-duration-slow) var(--ds-ease-enter) both; }
+.ds-anim-slide-up { animation: ds-slide-up var(--ds-duration-slow) var(--ds-ease-enter) both; }
+
+/* ── Stagger: agregar --ds-stagger-i (índice) desde el HTML/JS y esta
+   clase calcula el delay. Ej: style="--ds-stagger-i:3" ── */
+.ds-stagger {
+  opacity: 0;
+  animation: ds-fade-up var(--ds-duration-normal) var(--ds-ease-enter) both;
+  animation-delay: calc(var(--ds-stagger-i, 0) * 40ms);
+}
+
+/* ── Hover / active elegantes, reutilizables en cualquier elemento
+   interactivo (tarjetas, filas, botones custom) ── */
+.ds-hover-lift {
+  transition: transform var(--ds-duration-normal) var(--ds-ease-standard),
+              box-shadow var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-hover-lift:hover { transform: translateY(-4px); box-shadow: var(--ds-shadow-lg); }
+.ds-hover-lift:active { transform: translateY(-1px) scale(0.99); transition-duration: var(--ds-duration-fast); }
+
+.ds-press {
+  transition: transform var(--ds-duration-fast) var(--ds-ease-standard);
+}
+.ds-press:active { transform: scale(0.96); }
+
+/* ── Foco accesible: visible solo con teclado (:focus-visible),
+   nunca interfiere con el mouse/touch ── */
+.ds-focusable:focus-visible,
+.ds-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+
+/* ── Ripple sutil: requiere un contenedor position:relative;overflow:hidden
+   y un <span class="ds-ripple__dot"> posicionado por JS en el punto de
+   click (left/top). Pensado para usarse solo donde tenga sentido (ej.
+   un botón primario grande), no en todo. ── */
+.ds-ripple { position: relative; overflow: hidden; }
+.ds-ripple__dot {
+  position: absolute;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: currentColor; opacity: 0.35;
+  transform: scale(0); pointer-events: none;
+  animation: ds-ripple 0.55s var(--ds-ease-exit) forwards;
+}

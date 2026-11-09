@@ -1,0 +1,68 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/spacing.css — Utilidades de espaciado (escala de tokens.css)
+   Depende de: tokens.css
+   Nomenclatura: {propiedad}-{lado}-{tamaño}
+     m  = margin      p  = padding      g = gap
+     t/r/b/l = top/right/bottom/left    x = izq+der   y = arriba+abajo
+═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Alias corto para usar en JS/inline si hiciera falta */
+  --space-xs: var(--ds-space-xs);
+  --space-sm: var(--ds-space-sm);
+  --space-md: var(--ds-space-md);
+  --space-lg: var(--ds-space-lg);
+  --space-xl: var(--ds-space-xl);
+}
+
+.ds-stack-xs > * + * { margin-top: var(--ds-space-xs); }
+.ds-stack-sm > * + * { margin-top: var(--ds-space-sm); }
+.ds-stack-md > * + * { margin-top: var(--ds-space-md); }
+.ds-stack-lg > * + * { margin-top: var(--ds-space-lg); }
+
+.ds-flex      { display: flex; }
+.ds-flex-col  { display: flex; flex-direction: column; }
+.ds-flex-wrap { flex-wrap: wrap; }
+.ds-items-center { align-items: center; }
+.ds-justify-between { justify-content: space-between; }
+.ds-justify-center  { justify-content: center; }
+
+.ds-gap-3xs { gap: var(--ds-space-3xs); }
+.ds-gap-2xs { gap: var(--ds-space-2xs); }
+.ds-gap-xs  { gap: var(--ds-space-xs); }
+.ds-gap-sm  { gap: var(--ds-space-sm); }
+.ds-gap-md  { gap: var(--ds-space-md); }
+.ds-gap-lg  { gap: var(--ds-space-lg); }
+.ds-gap-xl  { gap: var(--ds-space-xl); }
+
+.ds-p-xs { padding: var(--ds-space-xs); }
+.ds-p-sm { padding: var(--ds-space-sm); }
+.ds-p-md { padding: var(--ds-space-md); }
+.ds-p-lg { padding: var(--ds-space-lg); }
+.ds-p-xl { padding: var(--ds-space-xl); }
+
+.ds-px-sm { padding-left: var(--ds-space-sm); padding-right: var(--ds-space-sm); }
+.ds-px-md { padding-left: var(--ds-space-md); padding-right: var(--ds-space-md); }
+.ds-px-lg { padding-left: var(--ds-space-lg); padding-right: var(--ds-space-lg); }
+.ds-py-sm { padding-top: var(--ds-space-sm); padding-bottom: var(--ds-space-sm); }
+.ds-py-md { padding-top: var(--ds-space-md); padding-bottom: var(--ds-space-md); }
+.ds-py-lg { padding-top: var(--ds-space-lg); padding-bottom: var(--ds-space-lg); }
+
+.ds-mt-xs { margin-top: var(--ds-space-xs); }
+.ds-mt-sm { margin-top: var(--ds-space-sm); }
+.ds-mt-md { margin-top: var(--ds-space-md); }
+.ds-mt-lg { margin-top: var(--ds-space-lg); }
+.ds-mt-xl { margin-top: var(--ds-space-xl); }
+.ds-mb-xs { margin-bottom: var(--ds-space-xs); }
+.ds-mb-sm { margin-bottom: var(--ds-space-sm); }
+.ds-mb-md { margin-bottom: var(--ds-space-md); }
+.ds-mb-lg { margin-bottom: var(--ds-space-lg); }
+.ds-mb-xl { margin-bottom: var(--ds-space-xl); }
+
+/* ── Contenedor de página, mismo ancho que .container ya existente ── */
+.ds-container {
+  width: 100%;
+  max-width: var(--ds-container);
+  margin: 0 auto;
+  padding: 0 20px;
+}

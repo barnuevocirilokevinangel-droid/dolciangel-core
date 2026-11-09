@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 450" width="100%" height="100%">
+  <defs>
+    <!-- Filtros de sombra y profundidad -->
+    <filter id="chocDropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="22" flood-color="#3B1207" flood-opacity="0.38" />
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1F0803" flood-opacity="0.25" />
+    </filter>
+    <filter id="ganacheGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#781D0B" flood-opacity="0.35" />
+    </filter>
+
+    <!-- Gradientes Bizcocho de Cacao Húmedo -->
+    <linearGradient id="chocSponge" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#451A03" />
+      <stop offset="40%" stop-color="#381404" />
+      <stop offset="80%" stop-color="#280C02" />
+      <stop offset="100%" stop-color="#1A0601" />
+    </linearGradient>
+
+    <!-- Gradientes Ganache Intenso -->
+    <linearGradient id="chocGanache" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#651C09" />
+      <stop offset="50%" stop-color="#3C0E05" />
+      <stop offset="100%" stop-color="#1D0502" />
+    </linearGradient>
+
+    <!-- Gradiente Cobertura Brillante (Mirror Glaze) -->
+    <linearGradient id="chocGlaze" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#551808" />
+      <stop offset="40%" stop-color="#360D04" />
+      <stop offset="85%" stop-color="#200602" />
+      <stop offset="100%" stop-color="#110301" />
+    </linearGradient>
+    <linearGradient id="chocGloss" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.65" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="chocDrip" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#421206" />
+      <stop offset="80%" stop-color="#2B0A03" />
+      <stop offset="100%" stop-color="#170401" />
+    </linearGradient>
+    
+    <!-- Gradiente Frambuesa -->
+    <radialGradient id="raspGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#F43F5E" />
+      <stop offset="50%" stop-color="#BE123C" />
+      <stop offset="90%" stop-color="#881337" />
+      <stop offset="100%" stop-color="#4C0519" />
+    </radialGradient>
+  </defs>
+
+  <g filter="url(#chocDropShadow)">
+    <!-- Borde posterior curvado de la torta -->
+    <path d="M 110,210 C 230,170 380,210 430,240 L 430,285 C 380,255 230,215 110,255 Z" fill="#240A03" />
+
+    <!-- Capa 1 Bizcocho (Inferior) -->
+    <path d="M 110,210 L 255,345 L 255,315 L 110,180 Z" fill="url(#chocSponge)" />
+    <path d="M 255,345 L 430,285 L 430,255 L 255,315 Z" fill="url(#chocSponge)" opacity="0.95" />
+
+    <!-- Capa 1 Relleno Ganache Centro -->
+    <path d="M 110,180 L 255,315 L 255,295 L 110,160 Z" fill="url(#chocGanache)" />
+    <path d="M 255,315 L 430,255 L 430,235 L 255,295 Z" fill="url(#chocGanache)" />
+
+    <!-- Capa 2 Bizcocho (Media) -->
+    <path d="M 110,160 L 255,295 L 255,265 L 110,130 Z" fill="url(#chocSponge)" />
+    <path d="M 255,295 L 430,235 L 430,205 L 255,265 Z" fill="url(#chocSponge)" opacity="0.95" />
+
+    <!-- Capa 2 Relleno Ganache Superior -->
+    <path d="M 110,130 L 255,265 L 255,245 L 110,110 Z" fill="url(#chocGanache)" />
+    <path d="M 255,265 L 430,205 L 430,185 L 255,245 Z" fill="url(#chocGanache)" />
+
+    <!-- Capa 3 Bizcocho (Superior) -->
+    <path d="M 110,110 L 255,245 L 255,220 L 110,85 Z" fill="url(#chocSponge)" />
+    <path d="M 255,245 L 430,185 L 430,160 L 255,220 Z" fill="url(#chocSponge)" opacity="0.9" />
+
+    <!-- Base / Fondo 3D -->
+    <path d="M 110,245 L 255,380 L 430,320 L 430,285 L 255,345 L 110,210 Z" fill="#1A0602" />
+
+    <!-- COBERTURA GLASÉ ESPEJO CHOCOLATE (Tope superior) -->
+    <path d="M 110,85 L 255,220 L 430,160 C 380,130 230,85 110,85 Z" fill="url(#chocGlaze)" filter="url(#ganacheGlow)" />
+
+    <!-- Brillo especular espejo sobre la cobertura -->
+    <path d="M 130,95 C 220,95 320,125 390,152 C 340,168 280,172 220,158 C 170,145 140,120 130,95 Z" 
+          fill="url(#chocGloss)" opacity="0.55" />
+
+    <!-- Chorreado artesanal de chocolate belga por los laterales -->
+    <path d="M 215,200 C 215,230 222,255 219,270 C 217,280 209,280 207,270 C 205,255 208,225 208,195 Z" fill="url(#chocDrip)" />
+    <path d="M 250,215 C 250,245 258,280 256,305 C 254,320 242,320 241,302 C 240,280 245,245 244,210 Z" fill="url(#chocDrip)" />
+    <path d="M 330,192 C 330,220 338,245 336,260 C 334,272 324,272 323,258 C 322,240 325,210 324,194 Z" fill="url(#chocDrip)" />
+    <path d="M 380,172 C 382,195 388,215 387,228 C 385,238 377,238 376,226 C 375,212 376,190 376,174 Z" fill="url(#chocDrip)" />
+
+    <!-- Virutas y chispas de chocolate crocante en el tope -->
+    <g fill="#170502">
+      <!-- Rizo de chocolate 1 -->
+      <path d="M 190,120 C 195,110 215,112 218,125 C 212,128 200,125 190,120 Z" />
+      <!-- Rizo de chocolate 2 -->
+      <path d="M 290,150 C 300,140 320,145 322,158 C 314,160 300,156 290,150 Z" />
+      <!-- Chispas -->
+      <circle cx="230" cy="140" r="4" fill="#381006"/>
+      <circle cx="270" cy="165" r="3.5" fill="#381006"/>
+      <circle cx="345" cy="155" r="4.5" fill="#381006"/>
+      <circle cx="370" cy="145" r="3" fill="#381006"/>
+    </g>
+
+    <!-- Frambuesa silvestre en la cima con brillo -->
+    <g transform="translate(235, 65)">
+      <!-- Sombra de la frambuesa -->
+      <ellipse cx="25" cy="45" rx="18" ry="6" fill="#000000" opacity="0.4"/>
+      <!-- Gránulos de frambuesa -->
+      <circle cx="15" cy="35" r="9" fill="url(#raspGrad)"/>
+      <circle cx="35" cy="35" r="9" fill="url(#raspGrad)"/>
+      <circle cx="25" cy="22" r="9" fill="url(#raspGrad)"/>
+      <circle cx="12" cy="22" r="8" fill="url(#raspGrad)"/>
+      <circle cx="38" cy="22" r="8" fill="url(#raspGrad)"/>
+      <circle cx="25" cy="10" r="7.5" fill="url(#raspGrad)"/>
+      <!-- Brillos en los gránulos -->
+      <circle cx="23" cy="8" r="2.5" fill="#FDA4AF" opacity="0.8"/>
+      <circle cx="13" cy="20" r="2.5" fill="#FDA4AF" opacity="0.8"/>
+      <circle cx="33" cy="20" r="2.5" fill="#FDA4AF" opacity="0.8"/>
+      <!-- Hoja verde de frambuesa -->
+      <path d="M 25,6 C 28,-5 36,-10 44,-8 C 40,-2 32,2 25,6 Z" fill="#15803D"/>
+    </g>
+  </g>
+</svg>

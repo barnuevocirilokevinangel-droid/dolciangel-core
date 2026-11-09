@@ -1,0 +1,69 @@
+/* ═══════════════════════════════════════════════════════════
+   styles/cards.css — Sistema de tarjetas (.ds-card…)
+   Depende de: tokens.css, theme.css, animations.css
+   Namespace .ds-card* distinto de .card (producto, carta pública) y
+   .admin-card (Configuración) — aditivo. Ver informe: unificar esas
+   dos bajo este sistema es un paso pendiente, no automático.
+═══════════════════════════════════════════════════════════ */
+
+.ds-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+  padding: var(--ds-space-lg);
+  transition: box-shadow var(--ds-duration-normal) var(--ds-ease-standard),
+              border-color var(--ds-duration-normal) var(--ds-ease-standard),
+              transform var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-card--interactive { cursor: pointer; }
+.ds-card--interactive:hover {
+  box-shadow: var(--ds-shadow-lg);
+  border-color: var(--ds-border-strong);
+  transform: translateY(-4px);
+}
+.ds-card--interactive:active { transform: translateY(-1px) scale(0.99); transition-duration: var(--ds-duration-fast); }
+
+.ds-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--ds-space-sm); margin-bottom: var(--ds-space-sm); }
+.ds-card__title  { font-family: var(--ds-font-serif); font-size: var(--ds-fs-xl); color: var(--ds-text); }
+.ds-card__body   { color: var(--ds-text-secondary); font-size: var(--ds-fs-md); line-height: var(--ds-lh-relaxed); }
+.ds-card__footer { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-sm); margin-top: var(--ds-space-md); }
+
+/* ── Variante: Producto (imagen + info, mobile-first, usada en grids
+   de 2 columnas como la carta pública) ── */
+.ds-card--product { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.ds-card--product .ds-card__media {
+  position: relative; aspect-ratio: 1; overflow: hidden; flex-shrink: 0;
+  background: var(--ds-surface-elevated);
+}
+.ds-card--product .ds-card__media img { width: 100%; height: 100%; object-fit: cover; }
+.ds-card--product .ds-card__body { padding: var(--ds-space-sm) var(--ds-space-md) var(--ds-space-md); flex: 1; }
+.ds-card--product .ds-card__name  { font-family: var(--ds-font-serif); font-weight: var(--ds-fw-semibold); font-size: var(--ds-fs-lg); color: var(--ds-text); }
+.ds-card--product .ds-card__price { font-family: var(--ds-font-serif); font-weight: var(--ds-fw-bold); font-size: var(--ds-fs-xl); color: var(--ds-gold-dark); }
+
+/* ── Variante: Estadística (número grande + etiqueta, para dashboards
+   tipo Stripe/Linear) ── */
+.ds-card--stat { display: flex; flex-direction: column; gap: var(--ds-space-2xs); }
+.ds-card--stat .ds-stat__label {
+  font-size: var(--ds-fs-xs); font-weight: var(--ds-fw-bold);
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ds-text-tertiary);
+}
+.ds-card--stat .ds-stat__value {
+  font-family: var(--ds-font-serif); font-size: var(--ds-fs-3xl); font-weight: var(--ds-fw-bold); color: var(--ds-text);
+  line-height: var(--ds-lh-tight);
+}
+.ds-card--stat .ds-stat__delta { font-size: var(--ds-fs-sm); font-weight: var(--ds-fw-semibold); display: inline-flex; align-items: center; gap: 4px; }
+.ds-card--stat .ds-stat__delta--up   { color: var(--ds-success); }
+.ds-card--stat .ds-stat__delta--down { color: var(--ds-danger); }
+
+/* ── Variante: Configuración (ícono/título + texto + acción, tipo
+   panel de ajustes de Stripe/Notion) ── */
+.ds-card--settings { display: flex; flex-direction: column; align-items: flex-start; gap: var(--ds-space-sm); }
+.ds-card--settings .ds-card__title { font-size: var(--ds-fs-lg); display: flex; align-items: center; gap: 8px; }
+.ds-card--settings.ds-card--danger { border-color: rgba(190,50,50,0.25); background: rgba(190,50,50,0.03); }
+
+/* ── Grid responsivo de tarjetas ── */
+.ds-cards-grid { display: grid; grid-template-columns: 1fr; gap: var(--ds-space-md); }
+@media (min-width: 640px) { .ds-cards-grid--2 { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 900px) { .ds-cards-grid--3 { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 480px) { .ds-cards-grid--products { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }

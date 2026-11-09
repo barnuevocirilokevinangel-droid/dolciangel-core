@@ -1,0 +1,58 @@
+═══════════════════════════════════════════════════
+  DOLCIANGEL — VIDEOS DE LA LANDING
+  Para reemplazar: simplemente soltar el .mp4 aquí.
+═══════════════════════════════════════════════════
+
+ARCHIVOS ESPERADOS:
+──────────────────
+hero.mp4
+  → Sección: Portada principal
+  → Duración sugerida: 10-30 seg en loop
+  → Contenido: ambiente del local, personas disfrutando, postre en mano
+  → Sensación: cálido, dorado, cinematográfico
+
+historia.mp4
+  → Sección: "Nuestra historia" (panel izquierdo, split 45/55)
+  → Duración sugerida: 10-20 seg en loop
+  → Contenido: manos elaborando un postre, proceso artesanal, cocina íntima
+  → Sensación: cercano, humano, hecho con cuidado
+
+momentos-cita.mp4
+  → Sección: Momentos — tarjeta "Una cita"
+  → Duración sugerida: 8-15 seg en loop
+  → Contenido: pareja en mesa, café + postre, luz suave
+  → Sensación: íntimo, romántico, tranquilo
+
+momentos-familia.mp4
+  → Sección: Momentos — tarjeta "En familia"
+  → Duración sugerida: 8-15 seg en loop
+  → Contenido: mesa compartida, risas, manos pasando postres
+  → Sensación: cálido, familiar, alegre
+
+momentos-estudiantes.mp4
+  → Sección: Momentos — tarjeta "Con amigos"
+  → Duración sugerida: 8-15 seg en loop
+  → Contenido: grupo joven, libros o conversación, bebidas en mesa
+  → Sensación: desenfadado, cómodo, natural
+
+favoritos.mp4
+  → Sección: Banner antes de "Nuestros favoritos"
+  → Duración sugerida: 10-25 seg en loop
+  → Contenido: plano detalle de postres, decoración, texturas
+  → Sensación: apetecible, artesanal, premium
+
+local.mp4
+  → Sección: Banner antes de "Dónde encontrarnos"
+  → Duración sugerida: 10-20 seg en loop
+  → Contenido: exterior/interior del local, ambiente, logo visible
+  → Sensación: acogedor, elegante, real
+
+═══════════════════════════════════════════════════
+ESPECIFICACIONES TÉCNICAS RECOMENDADAS:
+  Formato:     MP4 (H.264 + AAC)
+  Resolución:  1280×720 mínimo / 1920×1080 ideal
+  Framerate:   24 fps (cinematográfico) o 30 fps
+  Duración:    8–30 seg (sin cortes bruscos, inicio = final para loop)
+  Audio:       Puede incluirse — el video se reproduce sin sonido (muted)
+  Compresión:  Target 2–4 MB por archivo para móvil
+═══════════════════════════════════════════════════
