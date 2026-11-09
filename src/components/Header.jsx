@@ -3,7 +3,7 @@ import { useApp, SEDES } from '../context/AppContext';
 import { Store, User, LogOut, Wifi, WifiOff, ShoppingBag, Sparkles, Globe } from 'lucide-react';
 
 export const Header = ({ onOpenCart, onOpenSwitchModal, onGoToPublic }) => {
-  const { sede, perfil, syncStatus, isOnline, activeAccount, cartCount, cartTotal } = useApp();
+  const { sede, perfil, syncStatus, isOnline, activeAccount, cartCount, cartTotal, logout } = useApp();
 
   const currentSedeInfo = sede ? SEDES[sede] : null;
 
@@ -61,17 +61,21 @@ export const Header = ({ onOpenCart, onOpenSwitchModal, onGoToPublic }) => {
             </button>
           )}
 
-          {/* Pill de Perfil */}
+          {/* Pill de Perfil con bloqueo directo */}
           {perfil && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold shadow-sm">
+            <button
+              onClick={logout}
+              title="Click para bloquear pantalla / cerrar turno"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-700 hover:text-rose-700 text-xs font-semibold shadow-sm transition-all active:scale-95 group"
+            >
               <span className="text-sm">{perfil.avatar}</span>
-              <span className="font-bold text-slate-900">{perfil.nombre}</span>
+              <span className="font-bold text-slate-900 group-hover:text-rose-700">{perfil.nombre}</span>
               {perfil.isDueno && (
                 <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-300">
                   Dueño
                 </span>
               )}
-            </div>
+            </button>
           )}
 
           {/* Botón Carrito en Cabecera (con mesa activa) */}
@@ -105,11 +109,11 @@ export const Header = ({ onOpenCart, onOpenSwitchModal, onGoToPublic }) => {
             </button>
           )}
 
-          {/* Botón Salir / Cambiar sesión */}
+          {/* Botón Bloquear / Cerrar turno (Exige PIN) */}
           <button
-            onClick={onOpenSwitchModal}
-            title="Cambiar sesión o local"
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            onClick={logout}
+            title="Bloquear pantalla / Cerrar turno (Exige PIN)"
+            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
           >
             <LogOut className="w-4 h-4" />
           </button>

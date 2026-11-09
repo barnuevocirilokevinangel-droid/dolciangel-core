@@ -72,12 +72,22 @@ const DEFAULT_ACCOUNTS = [
 
 export const AppProvider = ({ children }) => {
   // 1. Sesión y Sede
-  const [sede, setSede] = useState(() => localStorage.getItem('dg_sede') || null);
-  const [perfil, setPerfil] = useState(() => {
-    const saved = localStorage.getItem('dg_perfil');
-    return saved ? JSON.parse(saved) : null;
-  });
+  // La sede física puede recordarse en la terminal (default 'BA' para Buenos Aires)
+  const [sede, setSede] = useState(() => localStorage.getItem('dg_sede') || 'BA');
+  // SEGURIDAD ESTRICTA: El perfil de colaborador NUNCA persiste entre recargas (F5),
+  // cierre de ventana o pestañas nuevas. Siempre arranca en null para exigir PIN obligatorio.
+  const [perfil, setPerfil] = useState(null);
   const [activeTab, setActiveTab] = useState('ventas');
+
+  // Limpieza defensiva en montaje para evitar cualquier bypass por sesiones viejas en localStorage
+  useEffect(() => {
+    try {
+      localStorage.removeItem('dg_perfil');
+      sessionStorage.removeItem('dg_perfil');
+    } catch (e) {
+      // Silencioso
+    }
+  }, []);
 
   // 2. Cuentas / Multi-Mesa simultáneas con aislamiento estricto por sede
   const [accountsBySede, setAccountsBySede] = useState(() => {
@@ -205,9 +215,12 @@ export const AppProvider = ({ children }) => {
     else localStorage.removeItem('dg_sede');
   }, [sede]);
 
+  // El perfil de colaborador vive únicamente en memoria de la sesión activa
   useEffect(() => {
-    if (perfil) localStorage.setItem('dg_perfil', JSON.stringify(perfil));
-    else localStorage.removeItem('dg_perfil');
+    try {
+      localStorage.removeItem('dg_perfil');
+      sessionStorage.removeItem('dg_perfil');
+    } catch (e) {}
   }, [perfil]);
 
   // Login y Logout

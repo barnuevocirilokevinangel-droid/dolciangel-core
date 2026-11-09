@@ -17,7 +17,13 @@ export const LoginModal = ({ isOpen, onClose, canClose = false }) => {
         setSelectedSede(currentSede);
         setSelectedPerfil(currentPerfil);
         setStep(2);
+      } else if (currentSede && SEDES[currentSede]) {
+        setSelectedSede(currentSede);
+        setSelectedPerfil(null);
+        setStep(2);
+        setPin('');
       } else {
+        setSelectedSede('BA');
         setStep(1);
         setSelectedPerfil(null);
         setPin('');

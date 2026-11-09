@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { LoginModal } from './components/LoginModal';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { VentasView } from './components/VentasView';
 import { CartaWebView } from './components/CartaWebView';
 import { PublicCartaView } from './components/PublicCartaView';
@@ -219,7 +220,9 @@ export default function App() {
   if (currentRoute === 'core') {
     return (
       <AppProvider>
-        <MainLayout onNavigate={handleNavigate} />
+        <ProtectedRoute onNavigate={handleNavigate}>
+          <MainLayout onNavigate={handleNavigate} />
+        </ProtectedRoute>
       </AppProvider>
     );
   }
