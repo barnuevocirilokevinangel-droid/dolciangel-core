@@ -21,7 +21,7 @@ export const ProductImage = ({
   containerClassName = '',
   aspectRatio = '', // e.g. 'aspect-[4/3]', 'aspect-square', etc.
   rounded = 'rounded-2xl',
-  objectFit = 'object-contain'
+  objectFit = 'object-cover'
 }) => {
   const [imageStatus, setImageStatus] = useState('loading'); // 'loading' | 'loaded' | 'error'
 

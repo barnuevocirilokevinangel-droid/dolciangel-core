@@ -523,15 +523,15 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                       </div>
                     )}
 
-                    {/* Contenedor de Imagen con Skeleton Loading y fondo neutro */}
+                    {/* Contenedor de Imagen con Skeleton Loading y sin bordes blancos */}
                     <div className="w-full aspect-square rounded-2xl overflow-hidden mb-2.5 relative bg-[#FDFBF7] shadow-inner flex items-center justify-center">
                       <ProductImage
-                        src={prod.foto_url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.imagen || prod.foto || prod.img}
+                        src={prod.foto_url || prod.imagen || prod.image || prod.url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.foto || prod.img}
                         alt={prod.nombre}
                         categoria={prod.categoria}
                         aspectRatio="aspect-square"
                         rounded="rounded-2xl"
-                        objectFit="object-contain p-2 hover:scale-105 transition-transform duration-300"
+                        objectFit="object-cover object-center hover:scale-105 transition-transform duration-300"
                       />
                       {/* Control Visual de Stock Flotante */}
                       <div className="absolute top-2 right-2 z-10 pointer-events-auto">
@@ -715,15 +715,15 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                             </div>
                           )}
 
-                          {/* Contenedor de Imagen con Skeleton Loading y fondo neutro */}
+                          {/* Contenedor de Imagen con Skeleton Loading y sin bordes blancos */}
                           <div className="w-full aspect-square rounded-2xl overflow-hidden mb-2.5 relative bg-[#FDFBF7] shadow-inner flex items-center justify-center">
                             <ProductImage
-                              src={prod.foto_url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.imagen || prod.foto || prod.img}
+                              src={prod.foto_url || prod.imagen || prod.image || prod.url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.foto || prod.img}
                               alt={prod.nombre}
                               categoria={prod.categoria}
                               aspectRatio="aspect-square"
                               rounded="rounded-2xl"
-                              objectFit="object-contain p-2 hover:scale-105 transition-transform duration-300"
+                              objectFit="object-cover object-center hover:scale-105 transition-transform duration-300"
                             />
                             {/* Badge de Stock Flotante */}
                             <div className="absolute top-2 right-2 z-10 pointer-events-auto">

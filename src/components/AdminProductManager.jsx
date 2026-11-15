@@ -142,7 +142,8 @@ export const AdminProductManager = () => {
     setIsNewCategory(false);
     setNewCategoryName('');
     setFormIcono(p.icono || getCategoryIcon(p.categoria));
-    setFormImagenUrl(p.imagenUrl || p.imagen || '');
+    const initialImg = p.foto_url || p.imagen || p.image || p.url || p.fotoUrl || p.imagenUrl || p.imagen_url || p.foto || p.img || '';
+    setFormImagenUrl(initialImg);
     setFormCosto(p.costoElaboracion?.toString() || p.costo?.toString() || '');
     setFormPrecioBA(getProductPrice(p, 'BA').toString());
     setFormPrecioVE(getProductPrice(p, 'VE').toString());
@@ -183,13 +184,22 @@ export const AdminProductManager = () => {
         ? editingProduct.id 
         : `prod_${finalCategory}_${Date.now()}`;
 
+      const finalImg = formImagenUrl.trim();
+
       const payload = {
         id: prodId,
         nombre: formNombre.trim(),
         descripcion: formDescripcion.trim(),
         categoria: finalCategory,
         icono: formIcono || getCategoryIcon(finalCategory),
-        imagenUrl: formImagenUrl.trim(),
+        // Preservación y compatibilidad total con Cloudinary y Firestore
+        foto_url: finalImg,
+        imagen: finalImg,
+        image: finalImg,
+        url: finalImg,
+        imagenUrl: finalImg,
+        foto: finalImg,
+        img: finalImg,
         costoElaboracion: costo,
         precios: {
           buenosAires: pBA,
@@ -409,11 +419,11 @@ export const AdminProductManager = () => {
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0 shadow-inner bg-slate-50 border border-pink-100/60">
                             <ProductImage
-                              src={p.foto_url || p.fotoUrl || p.imagenUrl || p.imagen_url || p.imagen || p.foto || p.img}
+                              src={p.foto_url || p.imagen || p.image || p.url || p.fotoUrl || p.imagenUrl || p.imagen_url || p.foto || p.img}
                               alt={p.nombre}
                               categoria={p.categoria}
                               rounded="rounded-2xl"
-                              objectFit="object-contain p-1"
+                              objectFit="object-cover"
                             />
                           </div>
                           <div>

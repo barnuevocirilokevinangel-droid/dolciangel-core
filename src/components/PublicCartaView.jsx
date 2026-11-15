@@ -103,14 +103,11 @@ const HERO_DESSERTS = [
 
 export function resolveProductImg(p) {
   if (!p) return null;
-  // 1. Prioridad: URLs reales de imagen subidas a Cloudinary, Firebase Storage, etc.
-  if (p.foto_url && typeof p.foto_url === 'string' && p.foto_url.trim().length > 5) return p.foto_url.trim();
-  if (p.fotoUrl && typeof p.fotoUrl === 'string' && p.fotoUrl.trim().length > 5) return p.fotoUrl.trim();
-  if (p.imagenUrl && typeof p.imagenUrl === 'string' && p.imagenUrl.trim().length > 5) return p.imagenUrl.trim();
-  if (p.imagen_url && typeof p.imagen_url === 'string' && p.imagen_url.trim().length > 5) return p.imagen_url.trim();
-  if (p.imagen && typeof p.imagen === 'string' && p.imagen.trim().length > 5) return p.imagen.trim();
-  if (p.foto && typeof p.foto === 'string' && p.foto.trim().length > 5) return p.foto.trim();
-  if (p.img && typeof p.img === 'string' && p.img.trim().length > 5) return p.img.trim();
+  // 1. Fallback múltiple estricto para no perder imágenes antiguas ni nuevas (Cloudinary, etc.)
+  const imageUrl = p.foto_url || p.imagen || p.image || p.url || p.fotoUrl || p.imagenUrl || p.imagen_url || p.foto || p.img || '';
+  if (typeof imageUrl === 'string' && imageUrl.trim().length > 4) {
+    return imageUrl.trim();
+  }
   
   // 2. Si es café, infusión o bebida sin foto, NO asociar fotos de pasteles (ej. Café Mocca)
   const cat = String(p.categoria || '').toLowerCase();
@@ -928,10 +925,10 @@ export const PublicCartaView = ({ onNavigate }) => {
                         type="button" 
                         onClick={() => setSelectedProductModal(dolciSelectionProducts[0])}
                       >
-                        <span className="dolci-selection-card__media bg-[#FDFBF7]" aria-hidden="true">
+                        <span className="dolci-selection-card__media bg-[#FDFBF7] overflow-hidden rounded-2xl" aria-hidden="true">
                           {resolveProductImg(dolciSelectionProducts[0]) && !imgErrors[dolciSelectionProducts[0].id] ? (
                             <img 
-                              className="dolci-selection-card__image is-loaded object-contain w-full h-full p-2" 
+                              className="dolci-selection-card__image is-loaded object-cover object-center w-full h-full" 
                               src={resolveProductImg(dolciSelectionProducts[0])} 
                               alt={dolciSelectionProducts[0].nombre} 
                               onError={() => setImgErrors(prev => ({ ...prev, [dolciSelectionProducts[0].id]: true }))}
@@ -966,10 +963,10 @@ export const PublicCartaView = ({ onNavigate }) => {
                         type="button"
                         onClick={() => setSelectedProductModal(prod)}
                       >
-                        <span className="dolci-selection-mini__media bg-[#FDFBF7]" aria-hidden="true">
+                        <span className="dolci-selection-mini__media bg-[#FDFBF7] overflow-hidden rounded-xl" aria-hidden="true">
                           {resolveProductImg(prod) && !imgErrors[prod.id] ? (
                             <img 
-                              className="dolci-selection-mini__image is-loaded object-contain w-full h-full p-1" 
+                              className="dolci-selection-mini__image is-loaded object-cover object-center w-full h-full" 
                               src={resolveProductImg(prod)} 
                               alt={prod.nombre} 
                               onError={() => setImgErrors(prev => ({ ...prev, [prod.id]: true }))}
@@ -1076,57 +1073,55 @@ export const PublicCartaView = ({ onNavigate }) => {
                       style={{ animationDelay: `${Math.min(i * 0.04, 0.32)}s` }}
                     >
                       <div 
-                        className={`card card-luxury-hover cursor-pointer h-full flex flex-col justify-between bg-white rounded-2xl border border-amber-900/15 overflow-hidden shadow-xs hover:shadow-lg transition-all ${
+                        className={`card group card-luxury-hover cursor-pointer h-full flex flex-col justify-between bg-white rounded-2xl border border-amber-900/15 overflow-hidden shadow-xs hover:shadow-lg transition-all ${
                           isAgotado ? 'opacity-75' : ''
                         }`}
                         onClick={() => setSelectedProductModal(p)}
                       >
-                        {/* 1. Contenedor Superior: Imagen / Fallback con aspecto consistente 4:3 y fondo neutro suave */}
-                        <div className="w-full">
-                          <div className="card__img relative w-full aspect-[4/3] bg-[#FDFBF7] overflow-hidden flex items-center justify-center p-2 rounded-t-2xl">
-                            {resolvedImg ? (
-                              <img 
-                                className="card__img-real is-loaded w-full h-full object-contain p-2 transition-transform duration-300 hover:scale-105 select-none" 
-                                src={resolvedImg} 
-                                alt={p.nombre} 
-                                loading="lazy"
-                                onError={() => setImgErrors(prev => ({ ...prev, [p.id]: true }))}
-                              />
-                            ) : (
-                              /* 2. Fallback Estilizado para productos sin foto (ej. Café Mocca) */
-                              <div className="card__img-fallback w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-[#FFFDF9] via-[#FDFBF7] to-[#F5ECE0] rounded-xl select-none">
-                                <span className="text-4xl sm:text-5xl select-none filter drop-shadow-xs transition-transform duration-300 hover:scale-110">
-                                  {categoryIcon || '🧁'}
-                                </span>
-                                <span className="font-serif font-bold text-xs sm:text-sm text-[#4A2D19] mt-2 line-clamp-2 max-w-[90%] text-center leading-snug">
-                                  {p.nombre}
-                                </span>
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800/60 mt-1">
-                                  {p.categoria || 'Dolciangel'}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Badges de Stock */}
-                            <div className="card__tags pointer-events-none">
-                              {isAgotado ? (
-                                <span className="card__tag" style={{ background: '#FEE2E2', color: '#991B1B', borderColor: '#F87171' }}>
-                                  🛑 Agotado hoy en vitrina
-                                </span>
-                              ) : isUltimas ? (
-                                <span className="card__tag" style={{ background: '#FEF3C7', color: '#92400E', borderColor: '#FCD34D' }}>
-                                  ⚡ ¡Últimas {stockBA} porciones!
-                                </span>
-                              ) : !p.esPedidoGrande ? (
-                                <span className="card__tag">
-                                  ✨ En Vitrina ({stockBA})
-                                </span>
-                              ) : (
-                                <span className="card__tag" style={{ background: '#E0F2FE', color: '#0369A1' }}>
-                                  🎂 A Pedido
-                                </span>
-                              )}
+                        {/* 1. Contenedor Superior: Imagen fija 1:1 (aspect-square) ocupando todo el cuadro sin bordes blancos */}
+                        <div className="card__img aspect-square w-full overflow-hidden rounded-2xl relative select-none bg-[#FDFBF7]">
+                          {resolvedImg ? (
+                            <img 
+                              className="card__img-real is-loaded w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105 select-none" 
+                              src={resolvedImg} 
+                              alt={p.nombre} 
+                              loading="lazy"
+                              onError={() => setImgErrors(prev => ({ ...prev, [p.id]: true }))}
+                            />
+                          ) : (
+                            /* 2. Fallback Estilizado para productos sin foto (ej. Café Mocca) */
+                            <div className="card__img-fallback w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-[#FFFDF9] via-[#FDFBF7] to-[#F5ECE0] select-none">
+                              <span className="text-4xl sm:text-5xl select-none filter drop-shadow-xs transition-transform duration-300 group-hover:scale-110">
+                                {categoryIcon || '🧁'}
+                              </span>
+                              <span className="font-serif font-bold text-xs sm:text-sm text-[#4A2D19] mt-2 line-clamp-2 max-w-[90%] text-center leading-snug">
+                                {p.nombre}
+                              </span>
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800/60 mt-1">
+                                {p.categoria || 'Dolciangel'}
+                              </span>
                             </div>
+                          )}
+
+                          {/* Badges de Stock: ✨ EN VITRINA posicionado con absolute top-3 left-3 z-10 */}
+                          <div className="card__tags absolute top-3 left-3 z-10 pointer-events-none">
+                            {isAgotado ? (
+                              <span className="card__tag" style={{ background: '#FEE2E2', color: '#991B1B', borderColor: '#F87171' }}>
+                                🛑 Agotado hoy en vitrina
+                              </span>
+                            ) : isUltimas ? (
+                              <span className="card__tag" style={{ background: '#FEF3C7', color: '#92400E', borderColor: '#FCD34D' }}>
+                                ⚡ ¡Últimas {stockBA} porciones!
+                              </span>
+                            ) : !p.esPedidoGrande ? (
+                              <span className="card__tag" style={{ background: '#E8F5E9', color: '#1B5E20', borderColor: '#81C784' }}>
+                                ✨ EN VITRINA{stockBA > 0 ? ` (${stockBA})` : ''}
+                              </span>
+                            ) : (
+                              <span className="card__tag" style={{ background: '#E0F2FE', color: '#0369A1', borderColor: '#7DD3FC' }}>
+                                🎂 A Pedido
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -1195,10 +1190,10 @@ export const PublicCartaView = ({ onNavigate }) => {
               </svg>
             </button>
 
-            <div className="pmodal__img relative aspect-[4/3] bg-[#FDFBF7] flex items-center justify-center p-3 rounded-2xl overflow-hidden">
+            <div className="pmodal__img relative aspect-square sm:aspect-[4/3] bg-[#FDFBF7] flex items-center justify-center rounded-2xl overflow-hidden">
               {resolveProductImg(selectedProductModal) && !imgErrors[selectedProductModal.id] ? (
                 <img 
-                  className="pmodal__img-real is-loaded w-full h-full object-contain p-2" 
+                  className="pmodal__img-real is-loaded w-full h-full object-cover object-center" 
                   src={resolveProductImg(selectedProductModal)} 
                   alt={selectedProductModal.nombre} 
                   onError={() => setImgErrors(prev => ({ ...prev, [selectedProductModal.id]: true }))}

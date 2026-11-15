@@ -326,15 +326,15 @@ export const CartaWebView = () => {
                   }`}
                 >
                   <div>
-                    {/* Contenedor de Imagen (rounded-2xl, aspect-[4/3]) con Skeleton Loading y fondo neutro */}
-                    <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden mb-2.5 relative bg-[#FDFBF7] border border-amber-900/10 shadow-inner flex items-center justify-center">
+                    {/* Contenedor de Imagen (rounded-2xl, aspect-square) con Skeleton Loading y sin bordes blancos */}
+                    <div className="w-full aspect-square rounded-2xl overflow-hidden mb-2.5 relative bg-[#FDFBF7] border border-amber-900/10 shadow-inner flex items-center justify-center">
                       <ProductImage
-                        src={prod.foto_url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.imagen || prod.foto || prod.img}
+                        src={prod.foto_url || prod.imagen || prod.image || prod.url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.foto || prod.img}
                         alt={prod.nombre}
                         categoria={prod.categoria}
-                        aspectRatio="aspect-[4/3]"
+                        aspectRatio="aspect-square"
                         rounded="rounded-2xl"
-                        objectFit="object-contain p-2 hover:scale-105 transition-transform duration-300"
+                        objectFit="object-cover object-center hover:scale-105 transition-transform duration-300"
                       />
 
                       {/* Badges Flotantes sobre la Imagen */}
@@ -513,11 +513,11 @@ export const CartaWebView = () => {
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0 shadow-inner bg-slate-50 border border-pink-100/60">
                               <ProductImage
-                                src={prod.foto_url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.imagen || prod.foto || prod.img}
+                                src={prod.foto_url || prod.imagen || prod.image || prod.url || prod.fotoUrl || prod.imagenUrl || prod.imagen_url || prod.foto || prod.img}
                                 alt={prod.nombre}
                                 categoria={prod.categoria}
                                 rounded="rounded-2xl"
-                                objectFit="object-contain p-1"
+                                objectFit="object-cover"
                               />
                             </div>
                             <div>
