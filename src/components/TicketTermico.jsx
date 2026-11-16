@@ -37,7 +37,7 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
   const vuelto = Number(venta.vuelto) || 0;
 
   // Composición de valor QR oficial bajo estándar SUNAT:
-  // ${ruc}|${tipoDoc}|${serie}|${numero}|${totalIgv}|${total}|${fecha}|${tipoDocCliente}|${numDocCliente}|
+  // ${ruc}|${tipoDoc}|${serie}|${numero}|${igv}|${total}|${fecha}|${tipoDocCliente}|${numDocCliente}|${hash}|
   const rucEmisor = NUBEFACT_CONFIG.EMPRESA_RUC || '10427321351';
   const codTipoDoc = tipo === 'FACTURA' ? '01' : tipo === 'BOLETA' ? '03' : '00';
   const totIgv = igv.toFixed(2);
@@ -46,11 +46,9 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
   const docCliente = (venta.cliente?.documento || '').trim();
   const tipoDocCli = docCliente ? (tipo === 'FACTURA' ? '6' : '1') : '-';
   const numDocCli = docCliente || '-';
+  const hashComprobante = comprobante.hash || comprobante.codigo_hash || comprobante.digest_value || 'DA-HASH';
 
-  const qrValue = comprobante.cadena_para_codigo_qr || 
-    `${rucEmisor}|${codTipoDoc}|${serieComprobante}|${numComprobante}|${totIgv}|${totVenta}|${fechaYMD}|${tipoDocCli}|${numDocCli}|`;
-
-  const hashComprobante = comprobante.hash || comprobante.codigo_hash || comprobante.digest_value || null;
+  const qrValue = `${rucEmisor}|${codTipoDoc}|${serieComprobante}|${numComprobante}|${totIgv}|${totVenta}|${fechaYMD}|${tipoDocCli}|${numDocCli}|${hashComprobante}|`;
 
   const fechaFormateada = venta.fecha 
     ? new Date(venta.fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'medium' })
@@ -69,8 +67,8 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
       {/* ESTILOS DE IMPRESIÓN PARA TICKETERA TÉRMICA CONTINUA (58mm / 80mm) */}
       <style>{`
         @page {
-          size: auto;
-          margin: 0mm;
+          size: 80mm auto;
+          margin: 0;
         }
         @media print {
           html, body {
@@ -78,9 +76,12 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
             padding: 0 !important;
             background: #ffffff !important;
             color: #000000 !important;
-            width: 100% !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
             height: auto !important;
-            min-height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
           }
           body * {
             visibility: hidden !important;
@@ -93,7 +94,7 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
             left: 0 !important;
             right: 0 !important;
             top: 0 !important;
-            width: 100% !important;
+            width: 80mm !important;
             max-width: 80mm !important;
             margin: 0 auto !important;
             padding: 4mm !important;
@@ -105,10 +106,12 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
             box-shadow: none !important;
             border: none !important;
             height: auto !important;
-            min-height: auto !important;
+            min-height: 0 !important;
             max-height: none !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
         }
       `}</style>
@@ -274,24 +277,15 @@ export const TicketTermico = ({ venta, onPrint, onClose }) => {
             </p>
           </div>
 
-          {/* Leyenda Oficial SUNAT */}
-          <p className="font-extrabold text-[8px] uppercase tracking-tight block text-slate-800">
-            {tipo === 'FACTURA' 
-              ? 'Representación impresa de la Factura Electrónica' 
-              : tipo === 'BOLETA' 
-              ? 'Representación impresa de la Boleta de Venta Electrónica' 
-              : 'Representación impresa de Nota de Venta de Control Interno'}
-          </p>
-
-          {isVE ? (
-            <p className="font-bold text-amber-800 text-[8px] uppercase">
-              ** TICKET DE CONTROL INTERNO (SIN VALOR FISCAL) **
+          {/* Sinceridad Operativa y Leyenda del Comprobante */}
+          <div className="pt-1 space-y-0.5">
+            <p className="font-black text-[9px] uppercase tracking-wide text-slate-900 border-y border-dashed border-slate-300 py-1">
+              COMPROBANTE DE VENTA INTERNO
             </p>
-          ) : comprobante.estado === 'ACEPTADO_SUNAT' ? (
-            <p className="font-bold text-emerald-600">
-              ✓ Comprobante autorizado por SUNAT
+            <p className="text-[7.5px] text-slate-500 uppercase">
+              (Control administrativo interno - Operación regular)
             </p>
-          ) : null}
+          </div>
 
           <p className="font-bold text-slate-700 pt-1">
             ¡Gracias por endulzar tu día con Dolciangel!

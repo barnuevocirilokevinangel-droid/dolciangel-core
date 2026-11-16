@@ -42,8 +42,8 @@
    ======================================================== */
 @media print {
   @page {
-    size: auto;
-    margin: 0mm;
+    size: 80mm auto;
+    margin: 0;
   }
 
   html, body {
@@ -51,14 +51,33 @@
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    width: 100% !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
     height: auto !important;
-    min-height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Ocultar barra de navegación, header, modales externos y botones */
+  header, nav, aside, footer, button, .no-print, [data-no-print="true"] {
+    display: none !important;
+  }
+
+  /* Desactivar restricciones de altura y scrolling en print para evitar duplicación de páginas */
+  #root,
+  .min-h-screen,
+  .h-screen,
+  [class*="max-h-"] {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   /* Ocultar todos los elementos de la interfaz web al imprimir */
   body * {
-    visibility: hidden !important;
+    visibility: hidden;
   }
 
   /* Mostrar ÚNICAMENTE el ticket blanco y negro con tipografía monoespaciada legible */
@@ -78,7 +97,7 @@
     left: 0 !important;
     right: 0 !important;
     top: 0 !important;
-    width: 100% !important;
+    width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 auto !important;
     padding: 4mm !important;
@@ -90,9 +109,12 @@
     box-shadow: none !important;
     border: none !important;
     height: auto !important;
-    min-height: auto !important;
+    min-height: 0 !important;
     max-height: none !important;
+    overflow: visible !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 }

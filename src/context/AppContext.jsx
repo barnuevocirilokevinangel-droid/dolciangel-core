@@ -494,6 +494,7 @@ export const AppProvider = ({ children }) => {
     tipoComprobante,
     clienteDoc,
     clienteNombre,
+    clienteDireccion = '',
     clienteTelefono,
     montoRecibido,
     vuelto,
@@ -548,16 +549,17 @@ export const AppProvider = ({ children }) => {
       items: itemsSummary,
       clienteDoc: isVE ? '' : (clienteDoc || ''),
       clienteNombre: clienteNombre || 'CLIENTES VARIOS',
-      clienteDireccion: '',
+      clienteDireccion: clienteDireccion || '',
       cliente: {
         documento: isVE ? '' : (clienteDoc || ''),
         nombre: clienteNombre || 'CLIENTES VARIOS',
+        direccion: clienteDireccion || '',
         telefono: clienteTelefono || ''
       }
     });
 
     if (!comprobanteData.exito) {
-      throw new Error(comprobanteData.error || 'Error al emitir comprobante en SUNAT con ApiPeru');
+      throw new Error(comprobanteData.error || 'Error al emitir comprobante');
     }
 
     const opGravada = Number((totalToPay / 1.18).toFixed(2));
@@ -572,7 +574,7 @@ export const AppProvider = ({ children }) => {
       sedeNombre: SEDES[sede].nombre,
       vendedor: perfil.nombre,
       vendedorRol: perfil.rol,
-      estado_sunat: isVE ? 'no_aplica' : (comprobanteData.estado_sunat || 'aceptado'),
+      estado_sunat: isVE ? 'no_aplica' : (comprobanteData.estado_sunat || 'interno'),
       cuenta: {
         id: targetAccount.id,
         nombre: targetAccount.name,
@@ -589,7 +591,7 @@ export const AppProvider = ({ children }) => {
         serie: comprobanteData.serie || correlativoInfo.serie,
         numero: comprobanteData.numero || correlativoInfo.numero,
         codigoCompleto: comprobanteData.codigoCompleto || correlativoInfo.codigoCompleto,
-        estado: comprobanteData.estado || (isVE ? 'CONTROL_INTERNO' : 'ACEPTADO_SUNAT'),
+        estado: comprobanteData.estado || (isVE ? 'CONTROL_INTERNO' : 'CONTROL_INTERNO'),
         enlace_del_pdf: comprobanteData.url_comprobante_sunat || comprobanteData.enlace_del_pdf || null,
         url_comprobante_sunat: comprobanteData.url_comprobante_sunat || null,
         cadena_para_codigo_qr: comprobanteData.cadena_para_codigo_qr || null,
@@ -599,6 +601,7 @@ export const AppProvider = ({ children }) => {
       cliente: {
         documento: isVE ? '' : (clienteDoc || ''),
         nombre: clienteNombre || 'Público General',
+        direccion: clienteDireccion || '',
         telefono: clienteTelefono || ''
       },
       montoRecibido: Number(montoRecibido) || totalToPay,

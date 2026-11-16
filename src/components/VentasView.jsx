@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp, SEDES } from '../context/AppContext';
-import { validarDNI, validarRUC } from '../services/sunatService';
+import { validarDNI, validarRUC, consultarDocumento } from '../services/sunatService';
 import { getProductPrice, getProductStock, extractCategories } from '../services/productUtils';
 import { TicketTermico } from './TicketTermico';
 import { TicketPrint } from './TicketPrint';
@@ -28,7 +28,8 @@ import {
   RotateCcw,
   AlertTriangle,
   Check,
-  Coins
+  Coins,
+  Loader2
 } from 'lucide-react';
 
 export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
@@ -91,9 +92,15 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   const [tipoComprobante, setTipoComprobante] = useState('NOTA_VENTA'); // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
   const [clienteDoc, setClienteDoc] = useState('');
   const [clienteNombre, setClienteNombre] = useState('');
+  const [clienteDireccion, setClienteDireccion] = useState('');
   const [clienteTelefono, setClienteTelefono] = useState('');
   const [montoRecibido, setMontoRecibido] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Estados de consulta automática ApiPeru para DNI / RUC
+  const [isSearchingDoc, setIsSearchingDoc] = useState(false);
+  const [docSearchSuccess, setDocSearchSuccess] = useState(null); // 'RENIEC' | 'SUNAT' | null
+  const [docSearchError, setDocSearchError] = useState('');
 
   // Regla estricta por sede: Villa España opera 100% con tickets de control interno sin valor fiscal SUNAT
   // Buenos Aires mantiene habilitadas Boleta Electrónica, Factura Electrónica y Nota de Venta
@@ -104,8 +111,92 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     if (isVE && tipoComprobante !== 'NOTA_VENTA') {
       setTipoComprobante('NOTA_VENTA');
       setClienteDoc('');
+      setClienteNombre('');
+      setClienteDireccion('');
     }
   }, [isVE, tipoComprobante]);
+
+  // Consulta automática de DNI / RUC en tiempo real con ApiPeru
+  useEffect(() => {
+    if (isVE || !showCheckout) return;
+
+    const docLimpio = (clienteDoc || '').toString().replace(/\D/g, '').trim();
+
+    // 1. DNI para Boleta (exactamente 8 dígitos numéricos)
+    if (tipoComprobante === 'BOLETA' && docLimpio.length === 8) {
+      let isMounted = true;
+      setIsSearchingDoc(true);
+      setDocSearchError('');
+      setDocSearchSuccess(null);
+
+      consultarDocumento({ dni: docLimpio })
+        .then((res) => {
+          if (!isMounted) return;
+          if (res.success && res.data?.nombre_completo) {
+            setClienteNombre(res.data.nombre_completo);
+            setDocSearchSuccess('RENIEC');
+            setDocSearchError('');
+          } else {
+            setDocSearchError(res.message || 'DNI no encontrado en RENIEC');
+            setDocSearchSuccess(null);
+          }
+        })
+        .catch((err) => {
+          if (isMounted) {
+            console.warn('Error al consultar DNI:', err);
+            setDocSearchError('Error al consultar RENIEC');
+            setDocSearchSuccess(null);
+          }
+        })
+        .finally(() => {
+          if (isMounted) setIsSearchingDoc(false);
+        });
+
+      return () => { isMounted = false; };
+    }
+
+    // 2. RUC para Factura (exactamente 11 dígitos numéricos)
+    if (tipoComprobante === 'FACTURA' && docLimpio.length === 11) {
+      let isMounted = true;
+      setIsSearchingDoc(true);
+      setDocSearchError('');
+      setDocSearchSuccess(null);
+
+      consultarDocumento({ ruc: docLimpio })
+        .then((res) => {
+          if (!isMounted) return;
+          if (res.success && res.data?.nombre_o_razon_social) {
+            setClienteNombre(res.data.nombre_o_razon_social);
+            if (res.data?.direccion_completa) {
+              setClienteDireccion(res.data.direccion_completa);
+            }
+            setDocSearchSuccess('SUNAT');
+            setDocSearchError('');
+          } else {
+            setDocSearchError(res.message || 'RUC no encontrado en SUNAT');
+            setDocSearchSuccess(null);
+          }
+        })
+        .catch((err) => {
+          if (isMounted) {
+            console.warn('Error al consultar RUC:', err);
+            setDocSearchError('Error al consultar SUNAT');
+            setDocSearchSuccess(null);
+          }
+        })
+        .finally(() => {
+          if (isMounted) setIsSearchingDoc(false);
+        });
+
+      return () => { isMounted = false; };
+    }
+
+    // Reset si el usuario borra dígitos
+    if (docLimpio.length < 8) {
+      setDocSearchSuccess(null);
+      setDocSearchError('');
+    }
+  }, [clienteDoc, tipoComprobante, showCheckout, isVE]);
 
   // Feedback y Ticket Térmico de la última venta
   const [lastSaleReceipt, setLastSaleReceipt] = useState(null);
@@ -293,6 +384,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
         tipoComprobante: finalTipoComprobante,
         clienteDoc: isVE ? '' : clienteDoc,
         clienteNombre,
+        clienteDireccion,
         clienteTelefono,
         montoRecibido: metodoPago === 'EFECTIVO' ? montoRecibido : cartTotal,
         vuelto: vueltoCalculado,
@@ -308,6 +400,9 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
       // Limpiar formulario de cobro
       setClienteDoc('');
       setClienteNombre('');
+      setClienteDireccion('');
+      setDocSearchSuccess(null);
+      setDocSearchError('');
       setClienteTelefono('');
       setMontoRecibido('');
       showToast(`¡Comanda de ${activeAccount.name} cobrada con éxito!`, 'success');
@@ -323,11 +418,17 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   const handleResetForNewSale = () => {
     setLastSaleReceipt(null);
     setSearchTerm('');
+    setClienteDoc('');
+    setClienteNombre('');
+    setClienteDireccion('');
+    setDocSearchSuccess(null);
+    setDocSearchError('');
   };
 
   return (
-    <div className="pb-28 max-w-7xl mx-auto px-4 pt-4">
-      {/* 1. BARRA DE NAVEGACIÓN HORIZONTAL DE MESAS / CUENTAS SIMULTÁNEAS */}
+    <div className="pb-28 max-w-7xl mx-auto px-4 pt-4 print:p-0 print:m-0 print:max-w-none">
+      <div className={lastSaleReceipt ? 'print:hidden' : ''}>
+        {/* 1. BARRA DE NAVEGACIÓN HORIZONTAL DE MESAS / CUENTAS SIMULTÁNEAS */}
       <div className="bg-white rounded-3xl p-3 shadow-sm border border-pink-100 mb-4">
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs">
           <div className="flex items-center gap-2">
@@ -1652,7 +1753,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                   <div className="flex items-center justify-between text-xs font-bold text-brand-900">
                     <span className="flex items-center gap-1.5">
                       <Receipt className="w-4 h-4 text-brand-700" />
-                      <span>Datos para Boleta de Venta (B001)</span>
+                      <span>Datos para Boleta de Venta (B002)</span>
                     </span>
                     <span className="text-[10px] bg-pink-100 text-brand-800 px-2 py-0.5 rounded-full font-bold">
                       SUNAT
@@ -1662,23 +1763,45 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                     <div>
                       <div className="flex justify-between items-center mb-1">
                         <label className="text-[11px] font-bold text-slate-700">DNI (8 dígitos) *</label>
-                        {esDniValido && (
+                        {isSearchingDoc && (
+                          <span className="text-[10px] font-bold text-brand-600 flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Buscando RENIEC...
+                          </span>
+                        )}
+                        {!isSearchingDoc && docSearchSuccess === 'RENIEC' && (
+                          <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                            <Check className="w-3 h-3" /> RENIEC Verificado
+                          </span>
+                        )}
+                        {!isSearchingDoc && !docSearchSuccess && esDniValido && (
                           <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
                             <Check className="w-3 h-3" /> Válido
                           </span>
                         )}
                       </div>
-                      <input
-                        type="text"
-                        maxLength={8}
-                        value={clienteDoc}
-                        onChange={(e) => setClienteDoc(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Ej. 45678912"
-                        required
-                        className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold focus:outline-none bg-white ${
-                          clienteDoc.length > 0 && !esDniValido ? 'border-rose-400 bg-rose-50/30' : 'border-pink-200 focus:border-brand-500'
-                        }`}
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          maxLength={8}
+                          value={clienteDoc}
+                          onChange={(e) => setClienteDoc(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Ej. 45678912"
+                          required
+                          className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold focus:outline-none bg-white pr-8 ${
+                            clienteDoc.length > 0 && !esDniValido ? 'border-rose-400 bg-rose-50/30' : 'border-pink-200 focus:border-brand-500'
+                          }`}
+                        />
+                        {isSearchingDoc && (
+                          <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-600" />
+                          </div>
+                        )}
+                      </div>
+                      {docSearchError && (
+                        <p className="text-[10px] text-rose-500 font-semibold mt-1">
+                          {docSearchError} (puede ingresar el nombre a mano)
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-[11px] font-bold text-slate-700 block mb-1">Nombre Completo *</label>
@@ -1711,23 +1834,45 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                     <div>
                       <div className="flex justify-between items-center mb-1">
                         <label className="text-[11px] font-bold text-slate-700">RUC (11 dígitos, inicia 10/20) *</label>
-                        {esRucValido && (
+                        {isSearchingDoc && (
+                          <span className="text-[10px] font-bold text-amber-700 flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Buscando SUNAT...
+                          </span>
+                        )}
+                        {!isSearchingDoc && docSearchSuccess === 'SUNAT' && (
+                          <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                            <Check className="w-3 h-3" /> SUNAT Verificado
+                          </span>
+                        )}
+                        {!isSearchingDoc && !docSearchSuccess && esRucValido && (
                           <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
                             <Check className="w-3 h-3" /> Válido
                           </span>
                         )}
                       </div>
-                      <input
-                        type="text"
-                        maxLength={11}
-                        value={clienteDoc}
-                        onChange={(e) => setClienteDoc(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Ej. 20601234567"
-                        required
-                        className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold focus:outline-none bg-white ${
-                          clienteDoc.length > 0 && !esRucValido ? 'border-rose-400 bg-rose-50/30' : 'border-amber-300 focus:border-amber-500'
-                        }`}
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          maxLength={11}
+                          value={clienteDoc}
+                          onChange={(e) => setClienteDoc(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Ej. 20601234567"
+                          required
+                          className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold focus:outline-none bg-white pr-8 ${
+                            clienteDoc.length > 0 && !esRucValido ? 'border-rose-400 bg-rose-50/30' : 'border-amber-300 focus:border-amber-500'
+                          }`}
+                        />
+                        {isSearchingDoc && (
+                          <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                          </div>
+                        )}
+                      </div>
+                      {docSearchError && (
+                        <p className="text-[10px] text-rose-500 font-semibold mt-1">
+                          {docSearchError} (puede ingresar la razón social a mano)
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-[11px] font-bold text-slate-700 block mb-1">Razón Social *</label>
@@ -1741,6 +1886,19 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                       />
                     </div>
                   </div>
+                  {/* Dirección Fiscal detectada de SUNAT */}
+                  {clienteDireccion && (
+                    <div className="pt-1">
+                      <label className="text-[10px] font-bold text-amber-900 block mb-0.5">Dirección Fiscal SUNAT</label>
+                      <input
+                        type="text"
+                        value={clienteDireccion}
+                        onChange={(e) => setClienteDireccion(e.target.value)}
+                        placeholder="Dirección fiscal registrada en SUNAT"
+                        className="w-full px-3 py-1.5 rounded-xl border border-amber-200 text-[11px] text-slate-700 bg-white/80 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1808,29 +1966,32 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
           </div>
         </div>
       )}
+      </div>
 
       {/* 6. MODAL DE ÉXITO & TICKET TÉRMICO (FEEDBACK LISTO PARA IMPRESORA 80mm/58mm) */}
       {lastSaleReceipt && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md text-center max-h-[92vh] overflow-y-auto">
-            {/* Animación de Éxito */}
-            <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center text-3xl mb-2 shadow-inner">
-              ✓
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn print:static print:inset-auto print:bg-transparent print:p-0 print:m-0 print:overflow-visible">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md text-center max-h-[92vh] overflow-y-auto print:p-0 print:m-0 print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-[80mm] print:mx-auto print:overflow-visible">
+            {/* Animación y textos de éxito en pantalla - Ocultos en impresión */}
+            <div className="print:hidden">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center text-3xl mb-2 shadow-inner">
+                ✓
+              </div>
+              <h3 className="font-serif font-bold text-2xl text-slate-900">
+                ¡Cobro Exitoso!
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Comanda de <strong>{lastSaleReceipt.cuenta?.nombre}</strong> cobrada e inventario descontado.
+              </p>
             </div>
-            <h3 className="font-serif font-bold text-2xl text-slate-900">
-              ¡Cobro Exitoso!
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Comanda de <strong>{lastSaleReceipt.cuenta?.nombre}</strong> cobrada e inventario descontado.
-            </p>
 
             {/* Vista Previa del Ticket Térmico Oficial (80mm / 58mm) */}
-            <div className="my-4">
+            <div className="my-4 print:my-0 print:p-0">
               <TicketPrint venta={lastSaleReceipt} />
             </div>
 
-            {/* Botones Táctiles Grandes: Imprimir Ticket y Nueva Venta */}
-            <div className="space-y-2 pt-2">
+            {/* Botones Táctiles Grandes: Imprimir Ticket y Nueva Venta - Ocultos en impresión */}
+            <div className="space-y-2 pt-2 print:hidden">
               <button
                 onClick={() => window.print()}
                 className="w-full py-3.5 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm shadow-lg shadow-slate-900/25 flex items-center justify-center gap-2 active:scale-98 transition-all"

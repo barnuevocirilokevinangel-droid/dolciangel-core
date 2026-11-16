@@ -66,8 +66,9 @@ export default async function handler(req, res) {
     const numDocCli = payload.cliente_numero_de_documento || "-";
     const totalIgv = typeof payload.total_igv === 'number' ? payload.total_igv.toFixed(2) : (payload.total_igv || "0.00");
     const total = typeof payload.total === 'number' ? payload.total.toFixed(2) : (payload.total || "0.00");
-    const qrString = `${rucEmisor}|${tipoDoc}|${serie}|${numero}|${totalIgv}|${total}|${fecha}|${tipoDocCli}|${numDocCli}|`;
     const simulatedHash = `DA-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    // Estructura oficial SUNAT: ${ruc}|${tipoDoc}|${serie}|${numero}|${igv}|${total}|${fecha}|${tipoDocCliente}|${numDocCliente}|${hash}|
+    const qrString = `${rucEmisor}|${tipoDoc}|${serie}|${numero}|${totalIgv}|${total}|${fecha}|${tipoDocCli}|${numDocCli}|${simulatedHash}|`;
 
     return res.status(200).json({
       success: true,
@@ -80,9 +81,9 @@ export default async function handler(req, res) {
           pdf: null
         },
         cadena_para_codigo_qr: qrString,
-        mensaje: "Comprobante generado y registrado en modo contingencia SUNAT"
+        mensaje: "Comprobante de venta interno registrado correctamente"
       },
-      message: "Comprobante emitido con éxito en SUNAT"
+      message: "Comprobante emitido en modo control interno"
     });
   } catch (error) {
     console.error("Error en proxy ApiPeru:", error);
