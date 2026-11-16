@@ -10,7 +10,8 @@ import {
   History, 
   Globe, 
   Settings,
-  Monitor
+  Monitor,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export const BottomNav = () => {
@@ -60,6 +61,11 @@ export const BottomNav = () => {
       id: 'historial',
       label: 'Historial',
       icon: History,
+    },
+    {
+      id: 'contabilidad',
+      label: 'SIRE / Contab.',
+      icon: FileSpreadsheet,
     },
     {
       id: 'carta',

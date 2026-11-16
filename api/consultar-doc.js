@@ -49,6 +49,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           success: true,
           tipo: 'dni',
+          nombre_completo: nombreCompleto,
           data: {
             dni,
             nombre_completo: nombreCompleto,
@@ -86,6 +87,8 @@ export default async function handler(req, res) {
         return res.status(200).json({
           success: true,
           tipo: 'ruc',
+          nombre_o_razon_social: razonSocial,
+          direccion_completa: direccionCompleta,
           data: {
             ruc,
             nombre_o_razon_social: razonSocial,

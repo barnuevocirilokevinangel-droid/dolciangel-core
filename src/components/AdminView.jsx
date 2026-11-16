@@ -20,7 +20,8 @@ import {
   Cake,
   Crown,
   Sliders,
-  Globe
+  Globe,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export const AdminView = ({ onOpenSwitchModal }) => {
@@ -33,6 +34,7 @@ export const AdminView = ({ onOpenSwitchModal }) => {
     clientesFidelidad, 
     movimientosCaja,
     seedInitialProducts,
+    setActiveTab: setGlobalTab,
     showToast 
   } = useApp();
 
@@ -203,6 +205,13 @@ export const AdminView = ({ onOpenSwitchModal }) => {
             >
               <Sliders className="w-3.5 h-3.5 text-pink-500" />
               <span>Sistema & Migración</span>
+            </button>
+            <button
+              onClick={() => setGlobalTab('contabilidad')}
+              className="px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition-all bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Contabilidad SIRE</span>
             </button>
           </div>
         </div>

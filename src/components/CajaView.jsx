@@ -68,7 +68,7 @@ export const CajaView = () => {
     const fechaInicio = new Date(sesionCaja.fechaApertura).getTime();
     return ventas.filter(v => {
       const fechaVenta = new Date(v.fecha).getTime();
-      return v.sede === sede && fechaVenta >= fechaInicio;
+      return v.sede === sede && fechaVenta >= fechaInicio && v.estado !== 'ANULADA';
     });
   }, [ventas, sesionCaja, sede]);
 

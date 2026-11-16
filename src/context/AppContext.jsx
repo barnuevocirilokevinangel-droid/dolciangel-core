@@ -17,7 +17,7 @@ import {
   limit
 } from '../services/firebase';
 import { INITIAL_PRODUCTS } from '../data/initialCatalog';
-import { emitirComprobante, obtenerSiguienteCorrelativo } from '../services/sunatService';
+import { emitirComprobante, anularComprobante, obtenerSiguienteCorrelativo } from '../services/sunatService';
 import { getProductPrice, getProductStock } from '../services/productUtils';
 
 const AppContext = createContext();
@@ -77,7 +77,16 @@ export const AppProvider = ({ children }) => {
   // SEGURIDAD ESTRICTA: El perfil de colaborador NUNCA persiste entre recargas (F5),
   // cierre de ventana o pestañas nuevas. Siempre arranca en null para exigir PIN obligatorio.
   const [perfil, setPerfil] = useState(null);
-  const [activeTab, setActiveTab] = useState('ventas');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname.toLowerCase();
+      const h = window.location.hash.toLowerCase();
+      if (p.startsWith('/admin/contabilidad') || h.startsWith('#/admin/contabilidad')) {
+        return 'contabilidad';
+      }
+    }
+    return 'ventas';
+  });
 
   // Limpieza defensiva en montaje para evitar cualquier bypass por sesiones viejas en localStorage
   useEffect(() => {
@@ -565,7 +574,7 @@ export const AppProvider = ({ children }) => {
     const opGravada = Number((totalToPay / 1.18).toFixed(2));
     const igv = Number((totalToPay - opGravada).toFixed(2));
 
-    // 1. Guardar la venta en 'ventas' con la información de la Mesa/Cuenta
+    // 1. Guardar la venta en 'ventas' con la información completa de comprobante APISUNAT, local y método de pago
     const ventaDocData = {
       id: saleId,
       fecha: new Date().toISOString(),
@@ -574,7 +583,11 @@ export const AppProvider = ({ children }) => {
       sedeNombre: SEDES[sede].nombre,
       vendedor: perfil.nombre,
       vendedorRol: perfil.rol,
-      estado_sunat: isVE ? 'no_aplica' : (comprobanteData.estado_sunat || 'interno'),
+      estado_sunat: isVE || effectiveTipoComprobante === 'NOTA_VENTA' ? 'no_aplica' : (comprobanteData.estado_sunat || 'aceptado'),
+      correlativo: comprobanteData.numero || correlativoInfo.numero,
+      hash_cpe: comprobanteData.hash_cpe || comprobanteData.hash || null,
+      enlace_del_pdf: comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
+      enlace_del_xml: comprobanteData.enlace_del_xml || comprobanteData.xml || null,
       cuenta: {
         id: targetAccount.id,
         nombre: targetAccount.name,
@@ -588,14 +601,20 @@ export const AppProvider = ({ children }) => {
       tipoComprobante: effectiveTipoComprobante, // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
       comprobante: {
         tipo: comprobanteData.tipo || effectiveTipoComprobante,
+        tipoDoc: comprobanteData.tipoDoc || (effectiveTipoComprobante === 'FACTURA' ? '01' : effectiveTipoComprobante === 'BOLETA' ? '03' : 'NV'),
+        documentId: comprobanteData.documentId || null,
+        fileName: comprobanteData.fileName || null,
         serie: comprobanteData.serie || correlativoInfo.serie,
         numero: comprobanteData.numero || correlativoInfo.numero,
         codigoCompleto: comprobanteData.codigoCompleto || correlativoInfo.codigoCompleto,
-        estado: comprobanteData.estado || (isVE ? 'CONTROL_INTERNO' : 'CONTROL_INTERNO'),
-        enlace_del_pdf: comprobanteData.url_comprobante_sunat || comprobanteData.enlace_del_pdf || null,
-        url_comprobante_sunat: comprobanteData.url_comprobante_sunat || null,
+        estado: comprobanteData.estado || (isVE || effectiveTipoComprobante === 'NOTA_VENTA' ? 'CONTROL_INTERNO' : 'ACEPTADO'),
+        enlace_del_pdf: comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
+        enlace_del_xml: comprobanteData.enlace_del_xml || comprobanteData.xml || null,
+        cdr: comprobanteData.cdr || null,
+        url_comprobante_sunat: comprobanteData.enlace_del_pdf || comprobanteData.url_comprobante_sunat || null,
         cadena_para_codigo_qr: comprobanteData.cadena_para_codigo_qr || null,
-        hash: comprobanteData.hash || null,
+        hash_cpe: comprobanteData.hash_cpe || comprobanteData.hash || null,
+        hash: comprobanteData.hash_cpe || comprobanteData.hash || null,
         fecha: new Date().toISOString()
       },
       cliente: {
@@ -699,6 +718,104 @@ export const AppProvider = ({ children }) => {
     return ventaDocData;
   };
 
+  /**
+   * Anular Venta con emisión real de Nota de Crédito (07) en APISUNAT si es Boleta/Factura electrónica.
+   * Conserva el documento en `ventas` marcado como `estado: 'ANULADA'` para auditoría contable SIRE
+   * y devuelve automáticamente el stock al inventario correspondiente.
+   */
+  const anularVenta = async (venta, { motivo = 'ANULACION DE LA OPERACION', codigoMotivo = '01' } = {}) => {
+    if (!venta || !venta.id) throw new Error('Venta inválida');
+    if (venta.estado === 'ANULADA') throw new Error('Esta venta ya se encuentra anulada');
+
+    const comp = venta.comprobante || {};
+    const serieOrig = (comp.serie || '').toUpperCase();
+    const esComprobanteSunat =
+      (venta.tipoComprobante === 'BOLETA' || venta.tipoComprobante === 'FACTURA') &&
+      serieOrig !== 'NV01' &&
+      comp.estado !== 'CONTROL_INTERNO';
+
+    let notaCreditoData = null;
+    if (esComprobanteSunat) {
+      notaCreditoData = await anularComprobante({ venta, motivo, codigoMotivo });
+    }
+
+    const batch = writeBatch(db);
+    const isVE =
+      venta.sede === 'VE' ||
+      venta.sede === 'villaEspana' ||
+      (venta.sedeNombre && venta.sedeNombre.toLowerCase().includes('villa'));
+    const stockFieldLegacy = isVE ? 'stock_VE' : 'stock_BA';
+    const nestedStockField = isVE ? 'stock.villaEspana' : 'stock.buenosAires';
+    const targetSedeId = isVE ? 'VE' : 'BA';
+
+    // 1. Devolver stock en Firestore (solo ítems que controlan inventario)
+    if (Array.isArray(venta.items)) {
+      for (const item of venta.items) {
+        const controlsStock =
+          item.controla_stock !== false &&
+          !item.es_personalizado &&
+          !item.id?.toString().startsWith('custom-');
+        if (!controlsStock) continue;
+
+        const prodRef = doc(collections.productos, item.id);
+        batch.update(prodRef, {
+          [stockFieldLegacy]: increment(item.cantidad),
+          [nestedStockField]: increment(item.cantidad),
+          updatedAt: serverTimestamp()
+        });
+
+        const kardexRef = doc(collections.kardex, `K-ANULACION-${venta.id}-${item.id}`);
+        batch.set(kardexRef, {
+          fecha: new Date().toISOString(),
+          timestamp: serverTimestamp(),
+          sede: targetSedeId,
+          tipo: 'INGRESO',
+          productoId: item.id,
+          productoNombre: item.nombre,
+          cantidad: item.cantidad,
+          motivo: `Devolución de stock por anulación${notaCreditoData ? ` (NC ${notaCreditoData.codigoCompleto})` : ''} de venta ${venta.id}`,
+          responsable: perfil?.nombre || 'Admin'
+        });
+      }
+    }
+
+    // 2. Eliminar movimiento de caja en efectivo asociado si existiera
+    const movCajaRef = doc(collections.movimientosCaja, `MC-${venta.id}`);
+    batch.delete(movCajaRef);
+
+    // 3. Marcar venta como ANULADA (nunca borrar documento fiscal para trazabilidad SIRE)
+    const ventaRef = doc(collections.ventas, venta.id);
+    batch.update(ventaRef, {
+      estado: 'ANULADA',
+      fechaAnulacion: new Date().toISOString(),
+      anuladoPor: perfil?.nombre || 'Admin',
+      motivoAnulacion: motivo,
+      ...(notaCreditoData ? {
+        notaCredito: {
+          tipoDoc: '07',
+          serie: notaCreditoData.serie,
+          numero: notaCreditoData.numero,
+          codigoCompleto: notaCreditoData.codigoCompleto,
+          documentId: notaCreditoData.documentId,
+          fileName: notaCreditoData.fileName,
+          hash_cpe: notaCreditoData.hash_cpe,
+          enlace_del_pdf: notaCreditoData.enlace_del_pdf,
+          enlace_del_xml: notaCreditoData.enlace_del_xml,
+          cdr: notaCreditoData.cdr,
+          status: notaCreditoData.status,
+          motivo: notaCreditoData.motivo,
+          codigoMotivo: notaCreditoData.codigoMotivo,
+          fecha: new Date().toISOString(),
+          fechaEmision: notaCreditoData.fechaEmision
+        }
+      } : {}),
+      updatedAt: serverTimestamp()
+    });
+
+    await batch.commit();
+    return notaCreditoData;
+  };
+
   return (
     <AppContext.Provider value={{
       sede,
@@ -737,6 +854,7 @@ export const AppProvider = ({ children }) => {
       isOnline,
       seedInitialProducts,
       processSale,
+      anularVenta,
       toast,
       showToast
     }}>

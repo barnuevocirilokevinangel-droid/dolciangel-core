@@ -15,6 +15,7 @@ import { ResumenView } from './components/ResumenView';
 import { StatsView } from './components/StatsView';
 import { HistorialGlobalView } from './components/HistorialGlobalView';
 import { AdminView } from './components/AdminView';
+import { ContabilidadView } from './components/ContabilidadView';
 import { GestorHeroView } from './components/GestorHeroView';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 
@@ -66,7 +67,8 @@ const MainLayout = ({ onNavigate }) => {
   const { 
     sede, 
     perfil, 
-    activeTab, 
+    activeTab,
+    setActiveTab,
     productos, 
     seedInitialProducts, 
     toast 
@@ -74,6 +76,36 @@ const MainLayout = ({ onNavigate }) => {
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false);
+
+  // Sincronizar URL /admin/contabilidad con activeTab
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const path = window.location.pathname.toLowerCase();
+    if (activeTab === 'contabilidad' && !path.startsWith('/admin/contabilidad')) {
+      try {
+        window.history.pushState({}, '', '/admin/contabilidad');
+      } catch {
+        // Ignorar en entornos sin pushState
+      }
+    } else if (activeTab !== 'contabilidad' && path.startsWith('/admin/contabilidad')) {
+      try {
+        window.history.pushState({}, '', '/core');
+      } catch {
+        // Ignorar
+      }
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const syncTabFromUrl = () => {
+      const p = window.location.pathname.toLowerCase();
+      if (p.startsWith('/admin/contabilidad')) {
+        setActiveTab('contabilidad');
+      }
+    };
+    window.addEventListener('popstate', syncTabFromUrl);
+    return () => window.removeEventListener('popstate', syncTabFromUrl);
+  }, [setActiveTab]);
 
   // Auto-siembra de catálogo inicial si la base de datos está vacía al cargar
   useEffect(() => {
@@ -142,6 +174,7 @@ const MainLayout = ({ onNavigate }) => {
         )}
         {activeTab === 'carta' && <CartaWebView />}
         {activeTab === 'web' && <GestorHeroView />}
+        {activeTab === 'contabilidad' && <ContabilidadView />}
         {activeTab === 'admin' && (
           <AdminView onOpenSwitchModal={() => setIsSwitchModalOpen(true)} />
         )}

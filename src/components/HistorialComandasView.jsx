@@ -23,17 +23,27 @@ import {
   Edit3, 
   AlertTriangle,
   Crown,
-  Check
+  Check,
+  ExternalLink,
+  Loader2,
+  FileText,
+  XCircle
 } from 'lucide-react';
 import { TicketTermico } from './TicketTermico';
 
 export const HistorialComandasView = () => {
-  const { sede, perfil, ventas, showToast } = useApp();
+  const { sede, perfil, ventas, anularVenta, showToast } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMetodo, setFilterMetodo] = useState('TODOS');
   const [filterComprobante, setFilterComprobante] = useState('TODOS');
   const [selectedTicket, setSelectedTicket] = useState(null);
+
+  // Estados para Anulación con Nota de Crédito APISUNAT (Exclusivo Dueño)
+  const [voidingSale, setVoidingSale] = useState(null);
+  const [voidCodigoMotivo, setVoidCodigoMotivo] = useState('01');
+  const [voidMotivo, setVoidMotivo] = useState('ANULACION DE LA OPERACION');
+  const [isVoiding, setIsVoiding] = useState(false);
 
   // Estados para Edición exclusiva del Dueño
   const [editingSale, setEditingSale] = useState(null);
@@ -54,6 +64,7 @@ export const HistorialComandasView = () => {
         (sede === 'BA' && (v.sede === 'buenosAires' || v.sede === 'BA'));
       const term = searchTerm.toLowerCase();
       const matchSearch = (v.id || '').toLowerCase().includes(term) ||
+                          (v.comprobante?.codigoCompleto || '').toLowerCase().includes(term) ||
                           (v.cliente?.nombre || '').toLowerCase().includes(term) ||
                           (v.cliente?.documento || '').includes(term) ||
                           (v.vendedor || '').toLowerCase().includes(term) ||
@@ -68,66 +79,49 @@ export const HistorialComandasView = () => {
   }, [ventas, sede, searchTerm, filterMetodo, filterComprobante]);
 
   const totalRecaudado = useMemo(() => {
-    return filteredVentas.reduce((sum, v) => sum + (v.total || 0), 0);
+    return filteredVentas
+      .filter(v => v.estado !== 'ANULADA')
+      .reduce((sum, v) => sum + (v.total || 0), 0);
   }, [filteredVentas]);
 
-  // 1. Anular y Borrar Venta (Exclusivo Dueño 👑)
-  const handleAnularVenta = async (venta) => {
+  // 1. Abrir Modal de Anulación / Nota de Crédito (Exclusivo Dueño 👑)
+  const handleAnularVenta = (venta) => {
     if (!isDueno) return;
-    const confirmMsg = `¿Estás seguro de ANULAR y BORRAR la venta ${venta.id}?\n\n` +
-      `Monto: S/ ${Number(venta.total).toFixed(2)}\n` +
-      `Cliente: ${venta.cliente?.nombre || 'Público General'}\n\n` +
-      `✓ El stock de los productos vendidos será devuelto automáticamente al inventario de ${venta.sedeNombre}.\n` +
-      `✓ Se revertirá el movimiento en el Kardex y Caja.`;
+    if (venta.estado === 'ANULADA') {
+      showToast('Esta venta ya fue anulada previamente', 'warning');
+      return;
+    }
+    setVoidingSale(venta);
+    setVoidCodigoMotivo('01');
+    setVoidMotivo('ANULACION DE LA OPERACION');
+  };
 
-    if (!window.confirm(confirmMsg)) return;
+  // Confirmar Anulación (emite Nota de Crédito en APISUNAT si es Boleta/Factura)
+  const handleConfirmVoidSale = async (e) => {
+    e.preventDefault();
+    if (!voidingSale || !isDueno || isVoiding) return;
 
+    setIsVoiding(true);
     try {
-      const batch = writeBatch(db);
-      const isVE = venta.sede === 'VE' || venta.sede === 'villaEspana' || (venta.sedeNombre && venta.sedeNombre.toLowerCase().includes('villa'));
-      const stockFieldLegacy = isVE ? 'stock_VE' : 'stock_BA';
-      const nestedStockField = isVE ? 'stock.villaEspana' : 'stock.buenosAires';
-      const targetSedeId = isVE ? 'VE' : 'BA';
+      const ncResult = await anularVenta(voidingSale, {
+        motivo: voidMotivo.trim() || 'ANULACION DE LA OPERACION',
+        codigoMotivo: voidCodigoMotivo
+      });
 
-      // 1. Devolver el stock a cada producto en la sede originaria
-      if (Array.isArray(venta.items)) {
-        for (const item of venta.items) {
-          const prodRef = doc(collections.productos, item.id);
-          batch.update(prodRef, {
-            [stockFieldLegacy]: increment(item.cantidad),
-            [nestedStockField]: increment(item.cantidad),
-            updatedAt: serverTimestamp()
-          });
-
-          // Registrar en kardex la devolución de stock
-          const kardexRef = doc(collections.kardex, `K-ANULACION-${venta.id}-${item.id}`);
-          batch.set(kardexRef, {
-            fecha: new Date().toISOString(),
-            timestamp: serverTimestamp(),
-            sede: targetSedeId,
-            tipo: 'INGRESO',
-            productoId: item.id,
-            productoNombre: item.nombre,
-            cantidad: item.cantidad,
-            motivo: `Devolución de stock por anulación de venta ${venta.id} (${isVE ? 'Villa España' : 'Buenos Aires'})`,
-            responsable: perfil?.nombre || 'Angel (Dueño)'
-          });
-        }
+      if (ncResult) {
+        showToast(
+          `Venta anulada y Nota de Crédito ${ncResult.codigoCompleto} emitida en SUNAT`,
+          'success'
+        );
+      } else {
+        showToast(`Venta interna ${voidingSale.id} anulada y stock devuelto`, 'success');
       }
-
-      // 2. Si tenía movimiento de caja, anularlo
-      const movCajaRef = doc(collections.movimientosCaja, `MC-${venta.id}`);
-      batch.delete(movCajaRef);
-
-      // 3. Eliminar el documento de la venta
-      const ventaRef = doc(collections.ventas, venta.id);
-      batch.delete(ventaRef);
-
-      await batch.commit();
-      showToast(`Venta ${venta.id} anulada y stock devuelto exitosamente`, 'success');
+      setVoidingSale(null);
     } catch (err) {
       console.error('Error al anular venta:', err);
-      showToast('Error al anular venta: ' + err.message, 'error');
+      showToast('Error al anular comprobante: ' + err.message, 'error');
+    } finally {
+      setIsVoiding(false);
     }
   };
 
@@ -306,12 +300,18 @@ export const HistorialComandasView = () => {
                   </td>
                 </tr>
               ) : (
-                filteredVentas.map((v) => (
-                  <tr key={v.id} className="hover:bg-pink-50/20 transition-colors">
+                filteredVentas.map((v) => {
+                  const pdfUrl = v.comprobante?.enlace_del_pdf || v.enlace_del_pdf;
+                  const xmlUrl = v.comprobante?.enlace_del_xml || v.enlace_del_xml;
+                  const isAnulada = v.estado === 'ANULADA';
+                  const codigoDisplay = v.comprobante?.codigoCompleto || v.id;
+
+                  return (
+                  <tr key={v.id} className={`hover:bg-pink-50/20 transition-colors ${isAnulada ? 'bg-rose-50/40 opacity-80' : ''}`}>
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-slate-900 block">
-                          {v.id}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`font-mono font-bold block ${isAnulada ? 'line-through text-rose-700' : 'text-slate-900'}`}>
+                          {codigoDisplay}
                         </span>
                         {v.cuenta?.nombre && (
                           <span className="bg-pink-100 text-brand-800 font-bold text-[10px] px-1.5 py-0.2 rounded-md">
@@ -319,15 +319,34 @@ export const HistorialComandasView = () => {
                           </span>
                         )}
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full inline-block mt-0.5 ${
-                        v.tipoComprobante === 'BOLETA'
-                          ? 'bg-purple-100 text-purple-800'
-                          : v.tipoComprobante === 'FACTURA'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {v.tipoComprobante}
-                      </span>
+                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                        <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full inline-block ${
+                          v.tipoComprobante === 'BOLETA'
+                            ? 'bg-purple-100 text-purple-800'
+                            : v.tipoComprobante === 'FACTURA'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {v.tipoComprobante}
+                        </span>
+                        {isAnulada && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.2 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                            ANULADA
+                          </span>
+                        )}
+                        {v.notaCredito?.codigoCompleto && (
+                          <a
+                            href={v.notaCredito.enlace_del_pdf || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-slate-800 text-gold-300 hover:bg-black inline-flex items-center gap-1"
+                            title="Abrir PDF de Nota de Crédito en SUNAT"
+                          >
+                            <span>NC {v.notaCredito.codigoCompleto}</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
@@ -371,22 +390,47 @@ export const HistorialComandasView = () => {
                       </span>
                     </td>
 
-                    <td className="py-3.5 px-4 text-right font-bold text-brand-700 text-sm">
+                    <td className={`py-3.5 px-4 text-right font-bold text-sm ${isAnulada ? 'line-through text-rose-500' : 'text-brand-700'}`}>
                       S/ {Number(v.total).toFixed(2)}
                     </td>
 
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => setSelectedTicket(v)}
-                          title="Ver Ticket Digital"
-                          className="p-1.5 rounded-lg bg-pink-50 hover:bg-pink-100 text-brand-700 font-bold transition-all"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        {pdfUrl ? (
+                          <a
+                            href={pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Abrir PDF SUNAT (APISUNAT)"
+                            className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-black text-white font-bold text-[10px] inline-flex items-center gap-1 transition-all"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-gold-400" />
+                            <span>PDF</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedTicket(v)}
+                            title="Ver Detalle Interno"
+                            className="p-1.5 rounded-lg bg-pink-50 hover:bg-pink-100 text-brand-700 font-bold transition-all"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {xmlUrl && (
+                          <a
+                            href={xmlUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Descargar XML SUNAT"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </a>
+                        )}
 
                         {/* ACCIONES EXCLUSIVAS DEL DUEÑO 👑 */}
-                        {isDueno && (
+                        {isDueno && !isAnulada && (
                           <>
                             <button
                               onClick={() => handleOpenEditModal(v)}
@@ -397,17 +441,18 @@ export const HistorialComandasView = () => {
                             </button>
                             <button
                               onClick={() => handleAnularVenta(v)}
-                              title="Anular venta y devolver stock (Solo Dueño)"
+                              title="Anular venta / Emitir Nota de Crédito SUNAT (Solo Dueño)"
                               className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <XCircle className="w-4 h-4" />
                             </button>
                           </>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -514,13 +559,114 @@ export const HistorialComandasView = () => {
         </div>
       )}
 
-      {/* Modal: Vista de Ticket SUNAT & Reimpresión */}
+      {/* Modal: Anular Venta / Emitir Nota de Crédito SUNAT (Exclusivo Dueño 👑) */}
+      {voidingSale && (
+        <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-rose-200 w-full max-w-md space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-lg text-slate-900">
+                  Anular Venta {voidingSale.comprobante?.codigoCompleto || voidingSale.id}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {(voidingSale.tipoComprobante === 'BOLETA' || voidingSale.tipoComprobante === 'FACTURA') &&
+                  voidingSale.comprobante?.serie !== 'NV01'
+                    ? 'Se emitirá automáticamente una Nota de Crédito (07) ante SUNAT vía APISUNAT.'
+                    : 'Se anulará el ticket de control interno y se devolverá el stock.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Cliente:</span>
+                <span className="font-bold text-slate-800">{voidingSale.cliente?.nombre || 'Público General'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total:</span>
+                <span className="font-bold text-rose-700">S/ {Number(voidingSale.total || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Local:</span>
+                <span className="font-semibold text-slate-700">{voidingSale.sedeNombre || voidingSale.sede}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmVoidSale} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Tipo de Nota de Crédito (Catálogo 09 SUNAT)</label>
+                <select
+                  value={voidCodigoMotivo}
+                  onChange={(e) => setVoidCodigoMotivo(e.target.value)}
+                  disabled={isVoiding}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-rose-500"
+                >
+                  <option value="01">01 - Anulación de la operación</option>
+                  <option value="02">02 - Anulación por error en el RUC</option>
+                  <option value="06">06 - Devolución total</option>
+                  <option value="07">07 - Devolución por ítem</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Motivo / Sustento *</label>
+                <input
+                  type="text"
+                  value={voidMotivo}
+                  onChange={(e) => setVoidMotivo(e.target.value)}
+                  required
+                  disabled={isVoiding}
+                  placeholder="Ej. ANULACION DE LA OPERACION"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-rose-500 font-semibold"
+                />
+              </div>
+
+              <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 font-medium">
+                ✓ El stock será devuelto automáticamente al Kardex y la venta se conservará marcada como ANULADA para el registro contable SIRE.
+              </p>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setVoidingSale(null)}
+                  disabled={isVoiding}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVoiding}
+                  className="flex-[2] py-3 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-extrabold shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2 transition-all"
+                >
+                  {isVoiding ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Emitiendo Nota de Crédito...</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4" />
+                      <span>Confirmar Anulación</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Vista de Detalle / Ticket Interno */}
       {selectedTicket && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-sm max-h-[92vh] overflow-y-auto text-center">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Comprobante Electrónico
+                Detalle de Venta
               </span>
               <button
                 onClick={() => setSelectedTicket(null)}
@@ -533,13 +679,25 @@ export const HistorialComandasView = () => {
             <TicketTermico venta={selectedTicket} />
 
             <div className="flex gap-2 pt-4">
-              <button
-                onClick={() => window.print()}
-                className="flex-1 py-3 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
-              >
-                <Printer className="w-4 h-4 text-gold-400" />
-                <span>🖨️ Imprimir Ticket (80mm)</span>
-              </button>
+              {selectedTicket.comprobante?.enlace_del_pdf ? (
+                <a
+                  href={selectedTicket.comprobante.enlace_del_pdf}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-3 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+                >
+                  <Printer className="w-4 h-4 text-gold-400" />
+                  <span>🖨️ Abrir PDF APISUNAT</span>
+                </a>
+              ) : (
+                <button
+                  onClick={() => window.print()}
+                  className="flex-1 py-3 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+                >
+                  <Printer className="w-4 h-4 text-gold-400" />
+                  <span>Imprimir Control Interno</span>
+                </button>
+              )}
               <button
                 onClick={() => setSelectedTicket(null)}
                 className="py-3 px-4 rounded-2xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all"
