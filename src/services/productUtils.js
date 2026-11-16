@@ -50,6 +50,11 @@ export function getProductPrice(prod, sede = 'BA') {
 export function getProductStock(prod, sede = 'BA') {
   if (!prod) return 0;
 
+  // Si el producto no controla stock (servicios, venta libre, ítems personalizados)
+  if (prod.controla_stock === false || prod.en_inventario === false || prod.es_personalizado || prod.id?.toString().startsWith('custom-')) {
+    return 9999;
+  }
+
   const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
 
   if (isVE) {

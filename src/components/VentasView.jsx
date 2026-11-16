@@ -43,6 +43,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     removeAccount,
     cart, 
     addToCart, 
+    addCustomItemToCart,
     updateCartQuantity, 
     updateCartItemExact,
     removeFromCart, 
@@ -54,6 +55,12 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     clientesFidelidad,
     showToast
   } = useApp();
+
+  // Modal para agregar ítem personalizado / venta libre de un solo uso
+  const [showCustomItemModal, setShowCustomItemModal] = useState(false);
+  const [customDescripcion, setCustomDescripcion] = useState('');
+  const [customPrecio, setCustomPrecio] = useState('');
+  const [customCantidad, setCustomCantidad] = useState(1);
 
   // 1. Filtrar productos autorizados para el Punto de Venta (POS):
   // Solo renderizar productos con controla_stock === true (o fallback seguro prod.controla_stock !== false)
@@ -175,6 +182,48 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
     addAccount(newAccountName.trim(), newAccountType);
     setNewAccountName('');
     setShowAddAccountModal(false);
+  };
+
+  // Confirmar y agregar ítem personalizado / venta libre a la mesa activa
+  const handleAddCustomItem = (e) => {
+    if (e) e.preventDefault();
+    const desc = customDescripcion.trim();
+    if (!desc) {
+      showToast('Ingresa el concepto o descripción del comprobante', 'error');
+      return;
+    }
+
+    const priceNum = parseFloat(customPrecio);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      showToast('Ingresa un precio unitario válido mayor a 0', 'error');
+      return;
+    }
+
+    const qtyNum = Math.max(1, parseInt(customCantidad, 10) || 1);
+
+    const customItem = {
+      id: `custom-${Date.now()}`,
+      nombre: desc,
+      precio: Number(priceNum.toFixed(2)),
+      precio_BA: Number(priceNum.toFixed(2)),
+      precio_VE: Number(priceNum.toFixed(2)),
+      cantidad: qtyNum,
+      es_personalizado: true,
+      controla_stock: false,
+      icono: '✨'
+    };
+
+    if (addCustomItemToCart) {
+      addCustomItemToCart(customItem, activeAccountId);
+    } else {
+      addToCart(customItem, activeAccountId, qtyNum);
+    }
+
+    showToast(`"${desc}" agregado a ${activeAccount?.name || 'la comanda'}`, 'success');
+    setShowCustomItemModal(false);
+    setCustomDescripcion('');
+    setCustomPrecio('');
+    setCustomCantidad(1);
   };
 
   // Botones táctiles rápidos para pago en efectivo
@@ -405,23 +454,42 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
             )}
           </div>
 
-          {/* Controles de Acordeones si no hay búsqueda activa */}
-          {!isSearching && (
-            <div className="flex items-center gap-2 self-end sm:self-auto text-xs">
-              <button
-                onClick={() => toggleAll(true)}
-                className="px-2.5 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-brand-700 font-bold transition-colors"
-              >
-                Expandir todos
-              </button>
-              <button
-                onClick={() => toggleAll(false)}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-colors"
-              >
-                Colapsar
-              </button>
-            </div>
-          )}
+          {/* Botón de Ítem Libre / Personalizado y Controles */}
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setCustomDescripcion('');
+                setCustomPrecio('');
+                setCustomCantidad(1);
+                setShowCustomItemModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm shadow-sm hover:shadow-md transition-all active:scale-95 flex-shrink-0"
+              title="Agregar venta libre o ítem personalizado de un solo uso"
+            >
+              <Sparkles className="w-4 h-4 text-amber-200" />
+              <span>+ Ítem Libre</span>
+            </button>
+
+            {!isSearching && (
+              <div className="flex items-center gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => toggleAll(true)}
+                  className="px-2.5 py-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-brand-700 font-bold transition-colors"
+                >
+                  Expandir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleAll(false)}
+                  className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-colors"
+                >
+                  Colapsar
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Categorías (Pills) visibles solo en modo catálogo normal */}
@@ -920,6 +988,26 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
               </div>
             </div>
 
+            {/* Barra rápida para agregar Ítem Libre dentro del carrito */}
+            <div className="px-4 py-2 bg-amber-50/70 border-b border-amber-100 flex items-center justify-between">
+              <span className="text-[11px] text-amber-900/80 font-medium">
+                ¿Venta libre o producto no registrado?
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomDescripcion('');
+                  setCustomPrecio('');
+                  setCustomCantidad(1);
+                  setShowCustomItemModal(true);
+                }}
+                className="text-xs font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1 bg-amber-100/90 hover:bg-amber-200/90 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-2xs"
+              >
+                <Sparkles className="w-3 h-3 text-amber-600" />
+                <span>+ Ítem Libre</span>
+              </button>
+            </div>
+
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
@@ -928,8 +1016,21 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                   </div>
                   <p className="font-bold text-slate-600">Comanda vacía para {activeAccount.name}</p>
                   <p className="text-xs text-slate-400 mt-1 max-w-[220px]">
-                    Selecciona postres y bebidas del menú para agregarlos a esta cuenta.
+                    Selecciona postres y bebidas del menú o añade un ítem libre para agregarlos a esta cuenta.
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomDescripcion('');
+                      setCustomPrecio('');
+                      setCustomCantidad(1);
+                      setShowCustomItemModal(true);
+                    }}
+                    className="mt-3 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>+ Agregar Ítem Libre</span>
+                  </button>
                 </div>
               ) : (
                 cart.map((item) => (
@@ -938,11 +1039,18 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                     className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-pink-50/30 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{item.product.icono || '🧁'}</span>
+                      <span className="text-2xl">{item.product.icono || (item.product.es_personalizado ? '✨' : '🧁')}</span>
                       <div>
-                        <h4 className="font-bold text-slate-800 text-xs sm:text-sm line-clamp-1">
-                          {item.product.nombre}
-                        </h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-bold text-slate-800 text-xs sm:text-sm line-clamp-1">
+                            {item.product.nombre}
+                          </h4>
+                          {item.product.es_personalizado && (
+                            <span className="text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded-md uppercase tracking-wider">
+                              Ítem Libre
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-brand-700 font-bold">
                           S/ {getProductPrice(item.product, sede).toFixed(2)} c/u
                         </span>
@@ -960,7 +1068,7 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                         <input
                           type="number"
                           min="1"
-                          max={getProductStock(item.product, sede)}
+                          max={item.product.es_personalizado ? 9999 : getProductStock(item.product, sede)}
                           value={item.quantity}
                           onKeyDown={(e) => {
                             if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
@@ -971,12 +1079,13 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                             const raw = e.target.value;
                             if (raw === '') return;
                             const parsed = parseInt(raw, 10);
-                            const maxStock = getProductStock(item.product, sede);
+                            const isNoStockControl = item.product.controla_stock === false || item.product.en_inventario === false || item.product.es_personalizado;
+                            const maxStock = isNoStockControl ? 9999 : getProductStock(item.product, sede);
                             if (isNaN(parsed) || parsed < 1) {
                               updateCartItemExact(item.product.id, 1);
                               return;
                             }
-                            if (parsed > maxStock) {
+                            if (!isNoStockControl && parsed > maxStock) {
                               showToast(`Stock máximo de ${item.product.nombre}: ${maxStock}`, 'warning');
                               updateCartItemExact(item.product.id, maxStock);
                               return;
@@ -987,15 +1096,16 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                         />
                         <button
                           onClick={() => {
-                            const maxStock = getProductStock(item.product, sede);
-                            if (item.quantity >= maxStock) {
+                            const isNoStockControl = item.product.controla_stock === false || item.product.en_inventario === false || item.product.es_personalizado;
+                            const maxStock = isNoStockControl ? 9999 : getProductStock(item.product, sede);
+                            if (!isNoStockControl && item.quantity >= maxStock) {
                               showToast(`Stock máximo alcanzado para "${item.product.nombre}". Disponible: ${maxStock}`, 'warning');
                               return;
                             }
                             addToCart(item.product);
                           }}
-                          disabled={item.quantity >= getProductStock(item.product, sede)}
-                          title={item.quantity >= getProductStock(item.product, sede) ? 'Stock máximo alcanzado' : 'Agregar 1'}
+                          disabled={!item.product.es_personalizado && item.product.controla_stock !== false && item.quantity >= getProductStock(item.product, sede)}
+                          title={!item.product.es_personalizado && item.quantity >= getProductStock(item.product, sede) ? 'Stock máximo alcanzado' : 'Agregar 1'}
                           className="w-6 h-6 rounded bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center active:scale-95 transition-all"
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -1127,6 +1237,189 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                   className="flex-1 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-md shadow-brand-700/20"
                 >
                   Crear Cuenta
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Ítem Personalizado / Venta Libre (SUNAT y Mesa Activa) */}
+      {showCustomItemModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCustomItemModal(false); }}
+        >
+          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md animate-scaleUp">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-sm">
+                  <Sparkles className="w-5 h-5 text-amber-100" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-lg text-slate-900 leading-tight">
+                    + Ítem Libre / Personalizado
+                  </h3>
+                  <span className="text-[11px] text-brand-700 font-semibold block">
+                    Para: {activeAccount?.name || 'Comanda Activa'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCustomItemModal(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 mt-2">
+              Venta de un solo uso. No se guarda en el catálogo permanente y es 100% compatible con tickets y comprobantes SUNAT (Boletas y Facturas).
+            </p>
+
+            {/* Chips de sugerencias rápidas */}
+            <div className="mt-3">
+              <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block mb-1.5">
+                Sugerencias rápidas:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  '🎂 Torta Personalizada',
+                  '🛵 Servicio de Delivery',
+                  '🧁 Bocaditos Evento',
+                  '✨ Decoración Especial',
+                  '📦 Empaque para Regalo'
+                ].map((sug, idx) => {
+                  const cleanText = sug.replace(/^[^a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, '');
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCustomDescripcion(cleanText)}
+                      className="text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 px-2 py-1 rounded-lg transition-colors"
+                    >
+                      {sug}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <form onSubmit={handleAddCustomItem} className="mt-4 space-y-3.5">
+              {/* Campo 1: Concepto / Descripción */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Concepto / Descripción del comprobante *
+                </label>
+                <input
+                  type="text"
+                  value={customDescripcion}
+                  onChange={(e) => setCustomDescripcion(e.target.value)}
+                  placeholder="Ej. Torta personalizada de 1 Kg, Delivery, Bocaditos..."
+                  required
+                  autoFocus
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Este texto exacto figurará en el comprobante fiscal y ticket térmico.
+                </span>
+              </div>
+
+              {/* Fila con Precio Unitario y Cantidad */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Campo 2: Precio Unitario (S/.) */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Precio Unitario (S/.) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                      S/
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={customPrecio}
+                      onChange={(e) => setCustomPrecio(e.target.value)}
+                      placeholder="0.00"
+                      required
+                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Campo 3: Cantidad */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Cantidad *
+                  </label>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => setCustomCantidad(prev => Math.max(1, (parseInt(prev, 10) || 1) - 1))}
+                      className="w-9 h-[42px] rounded-l-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center border border-r-0 border-slate-200 transition-colors"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      value={customCantidad}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setCustomCantidad(isNaN(val) ? '' : Math.max(1, val));
+                      }}
+                      onBlur={() => {
+                        if (!customCantidad || customCantidad < 1) setCustomCantidad(1);
+                      }}
+                      required
+                      className="w-full h-[42px] text-center font-bold text-slate-800 border-y border-slate-200 text-sm focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCustomCantidad(prev => (parseInt(prev, 10) || 1) + 1)}
+                      className="w-9 h-[42px] rounded-r-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center border border-l-0 border-slate-200 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vista previa de Subtotal Calculado */}
+              <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/70 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-amber-800 tracking-wider block">
+                    Total a Cobrar por este ítem
+                  </span>
+                  <span className="text-xs text-amber-900/80">
+                    {customCantidad || 1} x S/ {(parseFloat(customPrecio) || 0).toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="font-serif font-black text-lg text-amber-950">
+                    S/ {((parseFloat(customPrecio) || 0) * (parseInt(customCantidad, 10) || 1)).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomItemModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                  <span>Agregar a la Cuenta</span>
                 </button>
               </div>
             </form>

@@ -371,14 +371,17 @@ export const AppProvider = ({ children }) => {
   };
 
   // Carrito helpers vinculados a la cuenta activa (o específica)
-  const addToCart = (product, targetAccountId = activeAccountId) => {
-    const currentStock = getProductStock(product, sede);
+  const addToCart = (product, targetAccountId = activeAccountId, qtyToAdd = 1) => {
+    const isNoStockControl = product?.controla_stock === false || product?.en_inventario === false || product?.es_personalizado || product?.id?.toString().startsWith('custom-');
+    const currentStock = isNoStockControl ? 9999 : getProductStock(product, sede);
     const currentPrice = getProductPrice(product, sede);
 
-    if (currentStock <= 0) {
+    if (!isNoStockControl && currentStock <= 0) {
       showToast(`"${product.nombre}" está agotado en ${SEDES[sede]?.nombre || 'esta sede'}`, 'error');
       return;
     }
+
+    const qty = Math.max(1, Number(qtyToAdd) || Number(product?.cantidad) || 1);
 
     setAccounts(prev => {
       return prev.map(acc => {
@@ -386,7 +389,7 @@ export const AppProvider = ({ children }) => {
           const existing = acc.items.find(item => item.product.id === product.id);
           const currentQty = existing ? existing.quantity : 0;
 
-          if (currentQty + 1 > currentStock) {
+          if (!isNoStockControl && currentQty + qty > currentStock) {
             showToast(`Stock insuficiente de "${product.nombre}". Disponible: ${currentStock}`, 'warning');
             return acc;
           }
@@ -395,11 +398,11 @@ export const AppProvider = ({ children }) => {
           if (existing) {
             updatedItems = acc.items.map(item =>
               item.product.id === product.id
-                ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * currentPrice }
+                ? { ...item, quantity: item.quantity + qty, subtotal: (item.quantity + qty) * currentPrice }
                 : item
             );
           } else {
-            updatedItems = [...acc.items, { product, quantity: 1, subtotal: currentPrice }];
+            updatedItems = [...acc.items, { product, quantity: qty, subtotal: qty * currentPrice }];
           }
           return { ...acc, items: updatedItems };
         }
@@ -408,17 +411,23 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  // Helper específico para agregar ítems libres o personalizados de un solo uso
+  const addCustomItemToCart = (customItem, targetAccountId = activeAccountId) => {
+    addToCart(customItem, targetAccountId, customItem.cantidad || 1);
+  };
+
   const updateCartQuantity = (productId, delta, targetAccountId = activeAccountId) => {
     setAccounts(prev => {
       return prev.map(acc => {
         if (acc.id === targetAccountId) {
           const updatedItems = acc.items.map(item => {
             if (item.product.id === productId) {
-              const currentStock = getProductStock(item.product, sede);
+              const isNoStockControl = item.product?.controla_stock === false || item.product?.en_inventario === false || item.product?.es_personalizado || item.product?.id?.toString().startsWith('custom-');
+              const currentStock = isNoStockControl ? 9999 : getProductStock(item.product, sede);
               const currentPrice = getProductPrice(item.product, sede);
               const newQty = item.quantity + delta;
 
-              if (newQty > currentStock) {
+              if (!isNoStockControl && newQty > currentStock) {
                 showToast(`Límite de stock alcanzado (${currentStock})`, 'warning');
                 return item;
               }
@@ -441,10 +450,11 @@ export const AppProvider = ({ children }) => {
         if (acc.id === targetAccountId) {
           const updatedItems = acc.items.map(item => {
             if (item.product.id === productId) {
-              const currentStock = getProductStock(item.product, sede);
+              const isNoStockControl = item.product?.controla_stock === false || item.product?.en_inventario === false || item.product?.es_personalizado || item.product?.id?.toString().startsWith('custom-');
+              const currentStock = isNoStockControl ? 9999 : getProductStock(item.product, sede);
               const currentPrice = getProductPrice(item.product, sede);
               const parsed = parseInt(rawQuantity, 10);
-              const safeQty = isNaN(parsed) || parsed < 1 ? 1 : Math.min(parsed, currentStock);
+              const safeQty = isNaN(parsed) || parsed < 1 ? 1 : (isNoStockControl ? parsed : Math.min(parsed, currentStock));
               return { ...item, quantity: safeQty, subtotal: safeQty * currentPrice };
             }
             return item;
@@ -507,11 +517,13 @@ export const AppProvider = ({ children }) => {
       return {
         id: item.product.id,
         nombre: item.product.nombre,
-        categoria: item.product.categoria,
+        categoria: item.product.categoria || (item.product.es_personalizado ? 'Personalizado' : 'Venta Libre'),
         precio: priceForSede,
         cantidad: item.quantity,
         subtotal: priceForSede * item.quantity,
-        icono: item.product.icono || '🧁'
+        icono: item.product.icono || (item.product.es_personalizado ? '✨' : '🧁'),
+        es_personalizado: Boolean(item.product.es_personalizado),
+        controla_stock: Boolean(item.product.controla_stock)
       };
     });
 
@@ -597,7 +609,10 @@ export const AppProvider = ({ children }) => {
 
     // 2. Descontar stock atómicamente y registrar en kardex (solo para productos con control de stock activo)
     for (const item of itemsToProcess) {
-      const controlsStock = item.product?.controla_stock !== false && item.product?.en_inventario !== false;
+      const controlsStock = item.product?.controla_stock !== false && 
+                            item.product?.en_inventario !== false && 
+                            !item.product?.es_personalizado &&
+                            !item.product?.id?.toString().startsWith('custom-');
       if (!controlsStock) continue;
 
       const prodRef = doc(collections.productos, item.product.id);
@@ -701,6 +716,7 @@ export const AppProvider = ({ children }) => {
       // Comanda de cuenta activa
       cart,
       addToCart,
+      addCustomItemToCart,
       updateCartQuantity,
       updateCartItemExact,
       removeFromCart,
