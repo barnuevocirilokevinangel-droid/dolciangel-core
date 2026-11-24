@@ -213,11 +213,11 @@ export const AdminProductManager = () => {
 
     setIsSaving(true);
     try {
-      const prodId = editingProduct
-        ? editingProduct.id
-        : `prod_${finalCategory}_${Date.now()}`;
+      const prodId = String(
+        editingProduct?.id ? editingProduct.id : `prod_${finalCategory}_${Date.now()}`
+      ).trim();
 
-      const finalImg = formImagenUrl.trim();
+      const finalImg = String(formImagenUrl || '').trim();
 
       const payload = {
         id: prodId,
@@ -263,7 +263,7 @@ export const AdminProductManager = () => {
         payload.creadoEn = serverTimestamp();
       }
 
-      await setDoc(doc(collections.productos, prodId), payload, { merge: true });
+      await setDoc(doc(collections.productos, String(prodId)), payload, { merge: true });
 
       showToast(editingProduct ? '¡Producto actualizado con éxito!' : '¡Nuevo producto registrado!', 'success');
       closeModal();
@@ -277,12 +277,12 @@ export const AdminProductManager = () => {
 
   // Eliminar producto de Firestore
   const handleDeleteProduct = async (p) => {
-    if (!isDueno) return;
+    if (!isDueno || !p?.id) return;
     if (!window.confirm(`¿Estás seguro de eliminar el producto "${p.nombre}"?\n\nEsta acción eliminará el producto del catálogo y de la Carta Web.`)) {
       return;
     }
     try {
-      await deleteDoc(doc(collections.productos, p.id));
+      await deleteDoc(doc(collections.productos, String(p.id)));
       showToast(`Producto "${p.nombre}" eliminado`, 'success');
     } catch (err) {
       console.error('Error al eliminar:', err);

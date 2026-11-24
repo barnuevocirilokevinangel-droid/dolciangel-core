@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   db,
-  collections,
   doc,
   writeBatch
 } from '../services/firebase';
@@ -62,29 +61,60 @@ const formatLimaDateShort = (iso) => {
   });
 };
 
+const safeNum = (val, decimals = null, fallback = 0) => {
+  const n = Number(val);
+  if (!Number.isFinite(n)) return fallback;
+  return decimals !== null ? Number(n.toFixed(decimals)) : n;
+};
+
+const sanitizeFirestoreData = (value) => {
+  if (value === undefined) return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (Array.isArray(value)) return value.map(sanitizeFirestoreData);
+  if (value !== null && typeof value === 'object') {
+    const out = {};
+    Object.entries(value).forEach(([k, v]) => {
+      if (v !== undefined) {
+        out[k] = sanitizeFirestoreData(v);
+      }
+    });
+    return out;
+  }
+  return value;
+};
+
+const getSafeDocRef = (collectionName, docId) => {
+  const safeCol = String(collectionName || '').trim();
+  const safeId = String(docId || '').trim();
+  if (!safeCol || !safeId) {
+    throw new Error(`Referencia Firestore inválida: "${safeCol}/${safeId}"`);
+  }
+  return doc(db, safeCol, safeId);
+};
+
 const computeRecipeMetrics = (ingredientes = [], empaques = [], rendimiento = 1, mermaPct = 5, insumoMap = new Map()) => {
   const resolveCost = (line) => {
-    const live = insumoMap.get(line.insumoId);
-    const unitCost = live ? Number(live.costo_unitario_base || 0) : Number(line.costo_unitario_base || 0);
-    const qty = Number(line.cantidad) || 0;
+    const live = insumoMap.get(String(line?.insumoId || ''));
+    const unitCost = live ? safeNum(live.costo_unitario_base) : safeNum(line?.costo_unitario_base);
+    const qty = safeNum(line?.cantidad);
     return { unitCost, subtotal: qty * unitCost };
   };
 
   const costoTanda = ingredientes.reduce((sum, line) => sum + resolveCost(line).subtotal, 0);
-  const rend = Math.max(Number(rendimiento) || 1, 1);
+  const rend = Math.max(safeNum(rendimiento, null, 1), 1);
   const costoPostreUnitario = costoTanda / rend;
-  const pct = Math.max(Number(mermaPct) || 0, 0);
+  const pct = Math.max(safeNum(mermaPct, null, 0), 0);
   const costoMermaUnitario = costoPostreUnitario * (pct / 100);
   const costoEmpaqueUnitario = empaques.reduce((sum, line) => sum + resolveCost(line).subtotal, 0);
-  const costoTotalUnitario = Number((costoPostreUnitario + costoMermaUnitario + costoEmpaqueUnitario).toFixed(2));
+  const costoTotalUnitario = safeNum(costoPostreUnitario + costoMermaUnitario + costoEmpaqueUnitario, 2);
 
   return {
-    costoTanda: Number(costoTanda.toFixed(4)),
+    costoTanda: safeNum(costoTanda, 4),
     rendimiento: rend,
     mermaPct: pct,
-    costoPostreUnitario: Number(costoPostreUnitario.toFixed(4)),
-    costoMermaUnitario: Number(costoMermaUnitario.toFixed(4)),
-    costoEmpaqueUnitario: Number(costoEmpaqueUnitario.toFixed(4)),
+    costoPostreUnitario: safeNum(costoPostreUnitario, 4),
+    costoMermaUnitario: safeNum(costoMermaUnitario, 4),
+    costoEmpaqueUnitario: safeNum(costoEmpaqueUnitario, 4),
     costoTotalUnitario
   };
 };
@@ -95,9 +125,13 @@ const commitBatchedOperations = async (operations) => {
   for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
     const batch = writeBatch(db);
     operations.slice(i, i + CHUNK_SIZE).forEach((op) => {
-      if (op.type === 'set') batch.set(op.ref, op.data, op.options || { merge: true });
-      else if (op.type === 'update') batch.update(op.ref, op.data);
-      else if (op.type === 'delete') batch.delete(op.ref);
+      if (op.type === 'set') {
+        batch.set(op.ref, sanitizeFirestoreData(op.data), op.options || { merge: true });
+      } else if (op.type === 'update') {
+        batch.set(op.ref, sanitizeFirestoreData(op.data), { merge: true });
+      } else if (op.type === 'delete') {
+        batch.delete(op.ref);
+      }
     });
     await batch.commit();
   }
@@ -340,27 +374,27 @@ export const CosteoView = () => {
 
     setSavingInsumo(true);
     try {
-      const insumoId = insumoForm.id || `ins-${Date.now()}`;
-      const costoUnitarioBase = Number((price / qty).toFixed(6));
+      const insumoId = String(insumoForm.id || `ins-${Date.now()}`).trim();
+      const costoUnitarioBase = safeNum(price / qty, 6);
       const nowIso = new Date().toISOString();
 
-      const payload = {
+      const payload = sanitizeFirestoreData({
         id: insumoId,
-        nombre: insumoForm.nombre.trim(),
-        tipo: insumoForm.tipo,
-        unidad_compra: insumoForm.unidad_compra,
-        cantidad_por_paquete: qty,
-        unidad_uso: insumoForm.unidad_uso,
-        precio_compra: Number(price.toFixed(2)),
+        nombre: String(insumoForm.nombre || '').trim(),
+        tipo: String(insumoForm.tipo || 'materia_prima'),
+        unidad_compra: String(insumoForm.unidad_compra || 'kg'),
+        cantidad_por_paquete: safeNum(qty, 4, 1),
+        unidad_uso: String(insumoForm.unidad_uso || 'g'),
+        precio_compra: safeNum(price, 2, 0),
         costo_unitario_base: costoUnitarioBase,
-        proveedor: insumoForm.proveedor.trim(),
+        proveedor: String(insumoForm.proveedor || '').trim(),
         ultima_actualizacion: nowIso
-      };
+      });
 
       const ops = [
         {
           type: 'set',
-          ref: doc(db, collections.insumosProduccion, insumoId),
+          ref: getSafeDocRef('insumos_produccion', insumoId),
           data: payload,
           options: { merge: true }
         }
@@ -374,18 +408,28 @@ export const CosteoView = () => {
       let affectedProducts = 0;
 
       const syncLine = (line) =>
-        line.insumoId === insumoId
+        String(line.insumoId) === insumoId
           ? {
               ...line,
+              insumoId,
               nombre: payload.nombre,
               unidad_uso: payload.unidad_uso,
-              costo_unitario_base: costoUnitarioBase
+              costo_unitario_base: costoUnitarioBase,
+              cantidad: safeNum(line.cantidad, 4, 0)
             }
-          : line;
+          : {
+              ...line,
+              insumoId: String(line.insumoId || ''),
+              nombre: String(line.nombre || ''),
+              unidad_uso: String(line.unidad_uso || 'g'),
+              costo_unitario_base: safeNum(line.costo_unitario_base, 6, 0),
+              cantidad: safeNum(line.cantidad, 4, 0)
+            };
 
       recetasCosteo.forEach((recipe) => {
-        const usesInIng = (recipe.ingredientes || []).some((l) => l.insumoId === insumoId);
-        const usesInEmp = (recipe.empaques || []).some((l) => l.insumoId === insumoId);
+        if (!recipe?.id) return;
+        const usesInIng = (recipe.ingredientes || []).some((l) => String(l.insumoId) === insumoId);
+        const usesInEmp = (recipe.empaques || []).some((l) => String(l.insumoId) === insumoId);
         if (!usesInIng && !usesInEmp) return;
 
         affectedRecipes += 1;
@@ -401,7 +445,7 @@ export const CosteoView = () => {
 
         ops.push({
           type: 'update',
-          ref: doc(db, collections.recetasCosteo, recipe.id),
+          ref: getSafeDocRef('recetas_costeo', recipe.id),
           data: {
             ingredientes: newIngredientes,
             empaques: newEmpaques,
@@ -413,15 +457,15 @@ export const CosteoView = () => {
           }
         });
 
-        if (recipe.productoId && productMap.has(recipe.productoId)) {
+        if (recipe.productoId && productMap.has(String(recipe.productoId))) {
           affectedProducts += 1;
           ops.push({
             type: 'update',
-            ref: doc(db, collections.productos, recipe.productoId),
+            ref: getSafeDocRef('productos', recipe.productoId),
             data: {
               costoElaboracion: metrics.costoTotalUnitario,
               costo: metrics.costoTotalUnitario,
-              receta_id: recipe.id,
+              receta_id: String(recipe.id),
               updatedAt: nowIso
             }
           });
@@ -442,13 +486,14 @@ export const CosteoView = () => {
       }
     } catch (error) {
       console.error('Error guardando insumo:', error);
-      showToast('No se pudo guardar el insumo.', 'error');
+      showToast(`No se pudo guardar el insumo: ${error?.message || 'Error'}`, 'error');
     } finally {
       setSavingInsumo(false);
     }
   };
 
   const handleDeleteInsumo = async (ins) => {
+    if (!ins?.id) return;
     const usedCount = insumoUsageCounts.get(ins.id) || 0;
     const msg =
       usedCount > 0
@@ -458,7 +503,7 @@ export const CosteoView = () => {
 
     try {
       await commitBatchedOperations([
-        { type: 'delete', ref: doc(db, collections.insumosProduccion, ins.id) }
+        { type: 'delete', ref: getSafeDocRef('insumos_produccion', ins.id) }
       ]);
       showToast('Insumo eliminado.', 'info');
     } catch (error) {
@@ -571,45 +616,44 @@ export const CosteoView = () => {
     setSavingRecipe(true);
     try {
       const nowIso = new Date().toISOString();
-      const targetProdId = createNewProduct ? `prod-${Date.now()}` : selectedProductoId;
+      const targetProdId = String(createNewProduct ? `prod-${Date.now()}` : selectedProductoId).trim();
       const existingByProd = recipeByProductId.get(targetProdId);
-      const recetaId = editingRecipeId || existingByProd?.id || `rec-${Date.now()}`;
+      const recetaId = String(editingRecipeId || existingByProd?.id || `rec-${Date.now()}`).trim();
 
-      const cleanIngredientes = ingredientes
-        .filter((l) => Number(l.cantidad) > 0)
-        .map((l) => {
-          const live = insumoMap.get(l.insumoId);
-          return {
-            insumoId: l.insumoId,
-            nombre: live?.nombre || l.nombre,
-            unidad_uso: live?.unidad_uso || l.unidad_uso,
-            costo_unitario_base: Number(live?.costo_unitario_base ?? l.costo_unitario_base ?? 0),
-            cantidad: Number(l.cantidad)
-          };
-        });
+      const sanitizeLines = (list) =>
+        list
+          .filter((l) => safeNum(l?.cantidad) > 0 && l?.insumoId)
+          .map((l) => {
+            const live = insumoMap.get(String(l.insumoId));
+            return {
+              insumoId: String(l.insumoId),
+              nombre: String(live?.nombre || l.nombre || 'Insumo'),
+              unidad_uso: String(live?.unidad_uso || l.unidad_uso || 'g'),
+              costo_unitario_base: safeNum(live?.costo_unitario_base ?? l.costo_unitario_base, 6, 0),
+              cantidad: safeNum(l.cantidad, 4, 0)
+            };
+          });
 
-      const cleanEmpaques = empaques
-        .filter((l) => Number(l.cantidad) > 0)
-        .map((l) => {
-          const live = insumoMap.get(l.insumoId);
-          return {
-            insumoId: l.insumoId,
-            nombre: live?.nombre || l.nombre,
-            unidad_uso: live?.unidad_uso || l.unidad_uso,
-            costo_unitario_base: Number(live?.costo_unitario_base ?? l.costo_unitario_base ?? 0),
-            cantidad: Number(l.cantidad)
-          };
-        });
+      const cleanIngredientes = sanitizeLines(ingredientes);
+      const cleanEmpaques = sanitizeLines(empaques);
 
       const linkedProd = productMap.get(targetProdId);
-      const productoNombre = createNewProduct
-        ? newProductNombre.trim()
-        : linkedProd?.nombre || 'Producto';
+      const productoNombre = String(
+        createNewProduct ? newProductNombre.trim() : linkedProd?.nombre || 'Producto'
+      );
 
-      const finalPrecioBA = Number(precioBA) > 0 ? Number(Number(precioBA).toFixed(2)) : (linkedProd ? getProductPrice(linkedProd, 'BA') : 0);
-      const finalPrecioVE = Number(precioVE) > 0 ? Number(Number(precioVE).toFixed(2)) : (finalPrecioBA || (linkedProd ? getProductPrice(linkedProd, 'VE') : 0));
+      const finalPrecioBA =
+        safeNum(precioBA) > 0
+          ? safeNum(precioBA, 2)
+          : linkedProd
+          ? safeNum(getProductPrice(linkedProd, 'BA'), 2)
+          : 0;
+      const finalPrecioVE =
+        safeNum(precioVE) > 0
+          ? safeNum(precioVE, 2)
+          : finalPrecioBA || (linkedProd ? safeNum(getProductPrice(linkedProd, 'VE'), 2) : 0);
 
-      const recetaDoc = {
+      const recetaDoc = sanitizeFirestoreData({
         id: recetaId,
         productoId: targetProdId,
         productoNombre,
@@ -623,14 +667,14 @@ export const CosteoView = () => {
         costo_total_unitario: recipeMetrics.costoTotalUnitario,
         precio_BA_referencia: finalPrecioBA,
         precio_VE_referencia: finalPrecioVE,
-        notas: notasReceta.trim(),
+        notas: String(notasReceta || '').trim(),
         updatedAt: nowIso
-      };
+      });
 
       const ops = [
         {
           type: 'set',
-          ref: doc(db, collections.recetasCosteo, recetaId),
+          ref: getSafeDocRef('recetas_costeo', recetaId),
           data: recetaDoc,
           options: { merge: true }
         }
@@ -639,11 +683,11 @@ export const CosteoView = () => {
       if (createNewProduct) {
         ops.push({
           type: 'set',
-          ref: doc(db, collections.productos, targetProdId),
-          data: {
+          ref: getSafeDocRef('productos', targetProdId),
+          data: sanitizeFirestoreData({
             id: targetProdId,
             nombre: productoNombre,
-            categoria: newProductCategoria,
+            categoria: String(newProductCategoria || 'postres'),
             costoElaboracion: recipeMetrics.costoTotalUnitario,
             costo: recipeMetrics.costoTotalUnitario,
             receta_id: recetaId,
@@ -661,7 +705,7 @@ export const CosteoView = () => {
             enCarta: true,
             destacado: false,
             updatedAt: nowIso
-          },
+          }),
           options: { merge: true }
         });
       } else {
@@ -683,8 +727,8 @@ export const CosteoView = () => {
         }
         ops.push({
           type: 'set',
-          ref: doc(db, collections.productos, targetProdId),
-          data: prodUpdate,
+          ref: getSafeDocRef('productos', targetProdId),
+          data: sanitizeFirestoreData(prodUpdate),
           options: { merge: true }
         });
       }
@@ -702,24 +746,25 @@ export const CosteoView = () => {
       );
     } catch (error) {
       console.error('Error guardando escandallo:', error);
-      showToast('Error al guardar la receta.', 'error');
+      showToast(`Error al guardar la receta: ${error?.message || 'Error'}`, 'error');
     } finally {
       setSavingRecipe(false);
     }
   };
 
   const handleDeleteRecipe = async (recipe) => {
+    if (!recipe?.id) return;
     if (!window.confirm(`¿Eliminar el escandallo de "${recipe.productoNombre}"? El producto conservará su último costo de forma manual.`)) {
       return;
     }
     try {
       const ops = [
-        { type: 'delete', ref: doc(db, collections.recetasCosteo, recipe.id) }
+        { type: 'delete', ref: getSafeDocRef('recetas_costeo', recipe.id) }
       ];
-      if (recipe.productoId && productMap.has(recipe.productoId)) {
+      if (recipe.productoId && productMap.has(String(recipe.productoId))) {
         ops.push({
           type: 'update',
-          ref: doc(db, collections.productos, recipe.productoId),
+          ref: getSafeDocRef('productos', recipe.productoId),
           data: { receta_id: null, updatedAt: new Date().toISOString() }
         });
       }
