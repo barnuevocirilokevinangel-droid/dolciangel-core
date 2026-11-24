@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { db, doc, onSnapshot, setDoc, serverTimestamp } from '../services/firebase';
+import { uploadImageToStorage } from '../services/imageUpload';
 import { 
   Globe, 
   Save, 
@@ -142,24 +143,23 @@ export const GestorHeroView = () => {
     }
   };
 
-  // Cargar imagen local como Data URL
-  const handleImageUpload = (e) => {
+  // Comprimir a WebP (<150KB) y subir a Firebase Storage
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('La imagen es mayor a 2MB. Recomendamos imágenes livianas o URLs directas.', 'warning');
+    setIsSaving(true);
+    try {
+      const { url, sizeKB } = await uploadImageToStorage(file, 'web_hero');
+      setImagenUrl(url);
+      showToast(`Imagen optimizada (${sizeKB} KB WebP) y subida a Firebase Storage`, 'success');
+    } catch (err) {
+      console.error('Error al subir imagen Hero:', err);
+      showToast('Error al subir imagen: ' + (err.message || 'Verifica Firebase Storage'), 'error');
+    } finally {
+      setIsSaving(false);
     }
-
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const result = uploadEvent.target?.result;
-      if (typeof result === 'string') {
-        setImagenUrl(result);
-        showToast('Imagen cargada en la vista previa', 'info');
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleResetDefaults = () => {

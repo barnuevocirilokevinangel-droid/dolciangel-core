@@ -11,7 +11,8 @@ import {
   Globe, 
   Settings,
   Monitor,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChefHat
 } from 'lucide-react';
 
 export const BottomNav = () => {
@@ -35,6 +36,11 @@ export const BottomNav = () => {
       icon: Package,
       badge: lowStockCount > 0 ? lowStockCount : null,
       badgeColor: 'bg-amber-500 text-white'
+    },
+    {
+      id: 'costeo',
+      label: 'Costeo',
+      icon: ChefHat,
     },
     {
       id: 'caja',

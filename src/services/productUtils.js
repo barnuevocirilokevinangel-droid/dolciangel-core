@@ -151,3 +151,45 @@ export function extractCategories(productos = []) {
 
   return Array.from(categoryMap.values()).sort((a, b) => (a.order || 50) - (b.order || 50));
 }
+
+/**
+ * Calcula la rentabilidad real descontando el IGV (18%) del precio de venta:
+ * - Ingreso Neto = Precio / 1.18
+ * - IGV = Precio - Ingreso Neto
+ * - Ganancia Neta = Ingreso Neto - Costo
+ * - Margen Neto (%) = (Ganancia Neta / Ingreso Neto) * 100
+ */
+export function calculateNetMargin(precioConIgv = 0, costoElaboracion = 0) {
+  const precio = Number(precioConIgv) || 0;
+  const costo = Number(costoElaboracion) || 0;
+  const ingresoNeto = precio > 0 ? precio / 1.18 : 0;
+  const igv = precio > 0 ? precio - ingresoNeto : 0;
+  const gananciaNeta = ingresoNeto - costo;
+  const margenPct = ingresoNeto > 0 ? (gananciaNeta / ingresoNeto) * 100 : 0;
+
+  let status = 'red';
+  if (margenPct >= 50) status = 'green';
+  else if (margenPct >= 30) status = 'amber';
+
+  return {
+    precio,
+    ingresoNeto,
+    igv,
+    costo,
+    gananciaNeta,
+    margenPct,
+    status
+  };
+}
+
+/**
+ * Sugiere un precio de venta final (con IGV 18% incluido) a partir del costo
+ * y un porcentaje de margen neto objetivo sobre la venta neta.
+ */
+export function suggestPriceWithIgv(costo = 0, targetNetMarginPct = 55) {
+  const c = Number(costo) || 0;
+  if (c <= 0) return 0;
+  const m = Math.min(Math.max(Number(targetNetMarginPct) || 0, 0), 95) / 100;
+  const ingresoNetoObjetivo = m < 1 ? c / (1 - m) : c;
+  return Number((ingresoNetoObjetivo * 1.18).toFixed(2));
+}

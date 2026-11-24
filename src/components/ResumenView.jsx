@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, SEDES } from '../context/AppContext';
 import { CATEGORIAS } from '../data/initialCatalog';
+import { calculateNetMargin, getProductCost } from '../services/productUtils';
 import { 
   BarChart3, 
   Calendar, 
@@ -17,14 +18,17 @@ import {
   Store
 } from 'lucide-react';
 
-export const ResumenView = () => {
-  const { sede, ventas, movimientosCaja, sesionCaja, showToast } = useApp();
+const toLimaDate = (isoOrDate = new Date()) => {
+  const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+  if (isNaN(d.getTime())) return typeof isoOrDate === 'string' ? isoOrDate.split('T')[0] : '';
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+};
 
-  // Fecha seleccionada (por defecto hoy en YYYY-MM-DD local)
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
+export const ResumenView = () => {
+  const { sede, ventas, productos, movimientosCaja, sesionCaja } = useApp();
+
+  // Fecha seleccionada (por defecto hoy en YYYY-MM-DD hora Lima)
+  const [selectedDate, setSelectedDate] = useState(() => toLimaDate(new Date()));
 
   const [selectedSedeFilter, setSelectedSedeFilter] = useState(sede || 'BA');
 
@@ -32,15 +36,38 @@ export const ResumenView = () => {
   const ventasDia = useMemo(() => {
     return ventas.filter(v => {
       const matchSede = selectedSedeFilter === 'TODAS' || v.sede === selectedSedeFilter;
-      const vFecha = (v.fecha || '').split('T')[0];
+      const vFecha = v.fecha ? toLimaDate(v.fecha) : '';
       return matchSede && vFecha === selectedDate && v.estado !== 'ANULADA';
     });
   }, [ventas, selectedDate, selectedSedeFilter]);
 
-  // Total del Día en S/.
-  const totalDia = useMemo(() => {
-    return ventasDia.reduce((sum, v) => sum + (v.total || 0), 0);
-  }, [ventasDia]);
+  // Total del Día en S/. + IGV 18% + Ganancia Neta Real
+  const { totalDia, netoDia, igvDia, gananciaNetaDia, margenNetoDia } = useMemo(() => {
+    const costMap = new Map();
+    (productos || []).forEach(p => costMap.set(p.id, getProductCost(p)));
+
+    let total = 0;
+    let costo = 0;
+    ventasDia.forEach(v => {
+      total += Number(v.total || 0);
+      if (Array.isArray(v.items)) {
+        v.items.forEach(it => {
+          const qty = Number(it.cantidad || 0);
+          const unitCost = it.costo !== undefined ? Number(it.costo) : (costMap.get(it.id) || 0);
+          costo += qty * unitCost;
+        });
+      }
+    });
+
+    const netInfo = calculateNetMargin(total, costo);
+    return {
+      totalDia: total,
+      netoDia: netInfo.ingresoNeto,
+      igvDia: netInfo.igv,
+      gananciaNetaDia: netInfo.gananciaNeta,
+      margenNetoDia: netInfo.margenPct
+    };
+  }, [ventasDia, productos]);
 
   // Desglose por Método de Pago
   const pagoDesglose = useMemo(() => {
@@ -92,7 +119,7 @@ export const ResumenView = () => {
   const egresosDia = useMemo(() => {
     return movimientosCaja.filter(m => {
       const matchSede = selectedSedeFilter === 'TODAS' || m.sede === selectedSedeFilter;
-      const mFecha = (m.fecha || '').split('T')[0];
+      const mFecha = m.fecha ? toLimaDate(m.fecha) : '';
       return matchSede && mFecha === selectedDate && m.tipo === 'EGRESO_GASTO';
     }).reduce((sum, m) => sum + (m.monto || 0), 0);
   }, [movimientosCaja, selectedDate, selectedSedeFilter]);
@@ -108,8 +135,10 @@ export const ResumenView = () => {
     const text = `📊 *RESUMEN DIARIO DOLCIANGEL*\n` +
       `📅 Fecha: ${selectedDate}\n` +
       `🏪 Sede: ${SEDES[selectedSedeFilter]?.nombre || 'Todas'}\n\n` +
-      `💰 *TOTAL DEL DÍA: S/ ${totalDia.toFixed(2)}*\n` +
-      `🧾 Comandas: ${ventasDia.length} ventas (${totalPlatosVendidos} porciones)\n\n` +
+      `💰 *TOTAL COBRADO (c/ IGV): S/ ${totalDia.toFixed(2)}*\n` +
+      `🧾 Venta Neta (sin IGV): S/ ${netoDia.toFixed(2)} (IGV 18%: S/ ${igvDia.toFixed(2)})\n` +
+      `📈 Ganancia Neta Est.: S/ ${gananciaNetaDia.toFixed(2)} (${margenNetoDia.toFixed(1)}%)\n` +
+      `🛍️ Comandas: ${ventasDia.length} ventas (${totalPlatosVendidos} porciones)\n\n` +
       `💵 Efectivo: S/ ${pagoDesglose.efectivo.toFixed(2)}\n` +
       `📱 Yape / Plin: S/ ${pagoDesglose.yape.toFixed(2)}\n` +
       `💳 Tarjeta POS: S/ ${pagoDesglose.tarjeta.toFixed(2)}\n` +
@@ -196,9 +225,16 @@ export const ResumenView = () => {
         </span>
 
         <div className="my-4">
-          <span className="text-sm text-pink-100 block font-semibold mb-1">VENTAS TOTALES DEL DÍA</span>
+          <span className="text-sm text-pink-100 block font-semibold mb-1">VENTAS TOTALES DEL DÍA (C/ IGV)</span>
           <div className="text-5xl sm:text-6xl font-black text-gold-300 tracking-tight font-serif">
             S/ {totalDia.toFixed(2)}
+          </div>
+          <div className="mt-3 inline-flex flex-wrap items-center justify-center gap-3 px-4 py-1.5 rounded-2xl bg-white/10 border border-white/15 text-[11px] font-bold text-pink-50">
+            <span>Neto s/ IGV: <strong className="text-white">S/ {netoDia.toFixed(2)}</strong></span>
+            <span>•</span>
+            <span>IGV 18%: <strong className="text-white">S/ {igvDia.toFixed(2)}</strong></span>
+            <span>•</span>
+            <span>Ganancia Neta Est.: <strong className="text-emerald-300">S/ {gananciaNetaDia.toFixed(2)} ({margenNetoDia.toFixed(1)}%)</strong></span>
           </div>
         </div>
 

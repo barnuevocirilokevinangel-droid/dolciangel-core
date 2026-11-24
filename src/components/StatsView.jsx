@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, SEDES } from '../context/AppContext';
+import { getProductCost, calculateNetMargin } from '../services/productUtils';
 import { 
   TrendingUp, 
   BarChart2, 
@@ -20,16 +21,25 @@ import {
 } from 'lucide-react';
 
 export const StatsView = () => {
-  const { ventas, sede } = useApp();
+  const { ventas, productos = [], sede } = useApp();
 
   // Filtros: Período y Sede
   const [periodo, setPeriodo] = useState('mes'); // 'hoy', 'semana', 'mes', 'todo'
   const [selectedSede, setSelectedSede] = useState('TODAS'); // 'TODAS', 'BA', 'VE'
 
-  // Filtrado de ventas según período y sede
+  // Mapa rápido de costos de producto
+  const productCostMap = useMemo(() => {
+    const map = new Map();
+    productos.forEach((p) => {
+      if (p?.id) map.set(p.id, getProductCost(p));
+    });
+    return map;
+  }, [productos]);
+
+  // Filtrado de ventas según período y sede (en zona horaria America/Lima)
   const filteredVentas = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
     return ventas.filter(v => {
       if (v.estado === 'ANULADA') return false;
@@ -41,8 +51,10 @@ export const StatsView = () => {
 
       // Filtro Período
       if (!v.fecha) return true;
-      const vDateStr = v.fecha.split('T')[0];
       const vDate = new Date(v.fecha);
+      const vDateStr = isNaN(vDate.getTime())
+        ? v.fecha.split('T')[0]
+        : vDate.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
       if (periodo === 'hoy') {
         return vDateStr === todayStr;
@@ -53,32 +65,46 @@ export const StatsView = () => {
         return diffDays <= 7;
       }
       if (periodo === 'mes') {
-        return (
-          vDate.getMonth() === now.getMonth() &&
-          vDate.getFullYear() === now.getFullYear()
-        );
+        return vDateStr.slice(0, 7) === todayStr.slice(0, 7);
       }
       return true; // 'todo'
     });
   }, [ventas, periodo, selectedSede]);
 
-  // Cálculos de KPIs Principales
+  // Cálculos de KPIs Principales con desglose IGV 18% y Ganancia Neta Real
   const kpis = useMemo(() => {
     const totalVentas = filteredVentas.reduce((sum, v) => sum + (v.total || 0), 0);
     const totalComandas = filteredVentas.length;
     const ticketPromedio = totalComandas > 0 ? totalVentas / totalComandas : 0;
 
     let totalUnidades = 0;
+    let costoTotal = 0;
     filteredVentas.forEach(v => {
       if (Array.isArray(v.items)) {
         v.items.forEach(it => {
-          totalUnidades += it.cantidad || 0;
+          const qty = Number(it.cantidad || 0);
+          totalUnidades += qty;
+          const unitCost = it.costo !== undefined ? Number(it.costo) : (productCostMap.get(it.id) || 0);
+          costoTotal += qty * unitCost;
         });
       }
     });
 
-    return { totalVentas, totalComandas, ticketPromedio, totalUnidades };
-  }, [filteredVentas]);
+    const netInfo = calculateNetMargin(totalVentas, costoTotal);
+
+    return {
+      totalVentas,
+      totalComandas,
+      ticketPromedio,
+      totalUnidades,
+      ingresoNeto: netInfo.ingresoNeto,
+      igvTotal: netInfo.igv,
+      costoTotal,
+      gananciaNeta: netInfo.gananciaNeta,
+      margenNetoPct: netInfo.margenPct,
+      margenStatus: netInfo.status
+    };
+  }, [filteredVentas, productCostMap]);
 
   // Comparativa Buenos Aires vs Villa España
   const comparativaSedes = useMemo(() => {
@@ -86,21 +112,24 @@ export const StatsView = () => {
     const dataVE = { ventas: 0, comandas: 0, unidades: 0 };
 
     // Evaluamos sobre todas las ventas del período elegido (sin filtrar por sede individual)
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+
     const ventasDelPeriodo = ventas.filter(v => {
       if (v.estado === 'ANULADA') return false;
       if (!v.fecha) return true;
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const vDateStr = v.fecha.split('T')[0];
       const vDate = new Date(v.fecha);
+      const vDateStr = isNaN(vDate.getTime())
+        ? v.fecha.split('T')[0]
+        : vDate.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
       if (periodo === 'hoy') return vDateStr === todayStr;
       if (periodo === 'semana') {
-        const diffDays = Math.ceil(Math.abs(now - vDate) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.ceil(Math.abs(now.getTime() - vDate.getTime()) / (1000 * 60 * 60 * 24));
         return diffDays <= 7;
       }
       if (periodo === 'mes') {
-        return vDate.getMonth() === now.getMonth() && vDate.getFullYear() === now.getFullYear();
+        return vDateStr.slice(0, 7) === todayStr.slice(0, 7);
       }
       return true;
     });
@@ -133,17 +162,18 @@ export const StatsView = () => {
       if (Array.isArray(v.items)) {
         v.items.forEach(it => {
           const key = it.nombre || 'Producto';
+          const unitPrice = Number(it.precio ?? it.precioUnitario ?? 0);
           if (!map[key]) {
             map[key] = {
               nombre: key,
               categoria: it.categoria || 'otros',
               cantidad: 0,
               recaudado: 0,
-              precioUnitario: it.precioUnitario || 0
+              precioUnitario: unitPrice
             };
           }
           map[key].cantidad += it.cantidad || 0;
-          map[key].recaudado += it.subtotal || ((it.cantidad || 0) * (it.precioUnitario || 0));
+          map[key].recaudado += Number(it.subtotal || ((it.cantidad || 0) * unitPrice));
         });
       }
     });
@@ -289,8 +319,17 @@ export const StatsView = () => {
           <div className="text-2xl sm:text-3xl font-extrabold text-brand-700">
             S/ {kpis.totalVentas.toFixed(2)}
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 block">
-            {filteredVentas.length} transacciones auditadas
+          <span className="text-[11px] text-slate-500 mt-1 block font-semibold">
+            Neto: S/ {kpis.ingresoNeto.toFixed(2)} • IGV: S/ {kpis.igvTotal.toFixed(2)}
+          </span>
+          <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+            kpis.margenStatus === 'green'
+              ? 'bg-emerald-100 text-emerald-800'
+              : kpis.margenStatus === 'amber'
+              ? 'bg-amber-100 text-amber-800'
+              : 'bg-rose-100 text-rose-800'
+          }`}>
+            Ganancia Neta Est.: S/ {kpis.gananciaNeta.toFixed(2)} ({kpis.margenNetoPct.toFixed(1)}%)
           </span>
         </div>
 

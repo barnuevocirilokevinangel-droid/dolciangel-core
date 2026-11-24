@@ -139,7 +139,8 @@ service cloud.firestore {
     /* ═══════════════════════════════════════════════════
        5. dolciangel-core (POS unificado y gestión) — SIN Firebase Auth
        Colecciones operativas del frontend unificado POS:
-       productos, ventas, fidelidad, caja, kardex, pedidos web y configuración web.
+       productos, ventas, fidelidad, caja, kardex, pedidos web,
+       configuración web y costeo (insumos_produccion, recetas_costeo).
        ═══════════════════════════════════════════════════ */
     match /productos/{prodId}                  { allow read, write: if true; }
     match /ventas/{ventaId}                    { allow read, write: if true; }
@@ -150,6 +151,8 @@ service cloud.firestore {
     match /sesiones_caja/{sesionId}            { allow read, write: if true; }
     match /kardex/{kardexId}                   { allow read, write: if true; }
     match /canjes_fidelidad/{canjeId}          { allow read, write: if true; }
+    match /insumos_produccion/{insumoId}       { allow read, write: if true; }
+    match /recetas_costeo/{recetaId}           { allow read, write: if true; }
 
     /* ═══════════════════════════════════════════════════
        6. Todo lo demás — denegado explícitamente.

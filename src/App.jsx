@@ -17,6 +17,7 @@ import { HistorialGlobalView } from './components/HistorialGlobalView';
 import { AdminView } from './components/AdminView';
 import { ContabilidadView } from './components/ContabilidadView';
 import { GestorHeroView } from './components/GestorHeroView';
+import { CosteoView } from './components/CosteoView';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 export const resolveCurrentRoute = () => {
@@ -165,6 +166,7 @@ const MainLayout = ({ onNavigate }) => {
           />
         )}
         {activeTab === 'inventario' && <KardexView />}
+        {activeTab === 'costeo' && <CosteoView />}
         {activeTab === 'caja' && <CajaView />}
         {activeTab === 'resumen' && <ResumenView />}
         {activeTab === 'stats' && <StatsView />}

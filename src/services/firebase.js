@@ -20,6 +20,12 @@ import {
   increment,
   runTransaction
 } from 'firebase/firestore';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL
+} from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCOcc0JIOYONwlIHva5i7BLdGZ4OFGq1uo",
@@ -33,6 +39,7 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Habilitar persistencia offline con IndexedDB
 // Garantiza que ventas y comandas en mostrador se guarden localmente si se corta el wifi
@@ -55,10 +62,16 @@ export const collections = {
   sesionesCaja: collection(db, 'sesiones_caja'),
   kardex: collection(db, 'kardex'),
   canjesFidelidad: collection(db, 'canjes_fidelidad'),
+  insumosProduccion: collection(db, 'insumos_produccion'),
+  recetasCosteo: collection(db, 'recetas_costeo'),
 };
 
 export {
   db,
+  storage,
+  storageRef,
+  uploadBytes,
+  getDownloadURL,
   collection,
   doc,
   getDoc,

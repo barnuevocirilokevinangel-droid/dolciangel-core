@@ -66,7 +66,7 @@ export const ProductImage = ({
           decoding="async"
           onLoad={() => setImageStatus('loaded')}
           onError={() => setImageStatus('error')}
-          className={`w-full h-full ${objectFit} transition-opacity duration-300 ease-in-out ${
+          className={`w-full h-full ${objectFit} object-center transition-opacity duration-300 ease-in-out ${
             imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
           } ${className}`}
         />

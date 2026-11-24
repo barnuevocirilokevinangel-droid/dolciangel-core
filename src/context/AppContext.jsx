@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { 
   db, 
   collections, 
@@ -206,16 +206,37 @@ export const AppProvider = ({ children }) => {
 
   const [productos, setProductos] = useState([]);
   const [ventas, setVentas] = useState([]);
-  const [sesionCaja, setSesionCaja] = useState(null);
+  const [sesionesCajaList, setSesionesCajaList] = useState([]);
   const [movimientosCaja, setMovimientosCaja] = useState([]);
   const [kardex, setKardex] = useState([]);
   const [clientesFidelidad, setClientesFidelidad] = useState([]);
+  const [insumosProduccion, setInsumosProduccion] = useState([]);
+  const [recetasCosteo, setRecetasCosteo] = useState([]);
+  const [costeoTargetProductId, setCosteoTargetProductId] = useState(null);
 
-  // 4. Notificaciones Toast
+  const openProductInCosteo = (productId) => {
+    setCosteoTargetProductId(productId || null);
+    setActiveTab('costeo');
+  };
+
+  // Sesión de caja derivada de la sede activa sin re-suscribir listeners
+  const sesionCaja = useMemo(() => {
+    if (!sede) return null;
+    return sesionesCajaList.find(s => s.sede === sede && s.estado === 'ABIERTA') || null;
+  }, [sesionesCajaList, sede]);
+
+  // 4. Notificaciones Toast (con limpieza de temporizador previo)
   const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
   const showToast = (message, type = 'success') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToast({ message, type, id: Date.now() });
-    setTimeout(() => setToast(null), 3500);
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, 3500);
   };
 
   // Guardar en Storage sesión
@@ -254,7 +275,7 @@ export const AppProvider = ({ children }) => {
     showToast(`Cambiado a sede: ${SEDES[newSede].nombre}`);
   };
 
-  // 5. Suscripciones Firestore en Tiempo Real (onSnapshot)
+  // 5. Suscripciones Firestore en Tiempo Real (onSnapshot) - Montaje único [] para evitar lecturas duplicadas al cambiar de sede
   useEffect(() => {
     setSyncStatus('connecting');
 
@@ -263,7 +284,7 @@ export const AppProvider = ({ children }) => {
       if (snapshot.empty) {
         setProductos([]);
       } else {
-        const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const prods = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         setProductos(prods);
       }
       setSyncStatus('connected');
@@ -275,7 +296,7 @@ export const AppProvider = ({ children }) => {
     // VENTAS (últimas 100)
     const qVentas = query(collections.ventas, orderBy('fecha', 'desc'), limit(100));
     const unsubVentas = onSnapshot(qVentas, (snapshot) => {
-      const v = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const v = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setVentas(v);
     }, (error) => {
       console.error('Error al escuchar ventas:', error);
@@ -284,33 +305,52 @@ export const AppProvider = ({ children }) => {
     // CAJA SESIONES
     const qSesiones = query(collections.sesionesCaja, orderBy('fechaApertura', 'desc'), limit(10));
     const unsubSesiones = onSnapshot(qSesiones, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if (sede) {
-        const abierta = docs.find(s => s.sede === sede && s.estado === 'ABIERTA');
-        setSesionCaja(abierta || null);
-      } else {
-        setSesionCaja(null);
-      }
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setSesionesCajaList(docs);
+    }, (error) => {
+      console.error('Error al escuchar sesiones de caja:', error);
     });
 
     // MOVIMIENTOS CAJA
     const qMovs = query(collections.movimientosCaja, orderBy('fecha', 'desc'), limit(100));
     const unsubMovs = onSnapshot(qMovs, (snapshot) => {
-      const movs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const movs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setMovimientosCaja(movs);
+    }, (error) => {
+      console.error('Error al escuchar movimientos de caja:', error);
     });
 
     // KARDEX
     const qKardex = query(collections.kardex, orderBy('fecha', 'desc'), limit(100));
     const unsubKardex = onSnapshot(qKardex, (snapshot) => {
-      const k = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const k = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setKardex(k);
+    }, (error) => {
+      console.error('Error al escuchar kardex:', error);
     });
 
     // CLIENTES FIDELIDAD
     const unsubClientes = onSnapshot(collections.clientesFidelidad, (snapshot) => {
-      const cli = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const cli = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setClientesFidelidad(cli);
+    }, (error) => {
+      console.error('Error al escuchar clientes de fidelidad:', error);
+    });
+
+    // INSUMOS DE PRODUCCIÓN (Módulo Costeo)
+    const unsubInsumos = onSnapshot(collections.insumosProduccion, (snapshot) => {
+      const ins = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setInsumosProduccion(ins);
+    }, (error) => {
+      console.warn('Aviso al escuchar insumos_produccion:', error);
+    });
+
+    // RECETAS / ESCANDALLOS (Módulo Costeo)
+    const unsubRecetas = onSnapshot(collections.recetasCosteo, (snapshot) => {
+      const rec = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setRecetasCosteo(rec);
+    }, (error) => {
+      console.warn('Aviso al escuchar recetas_costeo:', error);
     });
 
     return () => {
@@ -320,8 +360,10 @@ export const AppProvider = ({ children }) => {
       unsubMovs();
       unsubKardex();
       unsubClientes();
+      unsubInsumos();
+      unsubRecetas();
     };
-  }, [sede]);
+  }, []);
 
   // Sembrado inicial de productos
   const seedInitialProducts = async () => {
@@ -580,12 +622,16 @@ export const AppProvider = ({ children }) => {
       fecha: new Date().toISOString(),
       timestamp: serverTimestamp(),
       sede,
+      local: SEDES[sede].nombre,
       sedeNombre: SEDES[sede].nombre,
       vendedor: perfil.nombre,
       vendedorRol: perfil.rol,
       estado_sunat: isVE || effectiveTipoComprobante === 'NOTA_VENTA' ? 'no_aplica' : (comprobanteData.estado_sunat || 'aceptado'),
+      serie: comprobanteData.serie || correlativoInfo.serie,
       correlativo: comprobanteData.numero || correlativoInfo.numero,
       hash_cpe: comprobanteData.hash_cpe || comprobanteData.hash || null,
+      enlace_pdf: comprobanteData.enlace_pdf || comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
+      enlace_xml: comprobanteData.enlace_xml || comprobanteData.enlace_del_xml || comprobanteData.xml || null,
       enlace_del_pdf: comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
       enlace_del_xml: comprobanteData.enlace_del_xml || comprobanteData.xml || null,
       cuenta: {
@@ -598,6 +644,7 @@ export const AppProvider = ({ children }) => {
       opGravada,
       igv,
       metodoPago, // 'EFECTIVO' | 'YAPE_PLIN' | 'TARJETA'
+      metodo_pago: metodoPago,
       tipoComprobante: effectiveTipoComprobante, // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
       comprobante: {
         tipo: comprobanteData.tipo || effectiveTipoComprobante,
@@ -850,6 +897,11 @@ export const AppProvider = ({ children }) => {
       movimientosCaja,
       kardex,
       clientesFidelidad,
+      insumosProduccion,
+      recetasCosteo,
+      costeoTargetProductId,
+      setCosteoTargetProductId,
+      openProductInCosteo,
       syncStatus,
       isOnline,
       seedInitialProducts,
