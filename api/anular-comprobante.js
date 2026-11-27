@@ -39,6 +39,29 @@ export default async function handler(req, res) {
     const venta = body.venta || body;
     const comp = venta.comprobante || {};
 
+    const normalizeSede = (val) =>
+      String(val || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+    const isVillaEspana = (val) => {
+      const n = normalizeSede(val);
+      return n === 've' || n === 'villaespana' || n.includes('villa espana');
+    };
+    if (
+      isVillaEspana(body.local) ||
+      isVillaEspana(body.sede) ||
+      isVillaEspana(venta.sede) ||
+      isVillaEspana(venta.local) ||
+      isVillaEspana(venta.sedeNombre)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'La sede Villa España no está habilitada para emitir comprobantes electrónicos SUNAT'
+      });
+    }
+
     const origTipoRaw = (
       body.origTipoDoc ||
       comp.tipoDoc ||

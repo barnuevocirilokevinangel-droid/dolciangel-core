@@ -23,6 +23,7 @@ import {
   emitirComprobante,
   anularComprobante,
   obtenerSiguienteCorrelativo,
+  incrementarCorrelativo,
   verificarEstadoComprobante
 } from '../services/sunatService';
 import { getProductPrice, getProductStock } from '../services/productUtils';
@@ -641,30 +642,57 @@ export const AppProvider = ({ children }) => {
       const saleId = 'V-' + Date.now();
       const ventaRef = doc(db, 'ventas', saleId);
 
-      // 1. Obtener correlativo oficial y emitir comprobante (SUNAT si BA + Boleta/Factura, sino NV01)
+      // 1. Obtener correlativo oficial y emitir comprobante.
+      // REGLA ESTRICTA: Villa España (VE) y cualquier NOTA_VENTA operan 100% internos (NV01) sin invocar nunca APISUNAT.
       const correlativoInfo = await obtenerSiguienteCorrelativo(effectiveTipoComprobante, sede);
 
-      const comprobanteData = await emitirComprobante({
-        id: saleId,
-        sede: isVE ? 'villaEspana' : 'buenosAires',
-        tipoDocumento: tipoDocLabel,
-        tipoComprobante: effectiveTipoComprobante,
-        serie: correlativoInfo.serie,
-        numero: correlativoInfo.numero,
-        correlativo: correlativoInfo.numero,
-        total: totalToPay,
-        metodoPago,
-        items: itemsSummary,
-        clienteDoc: isVE ? '' : (clienteDoc || ''),
-        clienteNombre: clienteNombre || 'CLIENTES VARIOS',
-        clienteDireccion: clienteDireccion || '',
-        cliente: {
-          documento: isVE ? '' : (clienteDoc || ''),
-          nombre: clienteNombre || 'CLIENTES VARIOS',
-          direccion: clienteDireccion || '',
-          telefono: clienteTelefono || ''
-        }
-      });
+      let comprobanteData;
+      if (isVE || effectiveTipoComprobante === 'NOTA_VENTA') {
+        await incrementarCorrelativo('NV01', correlativoInfo.numero);
+        comprobanteData = {
+          exito: true,
+          success: true,
+          tipo: 'interno',
+          tipoDoc: 'NV',
+          serie: 'NV01',
+          numero: correlativoInfo.numero,
+          codigoCompleto: `NV01-${String(correlativoInfo.numero).padStart(8, '0')}`,
+          estado_sunat: 'no_aplica',
+          estado: 'CONTROL_INTERNO',
+          hash_cpe: null,
+          cdr: null,
+          enlace_pdf: null,
+          enlace_del_pdf: null,
+          enlace_xml: null,
+          enlace_del_xml: null,
+          opGravada: Number((totalToPay / 1.18).toFixed(2)),
+          totalIgv: Number((totalToPay - Number((totalToPay / 1.18).toFixed(2))).toFixed(2)),
+          totalVenta: totalToPay
+        };
+      } else {
+        comprobanteData = await emitirComprobante({
+          id: saleId,
+          sede: 'buenosAires',
+          local: 'Buenos Aires',
+          tipoDocumento: tipoDocLabel,
+          tipoComprobante: effectiveTipoComprobante,
+          serie: correlativoInfo.serie,
+          numero: correlativoInfo.numero,
+          correlativo: correlativoInfo.numero,
+          total: totalToPay,
+          metodoPago,
+          items: itemsSummary,
+          clienteDoc: clienteDoc || '',
+          clienteNombre: clienteNombre || 'CLIENTES VARIOS',
+          clienteDireccion: clienteDireccion || '',
+          cliente: {
+            documento: clienteDoc || '',
+            nombre: clienteNombre || 'CLIENTES VARIOS',
+            direccion: clienteDireccion || '',
+            telefono: clienteTelefono || ''
+          }
+        });
+      }
 
       if (!comprobanteData.exito) {
         throw new Error(comprobanteData.error || 'Error al emitir comprobante');
@@ -956,9 +984,14 @@ export const AppProvider = ({ children }) => {
 
     inFlightVoidsRef.current.add(voidKey);
     try {
+      const isVE =
+        venta.sede === 'VE' ||
+        venta.sede === 'villaEspana' ||
+        (venta.sedeNombre && venta.sedeNombre.toLowerCase().includes('villa'));
       const comp = venta.comprobante || {};
       const serieOrig = (comp.serie || '').toUpperCase();
       const esComprobanteSunat =
+        !isVE &&
         (venta.tipoComprobante === 'BOLETA' || venta.tipoComprobante === 'FACTURA') &&
         serieOrig !== 'NV01' &&
         comp.estado !== 'CONTROL_INTERNO';
@@ -968,10 +1001,6 @@ export const AppProvider = ({ children }) => {
         notaCreditoData = await anularComprobante({ venta, motivo, codigoMotivo });
       }
 
-      const isVE =
-        venta.sede === 'VE' ||
-        venta.sede === 'villaEspana' ||
-        (venta.sedeNombre && venta.sedeNombre.toLowerCase().includes('villa'));
       const stockFieldLegacy = isVE ? 'stock_VE' : 'stock_BA';
       const nestedStockField = isVE ? 'stock.villaEspana' : 'stock.buenosAires';
       const targetSedeId = isVE ? 'VE' : 'BA';

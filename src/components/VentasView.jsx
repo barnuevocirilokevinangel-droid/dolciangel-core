@@ -85,17 +85,21 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
   const [docSearchSuccess, setDocSearchSuccess] = useState(null);
   const [docSearchError, setDocSearchError] = useState('');
 
-  // Villa España opera 100% con tickets de control interno
+  // Villa España opera 100% con tickets de control interno (sin emisión electrónica SUNAT)
   const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
 
   useEffect(() => {
-    if (isVE && tipoComprobante !== 'NOTA_VENTA') {
-      setTipoComprobante('NOTA_VENTA');
+    if (isVE) {
+      if (tipoComprobante !== 'NOTA_VENTA') {
+        setTipoComprobante('NOTA_VENTA');
+      }
       setClienteDoc('');
       setClienteNombre('');
       setClienteDireccion('');
+      setDocSearchSuccess(null);
+      setDocSearchError('');
     }
-  }, [isVE, tipoComprobante]);
+  }, [isVE, sede]);
 
   // Consulta automática de DNI / RUC en tiempo real con ApiPeru
   useEffect(() => {
@@ -1300,13 +1304,18 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                   </div>
 
                   {isVE ? (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between">
-                      <span className="font-extrabold text-xs text-amber-950">
-                        🧾 Nota de Venta / Control Interno
-                      </span>
-                      <span className="bg-amber-200 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-lg">
-                        VE
-                      </span>
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-xs text-amber-950">
+                          🧾 Nota de Venta (Control Interno)
+                        </span>
+                        <span className="bg-amber-200 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-lg">
+                          VE
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 font-medium">
+                        Sede Villa España opera solo con Nota de Venta interna
+                      </p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl">

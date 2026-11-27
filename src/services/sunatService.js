@@ -135,14 +135,12 @@ export async function consultarDocumento({ dni, ruc }) {
 
 /**
  * Consulta el siguiente correlativo oficial en Firestore sin quemarlo previamente.
- * - Boletas Buenos Aires: Serie "B002", arranca en 1264.
- * - Facturas Buenos Aires: Serie "F001", arranca en 1.
- * - Notas de Crédito: "FC01" / "BC02", arrancan en 1.
- * - Tickets Internos (Villa España / NV): Serie "NV01", arranca en 1.
+ * Solo Buenos Aires emite comprobantes electrónicos SUNAT (B002 / F001 / BC02 / FC01).
+ * Villa España opera exclusivamente con Nota de Venta interna (NV01).
  */
 export async function obtenerSiguienteCorrelativo(tipoComprobante = 'BOLETA', sede = 'BA', customSerie = null) {
   const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
-  let serie = customSerie;
+  let serie = isVE ? 'NV01' : customSerie;
   if (!serie) {
     if (isVE || tipoComprobante === 'NOTA_VENTA' || tipoComprobante === 'Nota de Venta') {
       serie = 'NV01';

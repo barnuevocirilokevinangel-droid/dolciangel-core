@@ -56,10 +56,40 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'Cuerpo JSON inválido.' });
     }
 
+    const normalizeSede = (val) =>
+      String(val || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+    const isVillaEspana = (val) => {
+      const n = normalizeSede(val);
+      return n === 've' || n === 'villaespana' || n.includes('villa espana');
+    };
+
+    if (
+      isVillaEspana(body.local) ||
+      isVillaEspana(body.sede) ||
+      isVillaEspana(body.sedeNombre) ||
+      isVillaEspana(body.establecimiento)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'La sede Villa España no está habilitada para emitir comprobantes electrónicos SUNAT'
+      });
+    }
+
     const rawTipo = (body.tipoDoc || body.tipoComprobante || body.tipoDocumento || 'BOLETA').toString().toUpperCase();
     const esFactura = rawTipo === '01' || rawTipo === 'FACTURA' || body.tipo_de_comprobante === '1';
     const tipoDoc = esFactura ? '01' : '03';
     const serie = (body.serie || (esFactura ? 'F001' : 'B002')).toString().trim().toUpperCase();
+
+    if (serie === 'B001' || serie === 'BC01') {
+      return res.status(400).json({
+        success: false,
+        message: 'La sede Villa España no está habilitada para emitir comprobantes electrónicos SUNAT'
+      });
+    }
 
     const requestedNum = parseInt(body.numero || body.correlativo || (esFactura ? 1 : 1264), 10);
     const apiSuggestedNum = await getNextCorrelativeFromApiSunat({

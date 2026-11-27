@@ -124,11 +124,12 @@ export const ContabilidadView = () => {
       const isFactura = tipoRaw === 'FACTURA' || comp.tipoDoc === '01';
       const isBoleta = tipoRaw === 'BOLETA' || comp.tipoDoc === '03';
       const serie = (comp.serie || (isFactura ? 'F001' : isBoleta ? 'B002' : 'NV01')).toUpperCase();
-      const esSunatReal = (isFactura || isBoleta) && serie !== 'NV01';
+      // Solo Buenos Aires genera comprobantes tributarios SUNAT (Villa España opera exclusivamente con Nota de Venta interna)
+      const esSunatReal = normalizedSede === 'BA' && (isFactura || isBoleta) && serie !== 'NV01' && v.estado_sunat !== 'no_aplica';
 
       if (onlySunatDocs && !esSunatReal) return;
 
-      const tipoDocSunat = isFactura ? '01' : isBoleta ? '03' : 'NV';
+      const tipoDocSunat = esSunatReal ? (isFactura ? '01' : '03') : 'NV';
       const numeroNum = comp.numero || v.correlativo || 1;
       const numeroStr = String(numeroNum).padStart(8, '0');
 
