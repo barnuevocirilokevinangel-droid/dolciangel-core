@@ -408,9 +408,103 @@ export const AdminProductManager = () => {
         </div>
       </div>
 
-      {/* Tabla Interactiva de Productos & Rentabilidad Neta (post IGV) */}
+      {/* Tabla / Card List Interactiva de Productos & Rentabilidad Neta (post IGV) */}
       <div className="bg-white rounded-3xl border border-pink-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* VISTA MÓVIL (< md): CARD LIST APILADA */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredProducts.length === 0 ? (
+            <div className="py-10 text-center text-slate-400 text-xs">
+              No hay productos que coincidan con la búsqueda
+            </div>
+          ) : (
+            filteredProducts.map((p) => {
+              const costo = getProductCost(p);
+              const pBA = getProductPrice(p, 'BA');
+              const pVE = getProductPrice(p, 'VE');
+              const sBA = getProductStock(p, 'BA');
+              const sVE = getProductStock(p, 'VE');
+              const mBA = calculateNetMargin(pBA, costo);
+              const mVE = calculateNetMargin(pVE, costo);
+              const hasReceta = Boolean(p.receta_id || recetasById.has(p.id));
+
+              return (
+                <div key={p.id} className="p-3.5 space-y-2.5 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-extrabold text-sm text-slate-900 leading-tight">
+                        {p.nombre}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5 text-[11px] text-slate-500">
+                        <span className="capitalize font-semibold">{p.categoria}</span>
+                        <span>•</span>
+                        <span>Costo: <strong className="text-slate-800">S/ {costo.toFixed(2)}</strong></span>
+                        {hasReceta && (
+                          <button
+                            type="button"
+                            onClick={() => openProductInCosteo(p.id)}
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-extrabold text-[10px]"
+                          >
+                            <ChefHat className="w-3 h-3" />
+                            <span>Auto (Receta)</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(p)}
+                        className="px-2.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 font-bold text-xs flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProduct(p)}
+                        className="p-1.5 rounded-xl bg-rose-50 text-rose-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded-xl bg-pink-50/50 border border-pink-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-500">BA (Stk: {sBA})</span>
+                        <span className="font-mono font-black text-brand-700">S/ {pBA.toFixed(2)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">Neto: S/{mBA.ingresoNeto.toFixed(1)}</span>
+                        <span className={`px-1.5 py-0.2 rounded font-bold ${MARGIN_BADGE_STYLES[mBA.status]}`}>
+                          {mBA.margenPct.toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-amber-50/50 border border-amber-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-500">VE (Stk: {sVE})</span>
+                        <span className="font-mono font-black text-amber-800">S/ {pVE.toFixed(2)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">Neto: S/{mVE.ingresoNeto.toFixed(1)}</span>
+                        <span className={`px-1.5 py-0.2 rounded font-bold ${MARGIN_BADGE_STYLES[mVE.status]}`}>
+                          {mVE.margenPct.toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* VISTA TABLET/ESCRITORIO (md:): TABLA COMPLETA */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-extrabold border-b border-slate-200 text-[10px]">
               <tr>
@@ -578,12 +672,12 @@ export const AdminProductManager = () => {
         </div>
       </div>
 
-      {/* MODAL DE PRODUCTO REORGANIZADO EN PESTAÑAS LIMPIAS */}
+      {/* MODAL DE PRODUCTO REORGANIZADO EN PESTAÑAS LIMPIAS (92dvh en móvil) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border border-pink-100 w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-xl rounded-t-2xl sm:rounded-3xl shadow-2xl border border-pink-100 flex flex-col overflow-hidden">
             {/* Header fijo */}
-            <div className="px-6 pt-5 pb-3 border-b border-slate-100">
+            <div className="px-4 sm:px-6 pt-4 pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span className="text-2xl">{formIcono || '🧁'}</span>
@@ -799,13 +893,14 @@ export const AdminProductManager = () => {
 
                       <input
                         type="number"
+                        inputMode="decimal"
                         step="0.01"
                         min={0}
                         value={formCosto}
                         readOnly={Boolean(formRecetaId)}
                         onChange={(e) => setFormCosto(e.target.value)}
                         placeholder="0.00"
-                        className={`w-full px-3 py-2.5 rounded-xl border font-mono font-bold text-sm focus:outline-none ${
+                        className={`w-full px-3 py-2.5 rounded-xl border font-mono font-bold text-base sm:text-sm focus:outline-none ${
                           formRecetaId
                             ? 'bg-purple-50/70 border-purple-200 text-purple-900 cursor-not-allowed'
                             : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500'
@@ -838,13 +933,14 @@ export const AdminProductManager = () => {
                         </label>
                         <input
                           type="number"
+                          inputMode="decimal"
                           step="0.10"
                           min={0}
                           required
                           value={formPrecioBA}
                           onChange={(e) => setFormPrecioBA(e.target.value)}
                           placeholder="0.00"
-                          className="w-full px-3 py-2 rounded-xl border border-brand-300 font-mono font-extrabold text-sm focus:outline-none bg-white text-brand-800"
+                          className="w-full px-3 py-2 rounded-xl border border-brand-300 font-mono font-extrabold text-base sm:text-sm focus:outline-none bg-white text-brand-800"
                         />
                         {previewPBA > 0 && (
                           <div className="space-y-1 pt-1 border-t border-pink-200/80 font-mono text-[11px]">
@@ -872,13 +968,14 @@ export const AdminProductManager = () => {
                         </label>
                         <input
                           type="number"
+                          inputMode="decimal"
                           step="0.10"
                           min={0}
                           required
                           value={formPrecioVE}
                           onChange={(e) => setFormPrecioVE(e.target.value)}
                           placeholder={formPrecioBA || '0.00'}
-                          className="w-full px-3 py-2 rounded-xl border border-amber-300 font-mono font-extrabold text-sm focus:outline-none bg-white text-amber-900"
+                          className="w-full px-3 py-2 rounded-xl border border-amber-300 font-mono font-extrabold text-base sm:text-sm focus:outline-none bg-white text-amber-900"
                         />
                         {previewPVE > 0 && (
                           <div className="space-y-1 pt-1 border-t border-amber-200/80 font-mono text-[11px]">
@@ -961,20 +1058,22 @@ export const AdminProductManager = () => {
                           <label className="font-bold text-slate-700 block mb-1">Stock Vitrina Buenos Aires</label>
                           <input
                             type="number"
+                            inputMode="numeric"
                             min={0}
                             value={formStockBA}
                             onChange={(e) => setFormStockBA(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-mono font-bold text-sm focus:outline-none focus:border-brand-500"
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-mono font-bold text-base sm:text-sm focus:outline-none focus:border-brand-500"
                           />
                         </div>
                         <div>
                           <label className="font-bold text-slate-700 block mb-1">Stock Vitrina Villa España</label>
                           <input
                             type="number"
+                            inputMode="numeric"
                             min={0}
                             value={formStockVE}
                             onChange={(e) => setFormStockVE(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-mono font-bold text-sm focus:outline-none focus:border-brand-500"
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-mono font-bold text-base sm:text-sm focus:outline-none focus:border-brand-500"
                           />
                         </div>
                       </div>
@@ -988,8 +1087,8 @@ export const AdminProductManager = () => {
                 )}
               </div>
 
-              {/* Footer fijo con acciones */}
-              <div className="flex gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50/70">
+              {/* Footer fijo con acciones (sticky bottom-0) */}
+              <div className="sticky bottom-0 flex gap-2 px-4 sm:px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-slate-100 bg-white shrink-0">
                 <button
                   type="button"
                   onClick={closeModal}

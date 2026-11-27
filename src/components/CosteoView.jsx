@@ -945,93 +945,184 @@ export const CosteoView = () => {
                 </button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-black uppercase text-slate-500">
-                      <th className="py-3.5 px-4">Insumo / Proveedor</th>
-                      <th className="py-3.5 px-3">Tipo</th>
-                      <th className="py-3.5 px-3">Presentación Compra</th>
-                      <th className="py-3.5 px-3 text-right">Precio Compra</th>
-                      <th className="py-3.5 px-3 text-right">Costo Unitario Base</th>
-                      <th className="py-3.5 px-3 text-center">Uso en Recetas</th>
-                      <th className="py-3.5 px-3">Actualizado</th>
-                      <th className="py-3.5 px-4 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    {filteredInsumos.map((ins) => {
-                      const usageCount = insumoUsageCounts.get(ins.id) || 0;
-                      return (
-                        <tr key={ins.id} className="hover:bg-pink-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-slate-800">{ins.nombre}</div>
+              <>
+                {/* VISTA MÓVIL (< md): LISTA DE TARJETAS APILADAS (CARD LIST) */}
+                <div className="md:hidden divide-y divide-slate-100">
+                  {filteredInsumos.map((ins) => {
+                    const usageCount = insumoUsageCounts.get(ins.id) || 0;
+                    return (
+                      <div key={ins.id} className="p-4 space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-extrabold text-sm text-slate-900 leading-tight">
+                              {ins.nombre}
+                            </div>
                             {ins.proveedor && (
-                              <div className="text-[11px] text-slate-500">Prov: {ins.proveedor}</div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                Prov: {ins.proveedor}
+                              </div>
                             )}
-                          </td>
-                          <td className="py-3 px-3">
-                            <span
-                              className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                                ins.tipo === 'empaque'
-                                  ? 'bg-teal-50 text-teal-800 border-teal-200'
-                                  : 'bg-amber-50 text-amber-800 border-amber-200'
-                              }`}
-                            >
-                              {ins.tipo === 'empaque' ? 'Empaque' : 'Materia Prima'}
+                          </div>
+                          <span
+                            className={`shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                              ins.tipo === 'empaque'
+                                ? 'bg-teal-50 text-teal-800 border-teal-200'
+                                : 'bg-amber-50 text-amber-800 border-amber-200'
+                            }`}
+                          >
+                            {ins.tipo === 'empaque' ? 'Empaque' : 'Materia Prima'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-100 text-xs">
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase block">
+                              Compra ({ins.unidad_compra})
                             </span>
-                          </td>
-                          <td className="py-3 px-3 text-slate-700 font-semibold">
-                            {ins.cantidad_por_paquete} {ins.unidad_uso}{' '}
-                            <span className="text-slate-400">({ins.unidad_compra})</span>
-                          </td>
-                          <td className="py-3 px-3 text-right font-extrabold text-slate-800">
-                            S/ {Number(ins.precio_compra || 0).toFixed(2)}
-                          </td>
-                          <td className="py-3 px-3 text-right">
-                            <span className="inline-block px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-800 font-black">
+                            <span className="font-extrabold text-slate-800">
+                              S/ {Number(ins.precio_compra || 0).toFixed(2)}
+                            </span>
+                            <span className="text-[11px] text-slate-500 ml-1">
+                              / {ins.cantidad_por_paquete} {ins.unidad_uso}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-indigo-500 font-bold uppercase block">
+                              Costo Base
+                            </span>
+                            <span className="font-black text-indigo-800">
                               S/ {Number(ins.costo_unitario_base || 0).toFixed(4)} / {ins.unidad_uso}
                             </span>
-                          </td>
-                          <td className="py-3 px-3 text-center">
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <div className="flex items-center gap-2">
                             {usageCount > 0 ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
                                 <RefreshCw className="w-3 h-3" />
                                 {usageCount} receta{usageCount > 1 ? 's' : ''}
                               </span>
                             ) : (
-                              <span className="text-slate-400 text-[11px]">Sin vincular</span>
+                              <span className="text-slate-400 text-xs">Sin vincular</span>
                             )}
-                          </td>
-                          <td className="py-3 px-3 text-[11px] text-slate-500">
-                            {formatLimaDateShort(ins.ultima_actualizacion)}
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <div className="inline-flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => openEditInsumo(ins)}
-                                title="Editar y recalcular recetas"
-                                className="p-2 rounded-xl bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800 transition-colors"
+                            <span className="text-[11px] text-slate-400">
+                              • {formatLimaDateShort(ins.ultima_actualizacion)}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditInsumo(ins)}
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-brand-100 text-slate-700 font-bold text-xs flex items-center gap-1"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Editar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteInsumo(ins)}
+                              className="p-2 rounded-xl bg-rose-50 text-rose-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* VISTA TABLET/ESCRITORIO (md:): TABLA COMPLETA */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-black uppercase text-slate-500">
+                        <th className="py-3.5 px-4">Insumo / Proveedor</th>
+                        <th className="py-3.5 px-3">Tipo</th>
+                        <th className="py-3.5 px-3">Presentación Compra</th>
+                        <th className="py-3.5 px-3 text-right">Precio Compra</th>
+                        <th className="py-3.5 px-3 text-right">Costo Unitario Base</th>
+                        <th className="py-3.5 px-3 text-center">Uso en Recetas</th>
+                        <th className="py-3.5 px-3">Actualizado</th>
+                        <th className="py-3.5 px-4 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {filteredInsumos.map((ins) => {
+                        const usageCount = insumoUsageCounts.get(ins.id) || 0;
+                        return (
+                          <tr key={ins.id} className="hover:bg-pink-50/30 transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="font-bold text-slate-800">{ins.nombre}</div>
+                              {ins.proveedor && (
+                                <div className="text-[11px] text-slate-500">Prov: {ins.proveedor}</div>
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <span
+                                className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                                  ins.tipo === 'empaque'
+                                    ? 'bg-teal-50 text-teal-800 border-teal-200'
+                                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                                }`}
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteInsumo(ins)}
-                                title="Eliminar insumo"
-                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                                {ins.tipo === 'empaque' ? 'Empaque' : 'Materia Prima'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-slate-700 font-semibold">
+                              {ins.cantidad_por_paquete} {ins.unidad_uso}{' '}
+                              <span className="text-slate-400">({ins.unidad_compra})</span>
+                            </td>
+                            <td className="py-3 px-3 text-right font-extrabold text-slate-800">
+                              S/ {Number(ins.precio_compra || 0).toFixed(2)}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <span className="inline-block px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-800 font-black">
+                                S/ {Number(ins.costo_unitario_base || 0).toFixed(4)} / {ins.unidad_uso}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              {usageCount > 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
+                                  <RefreshCw className="w-3 h-3" />
+                                  {usageCount} receta{usageCount > 1 ? 's' : ''}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-[11px]">Sin vincular</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-[11px] text-slate-500">
+                              {formatLimaDateShort(ins.ultima_actualizacion)}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditInsumo(ins)}
+                                  title="Editar y recalcular recetas"
+                                  className="p-2 rounded-xl bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800 transition-colors"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteInsumo(ins)}
+                                  title="Eliminar insumo"
+                                  className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -1718,13 +1809,18 @@ export const CosteoView = () => {
       )}
 
       {/* =================================================================== */}
-      {/* MODAL CRUD INSUMO                                                   */}
+      {/* MODAL CRUD INSUMO (92dvh en móvil con footer fijo)                  */}
       {/* =================================================================== */}
       {isInsumoModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-pink-100 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif font-bold text-xl text-slate-800">
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsInsumoModalOpen(false);
+          }}
+        >
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-lg rounded-t-2xl sm:rounded-3xl shadow-2xl border border-pink-100 flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <h3 className="font-serif font-bold text-lg sm:text-xl text-slate-800">
                 {insumoForm.id ? 'Editar Insumo de Producción' : 'Nuevo Insumo de Producción'}
               </h3>
               <button
@@ -1736,135 +1832,139 @@ export const CosteoView = () => {
               </button>
             </div>
 
-            {insumoForm.id && (insumoUsageCounts.get(insumoForm.id) || 0) > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 flex items-start gap-2">
-                <RefreshCw className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>
-                  Este insumo se usa en <strong>{insumoUsageCounts.get(insumoForm.id)}</strong> receta(s). Al guardar, se recalcularán automáticamente sus costos y los productos vinculados.
-                </span>
-              </div>
-            )}
-
-            <form onSubmit={handleSaveInsumo} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Nombre del Insumo *</label>
-                <input
-                  type="text"
-                  required
-                  value={insumoForm.nombre}
-                  onChange={(e) => setInsumoForm({ ...insumoForm, nombre: e.target.value })}
-                  placeholder="Ej. Queso Crema Philadelphia, Caja porción triangular..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Tipo</label>
-                  <select
-                    value={insumoForm.tipo}
-                    onChange={(e) => setInsumoForm({ ...insumoForm, tipo: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-bold bg-slate-50"
-                  >
-                    <option value="materia_prima">Materia Prima (Tanda)</option>
-                    <option value="empaque">Empaque (Por Porción)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Unidad de Compra</label>
-                  <select
-                    value={insumoForm.unidad_compra}
-                    onChange={(e) => handleUnidadCompraChange(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-bold bg-slate-50"
-                  >
-                    <option value="kg">Kilogramo (kg → uso en g)</option>
-                    <option value="g">Gramos (g)</option>
-                    <option value="L">Litro (L → uso en ml)</option>
-                    <option value="ml">Mililitros (ml)</option>
-                    <option value="und">Unidades / Paquete (und)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Contenido por Paquete (en {insumoForm.unidad_uso}) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0.001"
-                    step="any"
-                    value={insumoForm.cantidad_por_paquete}
-                    onChange={(e) =>
-                      setInsumoForm({ ...insumoForm, cantidad_por_paquete: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Precio de Compra (S/.) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={insumoForm.precio_compra}
-                    onChange={(e) =>
-                      setInsumoForm({ ...insumoForm, precio_compra: e.target.value })
-                    }
-                    placeholder="Ej. 38.50"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-black"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Proveedor (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={insumoForm.proveedor}
-                  onChange={(e) => setInsumoForm({ ...insumoForm, proveedor: e.target.value })}
-                  placeholder="Ej. Makro, Distribuidora Dulce..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold"
-                />
-              </div>
-
-              {/* Cálculo Automático en Vivo */}
-              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-bold text-indigo-700 block">
-                    Costo Unitario Base Calculado
-                  </span>
-                  {insumoForm.unidad_uso !== 'und' && (
-                    <span className="text-[11px] text-indigo-600">
-                      Equiv. S/ {(liveCostoUnitarioInsumo * 1000).toFixed(2)} por{' '}
-                      {insumoForm.unidad_uso === 'g' ? '1 kg' : '1 L'}
+            <form onSubmit={handleSaveInsumo} className="flex-1 flex flex-col justify-between overflow-y-auto text-xs">
+              <div className="p-4 sm:p-5 space-y-3.5">
+                {insumoForm.id && (insumoUsageCounts.get(insumoForm.id) || 0) > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 flex items-start gap-2">
+                    <RefreshCw className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>
+                      Este insumo se usa en <strong>{insumoUsageCounts.get(insumoForm.id)}</strong> receta(s). Al guardar, se recalcularán automáticamente sus costos y los productos vinculados.
                     </span>
-                  )}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nombre del Insumo *</label>
+                  <input
+                    type="text"
+                    required
+                    value={insumoForm.nombre}
+                    onChange={(e) => setInsumoForm({ ...insumoForm, nombre: e.target.value })}
+                    placeholder="Ej. Queso Crema Philadelphia, Caja porción..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-semibold focus:outline-none focus:border-brand-500"
+                  />
                 </div>
-                <div className="text-base font-black text-indigo-900">
-                  S/ {liveCostoUnitarioInsumo.toFixed(4)} / {insumoForm.unidad_uso}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Tipo</label>
+                    <select
+                      value={insumoForm.tipo}
+                      onChange={(e) => setInsumoForm({ ...insumoForm, tipo: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold bg-slate-50"
+                    >
+                      <option value="materia_prima">Materia Prima (Tanda)</option>
+                      <option value="empaque">Empaque (Por Porción)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Unidad de Compra</label>
+                    <select
+                      value={insumoForm.unidad_compra}
+                      onChange={(e) => handleUnidadCompraChange(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold bg-slate-50"
+                    >
+                      <option value="kg">Kilogramo (kg → uso en g)</option>
+                      <option value="g">Gramos (g)</option>
+                      <option value="L">Litro (L → uso en ml)</option>
+                      <option value="ml">Mililitros (ml)</option>
+                      <option value="und">Unidades / Paquete (und)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Contenido (en {insumoForm.unidad_uso}) *
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      required
+                      min="0.001"
+                      step="any"
+                      value={insumoForm.cantidad_por_paquete}
+                      onChange={(e) =>
+                        setInsumoForm({ ...insumoForm, cantidad_por_paquete: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Precio Compra (S/.) *
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={insumoForm.precio_compra}
+                      onChange={(e) =>
+                        setInsumoForm({ ...insumoForm, precio_compra: e.target.value })
+                      }
+                      placeholder="Ej. 38.50"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-black"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Proveedor (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={insumoForm.proveedor}
+                    onChange={(e) => setInsumoForm({ ...insumoForm, proveedor: e.target.value })}
+                    placeholder="Ej. Makro, Distribuidora Dulce..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-semibold"
+                  />
+                </div>
+
+                {/* Cálculo Automático en Vivo */}
+                <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-indigo-700 block">
+                      Costo Unitario Base Calculado
+                    </span>
+                    {insumoForm.unidad_uso !== 'und' && (
+                      <span className="text-[11px] text-indigo-600">
+                        Equiv. S/ {(liveCostoUnitarioInsumo * 1000).toFixed(2)} por{' '}
+                        {insumoForm.unidad_uso === 'g' ? '1 kg' : '1 L'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-base font-black text-indigo-900">
+                    S/ {liveCostoUnitarioInsumo.toFixed(4)} / {insumoForm.unidad_uso}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="sticky bottom-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white border-t border-slate-100 flex justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsInsumoModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                  className="flex-1 sm:flex-none px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingInsumo}
-                  className="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-60 text-white font-extrabold flex items-center gap-1.5"
+                  className="flex-[2] sm:flex-none px-5 py-3 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-60 text-white font-extrabold flex items-center justify-center gap-1.5"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{savingInsumo ? 'Recalculando...' : 'Guardar Insumo'}</span>

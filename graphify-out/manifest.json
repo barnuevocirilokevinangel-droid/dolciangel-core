@@ -1,0 +1,297 @@
+{
+  "api/_lib/apisunat.js": {
+    "mtime": 1794843425.90254,
+    "seen": 1795713310.9931033,
+    "ast_hash": "18667f85fd424bf66f89411a8e2934ee",
+    "semantic_hash": "18667f85fd424bf66f89411a8e2934ee"
+  },
+  "api/anular-comprobante.js": {
+    "mtime": 1794843476.1313703,
+    "seen": 1795713310.9931033,
+    "ast_hash": "3e075d2c8aacfde9a072f742fd5711b0",
+    "semantic_hash": "3e075d2c8aacfde9a072f742fd5711b0"
+  },
+  "api/consultar-doc.js": {
+    "mtime": 1794843492.9482114,
+    "seen": 1795713310.9931033,
+    "ast_hash": "b32ae3482e253ee4dff56a9e7fbdabe1",
+    "semantic_hash": "b32ae3482e253ee4dff56a9e7fbdabe1"
+  },
+  "api/emitir-comprobante.js": {
+    "mtime": 1795539566.8970327,
+    "seen": 1795713310.9931033,
+    "ast_hash": "01de63cbccf9b152cd175cc236e95462",
+    "semantic_hash": "01de63cbccf9b152cd175cc236e95462"
+  },
+  "firebase.json": {
+    "mtime": 1785438459.03615,
+    "seen": 1795713310.9931033,
+    "ast_hash": "b0502d30f66e265c2239979bea58780d",
+    "semantic_hash": "b0502d30f66e265c2239979bea58780d",
+    "ast_empty": true
+  },
+  "package.json": {
+    "mtime": 1794191960.7614312,
+    "seen": 1795713310.9931033,
+    "ast_hash": "b8e89fbbb759150d9728d86d60691b7e",
+    "semantic_hash": "b8e89fbbb759150d9728d86d60691b7e"
+  },
+  "postcss.config.js": {
+    "mtime": 1793205680.8598058,
+    "seen": 1795713310.9931033,
+    "ast_hash": "ef3ba2a81ba19f8ea5ddf625521e96f0",
+    "semantic_hash": "ef3ba2a81ba19f8ea5ddf625521e96f0"
+  },
+  "scripts/initCorrelativos.js": {
+    "mtime": 1794192118.9040382,
+    "seen": 1795713310.9931033,
+    "ast_hash": "8960aa5a136a1bcdcf5640440c17ed1b",
+    "semantic_hash": "8960aa5a136a1bcdcf5640440c17ed1b"
+  },
+  "scripts/migrateOldSalesToVentas.js": {
+    "mtime": 1793330765.9957743,
+    "seen": 1795713310.9931033,
+    "ast_hash": "2dea41333615adcfa789014e449a8d7b",
+    "semantic_hash": "2dea41333615adcfa789014e449a8d7b"
+  },
+  "scripts/syncOfficialPrices.js": {
+    "mtime": 1793250706.8992972,
+    "seen": 1795713310.9931033,
+    "ast_hash": "f20805bf0dcca41eabeddcd956c74895",
+    "semantic_hash": "f20805bf0dcca41eabeddcd956c74895"
+  },
+  "src/App.jsx": {
+    "mtime": 1795540261.899244,
+    "seen": 1795713310.9931033,
+    "ast_hash": "bec890728af6cde2b698634ed1184606",
+    "semantic_hash": "bec890728af6cde2b698634ed1184606"
+  },
+  "src/components/AdminProductManager.jsx": {
+    "mtime": 1795541441.664626,
+    "seen": 1795713310.9931033,
+    "ast_hash": "c1125176782141dcd1ecb686fde9a18e",
+    "semantic_hash": "c1125176782141dcd1ecb686fde9a18e"
+  },
+  "src/components/AdminView.jsx": {
+    "mtime": 1794843960.6884997,
+    "seen": 1795713310.9931033,
+    "ast_hash": "3f6649ee50011d45fb97bc36c9a240e7",
+    "semantic_hash": "3f6649ee50011d45fb97bc36c9a240e7"
+  },
+  "src/components/BottomNav.jsx": {
+    "mtime": 1795540266.2193844,
+    "seen": 1795713310.9931033,
+    "ast_hash": "d00dd450eba65b9eb225a8df7a6d7d37",
+    "semantic_hash": "d00dd450eba65b9eb225a8df7a6d7d37"
+  },
+  "src/components/CajaView.jsx": {
+    "mtime": 1794843612.3723974,
+    "seen": 1795713310.9931033,
+    "ast_hash": "8a2c4d8894f463ab58fa0df6c0d2751d",
+    "semantic_hash": "8a2c4d8894f463ab58fa0df6c0d2751d"
+  },
+  "src/components/CartaWebView.jsx": {
+    "mtime": 1794764403.0261047,
+    "seen": 1795713310.9931033,
+    "ast_hash": "b9360e38f5a79772e008b59da250b8a2",
+    "semantic_hash": "b9360e38f5a79772e008b59da250b8a2"
+  },
+  "src/components/ContabilidadView.jsx": {
+    "mtime": 1794843833.3280447,
+    "seen": 1795713310.9931033,
+    "ast_hash": "56682f3f1c8927ec07738ce44342ba42",
+    "semantic_hash": "56682f3f1c8927ec07738ce44342ba42"
+  },
+  "src/components/CosteoView.jsx": {
+    "mtime": 1795541422.893536,
+    "seen": 1795713310.9931033,
+    "ast_hash": "6816516ab13725bb973be421c8daf4fe",
+    "semantic_hash": "6816516ab13725bb973be421c8daf4fe"
+  },
+  "src/components/FidelidadView.jsx": {
+    "mtime": 1793210557.695624,
+    "seen": 1795713310.9931033,
+    "ast_hash": "d3cc610bad51b4d6231529e3e2a49cb5",
+    "semantic_hash": "d3cc610bad51b4d6231529e3e2a49cb5"
+  },
+  "src/components/GestorHeroView.jsx": {
+    "mtime": 1795539769.8470795,
+    "seen": 1795713310.9931033,
+    "ast_hash": "fc211fd7f5bb1c30b5b4f85bc9a1c199",
+    "semantic_hash": "fc211fd7f5bb1c30b5b4f85bc9a1c199"
+  },
+  "src/components/Header.jsx": {
+    "mtime": 1794255635.118931,
+    "seen": 1795713310.9931033,
+    "ast_hash": "62641c4421671119a9b5e4f67a0a1a50",
+    "semantic_hash": "62641c4421671119a9b5e4f67a0a1a50"
+  },
+  "src/components/HistorialComandasView.jsx": {
+    "mtime": 1794843786.113966,
+    "seen": 1795713310.9931033,
+    "ast_hash": "09119cff87ef3926d5badd65c6a9cee3",
+    "semantic_hash": "09119cff87ef3926d5badd65c6a9cee3"
+  },
+  "src/components/HistorialGlobalView.jsx": {
+    "mtime": 1793210459.6919549,
+    "seen": 1795713310.9931033,
+    "ast_hash": "dce1b8122a87f874b81d5a7dbbdee1b8",
+    "semantic_hash": "dce1b8122a87f874b81d5a7dbbdee1b8"
+  },
+  "src/components/ImageUploader.jsx": {
+    "mtime": 1795539707.8167484,
+    "seen": 1795713310.9931033,
+    "ast_hash": "3476c930726ef5b2ed77cc06255193a1",
+    "semantic_hash": "3476c930726ef5b2ed77cc06255193a1"
+  },
+  "src/components/KardexView.jsx": {
+    "mtime": 1794764460.3893056,
+    "seen": 1795713310.9931033,
+    "ast_hash": "12f2468cb03c4d47725cff4839985f9e",
+    "semantic_hash": "12f2468cb03c4d47725cff4839985f9e"
+  },
+  "src/components/LandingPageView.jsx": {
+    "mtime": 1794244271.9937153,
+    "seen": 1795713310.9931033,
+    "ast_hash": "96a1b6750c335170bd693ecc706835e3",
+    "semantic_hash": "96a1b6750c335170bd693ecc706835e3"
+  },
+  "src/components/LegalModals.jsx": {
+    "mtime": 1794244173.7696278,
+    "seen": 1795713310.9931033,
+    "ast_hash": "6f155ee42df90a1655363649d602b57a",
+    "semantic_hash": "6f155ee42df90a1655363649d602b57a"
+  },
+  "src/components/LoginModal.jsx": {
+    "mtime": 1794255567.712965,
+    "seen": 1795713310.9931033,
+    "ast_hash": "c8f0a5bc90d113e2b29f728c4bc35ee0",
+    "semantic_hash": "c8f0a5bc90d113e2b29f728c4bc35ee0"
+  },
+  "src/components/ProductImage.jsx": {
+    "mtime": 1795539721.0233977,
+    "seen": 1795713310.9931033,
+    "ast_hash": "bd719ebbdd68d25bf63676adcde4f16e",
+    "semantic_hash": "bd719ebbdd68d25bf63676adcde4f16e"
+  },
+  "src/components/ProtectedRoute.jsx": {
+    "mtime": 1794255500.6284513,
+    "seen": 1795713311.000531,
+    "ast_hash": "a9e1faeb2a0ed7eebf561c2d026dc4f1",
+    "semantic_hash": "a9e1faeb2a0ed7eebf561c2d026dc4f1"
+  },
+  "src/components/PublicCartaView.jsx": {
+    "mtime": 1794764340.5451493,
+    "seen": 1795713311.000531,
+    "ast_hash": "6c02560d559a3581d45ddcd69894fd56",
+    "semantic_hash": "6c02560d559a3581d45ddcd69894fd56"
+  },
+  "src/components/ResumenView.jsx": {
+    "mtime": 1795540002.7999108,
+    "seen": 1795713311.000531,
+    "ast_hash": "1fe4939034f1230202463c24558cad67",
+    "semantic_hash": "1fe4939034f1230202463c24558cad67"
+  },
+  "src/components/StatsView.jsx": {
+    "mtime": 1795539974.9282935,
+    "seen": 1795713311.000531,
+    "ast_hash": "da41f2e49ba69776e54abe655c2740a5",
+    "semantic_hash": "da41f2e49ba69776e54abe655c2740a5"
+  },
+  "src/components/TicketTermico.jsx": {
+    "mtime": 1794802999.5473597,
+    "seen": 1795713311.000531,
+    "ast_hash": "3e65708621a91d916be72b2cf8a442b0",
+    "semantic_hash": "3e65708621a91d916be72b2cf8a442b0"
+  },
+  "src/components/VentasView.jsx": {
+    "mtime": 1794843688.5885744,
+    "seen": 1795713311.0015676,
+    "ast_hash": "12e623a7d6155c255c31e1b0720b3cf2",
+    "semantic_hash": "12e623a7d6155c255c31e1b0720b3cf2"
+  },
+  "src/context/AppContext.jsx": {
+    "mtime": 1795539678.3758917,
+    "seen": 1795713311.0015676,
+    "ast_hash": "061ee61c3e04be0be5cc9e4f50bf3ddb",
+    "semantic_hash": "061ee61c3e04be0be5cc9e4f50bf3ddb"
+  },
+  "src/data/initialCatalog.js": {
+    "mtime": 1793250691.370245,
+    "seen": 1795713311.0015676,
+    "ast_hash": "2e68dab9743a25856c691b20319aca8a",
+    "semantic_hash": "2e68dab9743a25856c691b20319aca8a"
+  },
+  "src/main.jsx": {
+    "mtime": 1794244088.0436575,
+    "seen": 1795713311.0026948,
+    "ast_hash": "89b3f32ef14cb33cfcb81a39ec0b49dc",
+    "semantic_hash": "89b3f32ef14cb33cfcb81a39ec0b49dc"
+  },
+  "src/services/firebase.js": {
+    "mtime": 1795539574.2342665,
+    "seen": 1795713311.0026948,
+    "ast_hash": "07d2542f3e6fae3783d2f22d86ce409d",
+    "semantic_hash": "07d2542f3e6fae3783d2f22d86ce409d"
+  },
+  "src/services/imageUpload.js": {
+    "mtime": 1795539705.0553946,
+    "seen": 1795713311.0026948,
+    "ast_hash": "133eb179d1601728049d2f2afd97c980",
+    "semantic_hash": "133eb179d1601728049d2f2afd97c980"
+  },
+  "src/services/migration.js": {
+    "mtime": 1793210097.8908193,
+    "seen": 1795713311.0026948,
+    "ast_hash": "25f41975b880f9a041d6cb23228edd4b",
+    "semantic_hash": "25f41975b880f9a041d6cb23228edd4b"
+  },
+  "src/services/productUtils.js": {
+    "mtime": 1795539607.3974805,
+    "seen": 1795713311.0026948,
+    "ast_hash": "9894b535cfb7d03a454b28a05352af86",
+    "semantic_hash": "9894b535cfb7d03a454b28a05352af86"
+  },
+  "src/services/sunatService.js": {
+    "mtime": 1794843530.9895883,
+    "seen": 1795713311.0026948,
+    "ast_hash": "42f938bee2240e6e5494a4139d06a36e",
+    "semantic_hash": "42f938bee2240e6e5494a4139d06a36e"
+  },
+  "sw-pedidos.js": {
+    "mtime": 1780289759.0977142,
+    "seen": 1795713311.0041175,
+    "ast_hash": "7fdd704bc1513503705541bdd6499dff",
+    "semantic_hash": "7fdd704bc1513503705541bdd6499dff"
+  },
+  "tailwind.config.js": {
+    "mtime": 1793205675.805724,
+    "seen": 1795713311.0041175,
+    "ast_hash": "91c471a2d681b0a0b13a81e77e38bd10",
+    "semantic_hash": "91c471a2d681b0a0b13a81e77e38bd10"
+  },
+  "vercel.json": {
+    "mtime": 1794187249.973783,
+    "seen": 1795713311.0041175,
+    "ast_hash": "217a7555e2881003895b86e7f6c87d08",
+    "semantic_hash": "217a7555e2881003895b86e7f6c87d08"
+  },
+  "vite.config.js": {
+    "mtime": 1793205667.1573355,
+    "seen": 1795713311.0041175,
+    "ast_hash": "4326749adc3c4a3e048ad0100fc125fc",
+    "semantic_hash": "4326749adc3c4a3e048ad0100fc125fc"
+  },
+  "public/assets/video/hero.mp4": {
+    "mtime": 1783028541.068015,
+    "seen": 1795713311.0041175,
+    "ast_hash": "98cdd6c2d38598a0123cd2632aefb156",
+    "semantic_hash": "98cdd6c2d38598a0123cd2632aefb156"
+  },
+  "public/assets/video/historia.mp4": {
+    "mtime": 1783101672.9112072,
+    "seen": 1795713311.0041175,
+    "ast_hash": "9d055643de0001b039519264ce358a17",
+    "semantic_hash": "9d055643de0001b039519264ce358a17"
+  }
+}

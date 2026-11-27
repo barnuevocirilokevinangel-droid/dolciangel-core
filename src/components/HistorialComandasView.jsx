@@ -277,9 +277,146 @@ export const HistorialComandasView = () => {
         </div>
       </div>
 
-      {/* Tabla de Comandas */}
+      {/* Tabla / Card List de Comandas */}
       <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* VISTA MÓVIL (< md): LISTA DE TARJETAS APILADAS */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredVentas.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs">
+              No se encontraron comandas registradas
+            </div>
+          ) : (
+            filteredVentas.map((v) => {
+              const pdfUrl = v.comprobante?.enlace_del_pdf || v.enlace_del_pdf;
+              const xmlUrl = v.comprobante?.enlace_del_xml || v.enlace_del_xml;
+              const isAnulada = v.estado === 'ANULADA';
+              const codigoDisplay = v.comprobante?.codigoCompleto || v.id;
+              const totalPlatos = v.items?.reduce((acc, it) => acc + (it.cantidad || 0), 0) || 0;
+
+              return (
+                <div
+                  key={v.id}
+                  className={`p-3.5 space-y-2 text-xs ${isAnulada ? 'bg-rose-50/40 opacity-85' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className={`font-mono font-black text-sm ${
+                            isAnulada ? 'line-through text-rose-700' : 'text-slate-900'
+                          }`}
+                        >
+                          {codigoDisplay}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.2 rounded-full ${
+                            v.tipoComprobante === 'BOLETA'
+                              ? 'bg-purple-100 text-purple-800'
+                              : v.tipoComprobante === 'FACTURA'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {v.tipoComprobante}
+                        </span>
+                        {isAnulada && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.2 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                            ANULADA
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {v.cliente?.nombre || 'Público General'}{' '}
+                        {v.cliente?.documento ? `(${v.cliente.documento})` : ''}
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span
+                        className={`font-black text-base block ${
+                          isAnulada ? 'line-through text-rose-500' : 'text-brand-700'
+                        }`}
+                      >
+                        S/ {Number(v.total || 0).toFixed(2)}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500">
+                        {v.metodoPago} • {totalPlatos} ít.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span className="text-[11px] text-slate-400">
+                      {new Date(v.fecha).toLocaleString([], {
+                        month: 'short',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}{' '}
+                      • {v.vendedor}
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      {pdfUrl ? (
+                        <a
+                          href={pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[11px] inline-flex items-center gap-1"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-gold-400" />
+                          <span>PDF</span>
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTicket(v)}
+                          className="px-2.5 py-1.5 rounded-lg bg-pink-50 text-brand-700 font-bold text-[11px] inline-flex items-center gap-1"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Ver</span>
+                        </button>
+                      )}
+
+                      {xmlUrl && (
+                        <a
+                          href={xmlUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg bg-slate-100 text-slate-700"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+
+                      {isDueno && !isAnulada && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(v)}
+                            className="p-1.5 rounded-lg bg-amber-50 text-amber-800"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAnularVenta(v)}
+                            className="p-1.5 rounded-lg bg-rose-50 text-rose-700"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* VISTA TABLET/ESCRITORIO (md:): TABLA COMPLETA */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
               <tr>
@@ -459,10 +596,10 @@ export const HistorialComandasView = () => {
         </div>
       </div>
 
-      {/* Modal: Editar Venta (Exclusivo Dueño 👑) */}
+      {/* Modal: Editar Venta (92dvh en móvil) */}
       {editingSale && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-md rounded-t-2xl sm:rounded-3xl p-5 shadow-2xl border border-pink-100 flex flex-col justify-between overflow-y-auto">
             <div className="flex items-center gap-2 mb-3">
               <span className="p-2 rounded-xl bg-amber-100 text-amber-800">
                 <Crown className="w-5 h-5" />
@@ -559,10 +696,10 @@ export const HistorialComandasView = () => {
         </div>
       )}
 
-      {/* Modal: Anular Venta / Emitir Nota de Crédito SUNAT (Exclusivo Dueño 👑) */}
+      {/* Modal: Anular Venta / Emitir Nota de Crédito SUNAT (92dvh en móvil) */}
       {voidingSale && (
-        <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-rose-200 w-full max-w-md space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-md rounded-t-2xl sm:rounded-3xl p-5 shadow-2xl border border-rose-200 flex flex-col justify-between overflow-y-auto space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-11 h-11 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="w-6 h-6" />

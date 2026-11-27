@@ -473,9 +473,123 @@ export const ContabilidadView = () => {
         </div>
       </div>
 
-      {/* Tabla de Registros SIRE */}
+      {/* Tabla / Card List de Registros SIRE */}
       <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* VISTA MÓVIL (< md): LISTA DE TARJETAS APILADAS */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {isLoading ? (
+            <div className="p-8 text-center text-slate-400 text-xs font-semibold">
+              Cargando registros tributarios desde Firestore...
+            </div>
+          ) : sireRows.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              No se encontraron comprobantes para el mes {selectedMonth}.
+            </div>
+          ) : (
+            sireRows.map((r) => {
+              const isNC = r.tipoComprobante === '07';
+              return (
+                <div
+                  key={r.rowKey}
+                  className={`p-3.5 space-y-2 text-xs ${isNC ? 'bg-rose-50/40' : ''}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`px-2 py-0.5 rounded font-mono font-extrabold text-[10px] ${
+                          r.tipoComprobante === '01'
+                            ? 'bg-amber-100 text-amber-900'
+                            : r.tipoComprobante === '03'
+                            ? 'bg-purple-100 text-purple-900'
+                            : r.tipoComprobante === '07'
+                            ? 'bg-rose-100 text-rose-900'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {r.tipoComprobante}
+                      </span>
+                      <span className="font-mono font-black text-sm text-slate-900">
+                        {r.codigoCompleto}
+                      </span>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        r.estado.includes('ANULADO')
+                          ? 'bg-rose-100 text-rose-800'
+                          : r.estado === 'CONTROL_INTERNO'
+                          ? 'bg-slate-100 text-slate-700'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {r.estado}
+                    </span>
+                  </div>
+
+                  {isNC && r.docModSerie && (
+                    <div className="text-[11px] text-rose-600 font-mono">
+                      Modifica: {r.docModTipo} {r.docModSerie}-{r.docModNumero}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-800 truncate">{r.razonSocialCliente}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        [{r.tipoDocCliente}] {r.numDocCliente} • {r.fechaEmision}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-[11px] font-bold text-slate-600 block">{r.sede}</span>
+                      <span className="text-[10px] text-slate-400 font-bold">{r.metodoPago}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-3 font-mono text-[11px]">
+                      <span className="text-slate-500">
+                        Base: <strong className="text-slate-700">{r.baseGravada.toFixed(2)}</strong>
+                      </span>
+                      <span className="text-slate-500">
+                        IGV: <strong className="text-slate-700">{r.igv.toFixed(2)}</strong>
+                      </span>
+                      <span className={`font-black text-xs ${isNC ? 'text-rose-700' : 'text-brand-800'}`}>
+                        S/ {r.total.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {r.enlacePdf && (
+                        <a
+                          href={r.enlacePdf}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-900 text-gold-300 font-bold text-[11px] flex items-center gap-1"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>PDF</span>
+                        </a>
+                      )}
+                      {r.enlaceXml && (
+                        <a
+                          href={r.enlaceXml}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center gap-1"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>XML</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* VISTA TABLET/ESCRITORIO (md:): TABLA COMPLETA */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200 text-[11px]">
               <tr>

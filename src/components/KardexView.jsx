@@ -616,7 +616,71 @@ export const KardexView = () => {
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* VISTA MÓVIL (< md): LISTA DE TARJETAS APILADAS */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredStockProducts.length === 0 ? (
+                <div className="p-10 text-center text-slate-400">
+                  <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                  <p className="font-semibold text-sm">No se encontraron productos</p>
+                </div>
+              ) : (
+                filteredStockProducts.map((prod) => {
+                  const stockBA = getProductStock(prod, 'BA');
+                  const stockVE = getProductStock(prod, 'VE');
+                  const precioBA = getProductPrice(prod, 'BA');
+                  const precioVE = getProductPrice(prod, 'VE');
+
+                  return (
+                    <div key={prod.id} className="p-3.5 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="font-extrabold text-sm text-slate-900 block leading-tight">
+                            {prod.nombre}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-semibold">
+                            {prod.categoria || 'General'} • BA: S/ {precioBA.toFixed(2)} | VE: S/ {precioVE.toFixed(2)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenQuickStock(prod)}
+                          className="shrink-0 px-3 py-2 rounded-xl bg-slate-900 hover:bg-brand-700 text-white font-bold text-xs flex items-center gap-1.5 active:scale-95"
+                        >
+                          <SlidersHorizontal className="w-3.5 h-3.5 text-gold-400" />
+                          <span>Ajustar</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div
+                          className={`p-2 rounded-xl border flex items-center justify-between text-xs font-extrabold ${
+                            stockBA > 0
+                              ? 'bg-emerald-50/70 text-emerald-800 border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          <span>🏔️ B. Aires:</span>
+                          <span>{stockBA > 0 ? `${stockBA} un.` : 'AGOTADO (0)'}</span>
+                        </div>
+                        <div
+                          className={`p-2 rounded-xl border flex items-center justify-between text-xs font-extrabold ${
+                            stockVE > 0
+                              ? 'bg-blue-50/70 text-blue-800 border-blue-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          <span>🏖️ V. España:</span>
+                          <span>{stockVE > 0 ? `${stockVE} un.` : 'AGOTADO (0)'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* VISTA TABLET/ESCRITORIO (md:): TABLA COMPLETA */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
                   <tr>
@@ -790,7 +854,84 @@ export const KardexView = () => {
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* VISTA MÓVIL (< md): CARD LIST DE MOVIMIENTOS KARDEX */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredKardex.length === 0 ? (
+                <div className="p-10 text-center text-slate-400">
+                  <FileText className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                  <p className="font-semibold text-sm">No hay movimientos registrados</p>
+                </div>
+              ) : (
+                filteredKardex.map((item) => {
+                  const isIngreso = item.tipo === 'INGRESO' || (item.cantidad > 0 && item.tipo !== 'MERMA');
+                  const isMerma = item.tipo === 'MERMA';
+
+                  return (
+                    <div key={item.id} className="p-3.5 space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            isIngreso
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : isMerma
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
+                          {item.tipo}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-semibold">
+                          {new Date(item.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}{' '}
+                          {new Date(item.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-sm text-slate-900">{item.productoNombre}</span>
+                        <span
+                          className={`font-mono font-black text-base ${
+                            isIngreso ? 'text-emerald-600' : 'text-rose-600'
+                          }`}
+                        >
+                          {item.cantidad > 0 ? `+${item.cantidad}` : item.cantidad}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                        <span className="truncate">
+                          {item.motivo || 'Sin motivo'} {item.justificacion ? `("${item.justificacion}")` : ''}
+                        </span>
+                        <span className="shrink-0 font-semibold">{item.responsable || 'Sistema'}</span>
+                      </div>
+
+                      {isDueno && (
+                        <div className="flex justify-end gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditKardex(item)}
+                            className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center gap-1"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Editar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAnularKardex(item)}
+                            className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-bold text-[11px] flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Revertir</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* VISTA TABLET/ESCRITORIO (md:): TABLA COMPLETA */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50/50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
                   <tr>
@@ -902,107 +1043,95 @@ export const KardexView = () => {
       )}
 
       {/* ============================================================== */}
-      {/* MODAL: AJUSTE RÁPIDO DE STOCK DIRECTO                          */}
+      {/* MODAL: AJUSTE RÁPIDO DE STOCK DIRECTO (92dvh en móvil)         */}
       {/* ============================================================== */}
       {editingStockProd && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md">
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200 shadow-sm">
-                  <ProductImage 
-                    src={editingStockProd.foto_url || editingStockProd.imagen || editingStockProd.image || editingStockProd.url || editingStockProd.fotoUrl || editingStockProd.imagenUrl || editingStockProd.imagen_url || editingStockProd.foto || editingStockProd.img} 
-                    alt={editingStockProd.nombre} 
-                    categoria={editingStockProd.categoria} 
-                    objectFit="object-cover"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-pink-600 bg-pink-50 px-2 py-0.5 rounded-md">
-                    {editingStockProd.categoria || 'Producto'}
-                  </span>
-                  <h3 className="font-serif font-bold text-base text-slate-900 mt-0.5 leading-tight">
-                    {editingStockProd.nombre}
-                  </h3>
-                  <span className="text-xs text-slate-400 font-mono">ID: {editingStockProd.id}</span>
-                </div>
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-md rounded-t-2xl sm:rounded-3xl shadow-2xl border border-pink-100 flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-pink-600 bg-pink-50 px-2 py-0.5 rounded-md">
+                  {editingStockProd.categoria || 'Producto'}
+                </span>
+                <h3 className="font-serif font-bold text-base sm:text-lg text-slate-900 mt-0.5 leading-tight">
+                  {editingStockProd.nombre}
+                </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setEditingStockProd(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="p-1.5 rounded-full bg-slate-100 text-slate-600"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 mb-4 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-              Ingresa el nuevo conteo de stock físico. El sistema calculará la diferencia y registrará la auditoría en el Kardex.
-            </p>
+            <form onSubmit={handleSaveQuickStock} className="flex-1 flex flex-col justify-between overflow-y-auto text-xs">
+              <div className="p-4 sm:p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-200">
+                    <label className="font-bold text-emerald-800 block mb-1">
+                      Stock Buenos Aires *
+                    </label>
+                    <span className="text-[10px] text-emerald-600 block mb-1.5 font-medium">
+                      Actual: {getProductStock(editingStockProd, 'BA')} unids
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      value={quickStockBA}
+                      onChange={(e) => setQuickStockBA(e.target.value)}
+                      required
+                      className="w-full px-3 py-2.5 rounded-xl border border-emerald-300 font-black text-base text-emerald-900 bg-white focus:outline-none"
+                    />
+                  </div>
 
-            <form onSubmit={handleSaveQuickStock} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                {/* Stock Buenos Aires */}
-                <div className="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-200">
-                  <label className="font-bold text-emerald-800 block mb-1">
-                    Stock Buenos Aires *
-                  </label>
-                  <span className="text-[10px] text-emerald-600 block mb-1.5 font-medium">
-                    Actual: {getProductStock(editingStockProd, 'BA')} unids
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={quickStockBA}
-                    onChange={(e) => setQuickStockBA(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-emerald-300 font-black text-sm text-emerald-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+                  <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-200">
+                    <label className="font-bold text-blue-800 block mb-1">
+                      Stock Villa España *
+                    </label>
+                    <span className="text-[10px] text-blue-600 block mb-1.5 font-medium">
+                      Actual: {getProductStock(editingStockProd, 'VE')} unids
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      value={quickStockVE}
+                      onChange={(e) => setQuickStockVE(e.target.value)}
+                      required
+                      className="w-full px-3 py-2.5 rounded-xl border border-blue-300 font-black text-base text-blue-900 bg-white focus:outline-none"
+                    />
+                  </div>
                 </div>
 
-                {/* Stock Villa España */}
-                <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-200">
-                  <label className="font-bold text-blue-800 block mb-1">
-                    Stock Villa España *
-                  </label>
-                  <span className="text-[10px] text-blue-600 block mb-1.5 font-medium">
-                    Actual: {getProductStock(editingStockProd, 'VE')} unids
-                  </span>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Motivo / Justificación *</label>
                   <input
-                    type="number"
-                    min="0"
-                    value={quickStockVE}
-                    onChange={(e) => setQuickStockVE(e.target.value)}
+                    type="text"
+                    value={quickMotivo}
+                    onChange={(e) => setQuickMotivo(e.target.value)}
+                    placeholder="Ej. Conteo físico y cuadre de inventario"
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-blue-300 font-black text-sm text-blue-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold text-base sm:text-xs"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Motivo / Justificación del Ajuste *</label>
-                <input
-                  type="text"
-                  value={quickMotivo}
-                  onChange={(e) => setQuickMotivo(e.target.value)}
-                  placeholder="Ej. Conteo físico y cuadre de inventario"
-                  required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-brand-500 text-xs"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white border-t border-slate-100 flex gap-2 shrink-0">
                 <button
                   type="button"
                   disabled={isSavingStock}
                   onClick={() => setEditingStockProd(null)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingStock}
-                  className="flex-1 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold shadow-md shadow-brand-700/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-extrabold shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSavingStock ? 'Guardando...' : 'Confirmar Ajuste'}</span>
@@ -1013,75 +1142,80 @@ export const KardexView = () => {
         </div>
       )}
 
-      {/* MODAL: EDITAR MOVIMIENTO KARDEX (EXCLUSIVO DUEÑO 👑) */}
+      {/* MODAL: EDITAR MOVIMIENTO KARDEX (92dvh en móvil) */}
       {editingKardex && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="p-2 rounded-xl bg-amber-100 text-amber-800">
-                <Crown className="w-5 h-5" />
-              </span>
-              <div>
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-md rounded-t-2xl sm:rounded-3xl shadow-2xl border border-pink-100 flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-amber-100 text-amber-800">
+                  <Crown className="w-5 h-5" />
+                </span>
                 <h3 className="font-serif font-bold text-lg text-slate-900">
                   Modificar Registro de Kardex
                 </h3>
-                <span className="text-xs text-slate-500">Permiso exclusivo de Dueño</span>
               </div>
+              <button
+                type="button"
+                onClick={() => setEditingKardex(null)}
+                className="p-1.5 rounded-full bg-slate-100 text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <form onSubmit={handleSaveEditKardex} className="space-y-3.5 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Producto</label>
-                <input
-                  type="text"
-                  disabled
-                  value={editingKardex.productoNombre}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold"
-                />
+            <form onSubmit={handleSaveEditKardex} className="flex-1 flex flex-col justify-between overflow-y-auto text-xs">
+              <div className="p-4 sm:p-5 space-y-3.5">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Producto</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={editingKardex.productoNombre}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Motivo *</label>
+                  <input
+                    type="text"
+                    value={editMotivo}
+                    onChange={(e) => setEditMotivo(e.target.value)}
+                    required
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-semibold text-base sm:text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Justificación Detallada</label>
+                  <textarea
+                    value={editJustificacion}
+                    onChange={(e) => setEditJustificacion(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Responsable</label>
+                  <input
+                    type="text"
+                    value={editResponsable}
+                    onChange={(e) => setEditResponsable(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Motivo *</label>
-                <input
-                  type="text"
-                  value={editMotivo}
-                  onChange={(e) => setEditMotivo(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Justificación Detallada</label>
-                <textarea
-                  value={editJustificacion}
-                  onChange={(e) => setEditJustificacion(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Responsable</label>
-                <input
-                  type="text"
-                  value={editResponsable}
-                  onChange={(e) => setEditResponsable(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white border-t border-slate-100 flex gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setEditingKardex(null)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold shadow-md shadow-brand-700/20"
+                  className="flex-1 py-3 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-extrabold shadow-md"
                 >
                   Guardar Cambios
                 </button>
@@ -1091,99 +1225,106 @@ export const KardexView = () => {
         </div>
       )}
 
-      {/* MODAL: REGISTRAR MERMA / PÉRDIDA */}
+      {/* MODAL: REGISTRAR MERMA / PÉRDIDA (92dvh en móvil) */}
       {showMermaModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 mx-auto flex items-center justify-center text-2xl mb-3">
-              ⚠️
-            </div>
-            <h3 className="font-serif font-bold text-lg text-slate-900 text-center">
-              Registrar Merma / Baja de Producto
-            </h3>
-            <p className="text-xs text-slate-500 text-center mt-1">
-              Sede: {SEDES[sede]?.nombre} • Se descontará del stock disponible
-            </p>
-
-            <form onSubmit={handleRegistrarMerma} className="mt-4 space-y-3.5">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-md rounded-t-2xl sm:rounded-3xl shadow-2xl border border-pink-100 flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Producto a dar de baja *
-                </label>
-                <select
-                  value={selectedProdMerma}
-                  onChange={(e) => setSelectedProdMerma(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500 bg-white"
-                >
-                  <option value="">-- Selecciona el producto --</option>
-                  {productos.filter(p => p.controla_stock !== false && p.en_inventario !== false).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre} (Stock actual: {getProductStock(p, sede)})
-                    </option>
-                  ))}
-                </select>
+                <h3 className="font-serif font-bold text-lg text-slate-900">
+                  ⚠️ Registrar Merma / Baja
+                </h3>
+                <p className="text-xs text-slate-500">Sede: {SEDES[sede]?.nombre}</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowMermaModal(false)}
+                className="p-1.5 rounded-full bg-slate-100 text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleRegistrarMerma} className="flex-1 flex flex-col justify-between overflow-y-auto">
+              <div className="p-4 sm:p-5 space-y-3.5">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Cantidad *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={cantidadMerma}
-                    onChange={(e) => setCantidadMerma(e.target.value)}
-                    placeholder="Ej. 2"
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Motivo *
+                    Producto a dar de baja *
                   </label>
                   <select
-                    value={motivoMerma}
-                    onChange={(e) => setMotivoMerma(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500 bg-white"
+                    value={selectedProdMerma}
+                    onChange={(e) => setSelectedProdMerma(e.target.value)}
+                    required
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold bg-white"
                   >
-                    <option value="Vencimiento">Vencimiento</option>
-                    <option value="Daño / Caída">Daño / Caída</option>
-                    <option value="Falla de Refrigeración">Falla de frío</option>
-                    <option value="Consumo de Personal">Consumo personal</option>
-                    <option value="Muestra Comercial">Degustación / Muestra</option>
-                    <option value="Error de Producción">Error producción</option>
+                    <option value="">-- Selecciona el producto --</option>
+                    {productos
+                      .filter((p) => p.controla_stock !== false && p.en_inventario !== false)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre} (Stock actual: {getProductStock(p, sede)})
+                        </option>
+                      ))}
                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Cantidad *</label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      value={cantidadMerma}
+                      onChange={(e) => setCantidadMerma(e.target.value)}
+                      placeholder="Ej. 2"
+                      required
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Motivo *</label>
+                    <select
+                      value={motivoMerma}
+                      onChange={(e) => setMotivoMerma(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold bg-white"
+                    >
+                      <option value="Vencimiento">Vencimiento</option>
+                      <option value="Daño / Caída">Daño / Caída</option>
+                      <option value="Falla de Refrigeración">Falla de frío</option>
+                      <option value="Consumo de Personal">Consumo personal</option>
+                      <option value="Muestra Comercial">Degustación / Muestra</option>
+                      <option value="Error de Producción">Error producción</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Justificación Detallada *
+                  </label>
+                  <textarea
+                    value={justificacionMerma}
+                    onChange={(e) => setJustificacionMerma(e.target.value)}
+                    placeholder="Explica qué ocurrió con el producto..."
+                    required
+                    rows={2}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-medium"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Justificación Detallada *
-                </label>
-                <textarea
-                  value={justificacionMerma}
-                  onChange={(e) => setJustificacionMerma(e.target.value)}
-                  placeholder="Explica qué ocurrió con el producto (Obligatorio para auditoría)..."
-                  required
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white border-t border-slate-100 flex gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowMermaModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20"
+                  className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md"
                 >
                   Confirmar Merma
                 </button>
@@ -1193,83 +1334,94 @@ export const KardexView = () => {
         </div>
       )}
 
-      {/* MODAL: REGISTRAR INGRESO DE STOCK */}
+      {/* MODAL: REGISTRAR INGRESO DE STOCK (92dvh en móvil) */}
       {showIngresoModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md">
-            <div className="w-12 h-12 rounded-2xl bg-gold-100 text-gold-700 mx-auto flex items-center justify-center text-2xl mb-3">
-              📥
-            </div>
-            <h3 className="font-serif font-bold text-lg text-slate-900 text-center">
-              Registrar Ingreso de Mercadería
-            </h3>
-            <p className="text-xs text-slate-500 text-center mt-1">
-              Sede: {SEDES[sede]?.nombre} • Se sumará al stock disponible
-            </p>
-
-            <form onSubmit={handleRegistrarIngreso} className="mt-4 space-y-3.5">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-md rounded-t-2xl sm:rounded-3xl shadow-2xl border border-pink-100 flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Producto a ingresar *
-                </label>
-                <select
-                  value={selectedProdIngreso}
-                  onChange={(e) => setSelectedProdIngreso(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500 bg-white"
-                >
-                  <option value="">-- Selecciona el producto --</option>
-                  {productos.filter(p => p.controla_stock !== false && p.en_inventario !== false).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre} (Stock actual: {getProductStock(p, sede)})
-                    </option>
-                  ))}
-                </select>
+                <h3 className="font-serif font-bold text-lg text-slate-900">
+                  📥 Ingreso de Mercadería
+                </h3>
+                <p className="text-xs text-slate-500">Sede: {SEDES[sede]?.nombre}</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowIngresoModal(false)}
+                className="p-1.5 rounded-full bg-slate-100 text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleRegistrarIngreso} className="flex-1 flex flex-col justify-between overflow-y-auto">
+              <div className="p-4 sm:p-5 space-y-3.5">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Cantidad a sumar *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={cantidadIngreso}
-                    onChange={(e) => setCantidadIngreso(e.target.value)}
-                    placeholder="Ej. 10"
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Origen / Lote
+                    Producto a ingresar *
                   </label>
                   <select
-                    value={origenIngreso}
-                    onChange={(e) => setOrigenIngreso(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500 bg-white"
+                    value={selectedProdIngreso}
+                    onChange={(e) => setSelectedProdIngreso(e.target.value)}
+                    required
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold bg-white"
                   >
-                    <option value="Producción Interna">Taller / Cocina Central</option>
-                    <option value="Proveedor Externo">Compra Proveedor</option>
-                    <option value="Traslado de Sede">Traslado entre sedes</option>
-                    <option value="Ajuste positivo">Ajuste de inventario</option>
+                    <option value="">-- Selecciona el producto --</option>
+                    {productos
+                      .filter((p) => p.controla_stock !== false && p.en_inventario !== false)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre} (Stock actual: {getProductStock(p, sede)})
+                        </option>
+                      ))}
                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Cantidad a sumar *
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      value={cantidadIngreso}
+                      onChange={(e) => setCantidadIngreso(e.target.value)}
+                      placeholder="Ej. 10"
+                      required
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Origen / Lote
+                    </label>
+                    <select
+                      value={origenIngreso}
+                      onChange={(e) => setOrigenIngreso(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold bg-white"
+                    >
+                      <option value="Producción Interna">Taller / Cocina Central</option>
+                      <option value="Proveedor Externo">Compra Proveedor</option>
+                      <option value="Traslado de Sede">Traslado entre sedes</option>
+                      <option value="Ajuste positivo">Ajuste de inventario</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white border-t border-slate-100 flex gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowIngresoModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-md shadow-brand-700/20"
+                  className="flex-1 py-3 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-xs shadow-md"
                 >
                   Sumar al Stock
                 </button>

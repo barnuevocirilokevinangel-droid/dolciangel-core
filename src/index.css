@@ -3,10 +3,25 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-slate-50 text-slate-800 font-sans min-h-screen;
+  html, body {
+    @apply bg-slate-50 text-slate-800 font-sans min-h-screen overflow-x-hidden;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Evitar auto-zoom molesto en iOS Safari (< 16px dispara zoom al enfocar) */
+  @media (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Custom scrollbars for POS touch screens */
