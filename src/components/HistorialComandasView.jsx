@@ -4,35 +4,32 @@ import {
   db, 
   collections, 
   doc, 
+  setDoc,
   updateDoc, 
   deleteDoc, 
-  writeBatch, 
-  increment, 
   serverTimestamp 
 } from '../services/firebase';
 import { 
-  ClipboardList, 
   Search, 
-  Receipt, 
   Printer, 
   CreditCard, 
   Banknote, 
   Smartphone, 
   Eye, 
-  Trash2, 
   Edit3, 
   AlertTriangle,
   Crown,
-  Check,
   ExternalLink,
   Loader2,
   FileText,
-  XCircle
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 import { TicketTermico } from './TicketTermico';
 
 export const HistorialComandasView = () => {
-  const { sede, perfil, ventas, anularVenta, showToast } = useApp();
+  const { sede, perfil, ventas, sesionCaja, anularVenta, refreshSunatStatus, showToast } = useApp();
+  const [refreshingId, setRefreshingId] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMetodo, setFilterMetodo] = useState('TODOS');
@@ -158,11 +155,17 @@ export const HistorialComandasView = () => {
       if (editingSale.metodoPago !== editMetodoPago) {
         const movCajaRef = doc(collections.movimientosCaja, `MC-${editingSale.id}`);
         if (editMetodoPago === 'EFECTIVO') {
-          await updateDoc(movCajaRef, {
+          await setDoc(movCajaRef, {
+            id: `MC-${editingSale.id}`,
+            sesionId: sesionCaja?.id || editingSale.sesionId || null,
+            fecha: editingSale.fecha || new Date().toISOString(),
+            timestamp: serverTimestamp(),
+            sede: editingSale.sede || sede,
             tipo: 'VENTA_EFECTIVO',
-            monto: editingSale.total,
-            descripcion: `Venta POS en Efectivo ${editingSale.id} (Método corregido)`
-          }).catch(() => {});
+            monto: Number(editingSale.total || 0),
+            descripcion: `Venta POS en Efectivo ${editingSale.id} (Método corregido)`,
+            responsable: editVendedor.trim() || editingSale.vendedor || perfil.nombre
+          }, { merge: true });
         } else if (editingSale.metodoPago === 'EFECTIVO') {
           await deleteDoc(movCajaRef).catch(() => {});
         }
@@ -175,6 +178,19 @@ export const HistorialComandasView = () => {
       showToast('Error al guardar cambios: ' + err.message, 'error');
     } finally {
       setIsSavingEdit(false);
+    }
+  };
+
+  const handleRefreshSunat = async (venta) => {
+    if (refreshingId) return;
+    setRefreshingId(venta.id);
+    try {
+      const res = await refreshSunatStatus(venta);
+      showToast(`Estado actualizado desde SUNAT: ${res.status}`, 'success');
+    } catch (err) {
+      showToast('No se pudo consultar SUNAT: ' + err.message, 'warning');
+    } finally {
+      setRefreshingId(null);
     }
   };
 
@@ -323,6 +339,17 @@ export const HistorialComandasView = () => {
                           <span className="text-[10px] font-extrabold px-2 py-0.2 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
                             ANULADA
                           </span>
+                        )}
+                        {v.comprobante?.estado === 'PENDIENTE' && v.comprobante?.documentId && (
+                          <button
+                            type="button"
+                            disabled={refreshingId === v.id}
+                            onClick={() => handleRefreshSunat(v)}
+                            className="px-2 py-1 rounded-lg bg-amber-100 text-amber-900 font-bold text-[10px] inline-flex items-center gap-1"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${refreshingId === v.id ? 'animate-spin' : ''}`} />
+                            <span>Verificar SUNAT</span>
+                          </button>
                         )}
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5">
@@ -564,6 +591,18 @@ export const HistorialComandasView = () => {
                           >
                             <FileText className="w-3.5 h-3.5" />
                           </a>
+                        )}
+
+                        {v.comprobante?.estado === 'PENDIENTE' && v.comprobante?.documentId && (
+                          <button
+                            type="button"
+                            disabled={refreshingId === v.id}
+                            onClick={() => handleRefreshSunat(v)}
+                            title="Consultar estado definitivo en APISUNAT"
+                            className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${refreshingId === v.id ? 'animate-spin' : ''}`} />
+                          </button>
                         )}
 
                         {/* ACCIONES EXCLUSIVAS DEL DUEÑO 👑 */}

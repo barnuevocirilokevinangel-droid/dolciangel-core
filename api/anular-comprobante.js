@@ -30,7 +30,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    let body = {};
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    } catch {
+      return res.status(400).json({ success: false, message: 'Cuerpo JSON inválido.' });
+    }
     const venta = body.venta || body;
     const comp = venta.comprobante || {};
 
@@ -177,11 +182,13 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       status: result.status,
+      estado_sunat: String(result.status || 'ACEPTADO').toUpperCase(),
       documentId: result.documentId,
       fileName: result.fileName,
       tipoDoc: '07',
       serie: ncSerie,
       numero: ncNumeroFinal,
+      correlativo: ncNumeroFinal,
       codigoCompleto: ncFullId,
       fechaEmision,
       opGravada,
@@ -190,11 +197,15 @@ export default async function handler(req, res) {
       motivo,
       codigoMotivo,
       hash_cpe: result.hash_cpe,
+      enlace_pdf: result.enlace_del_pdf,
       enlace_del_pdf: result.enlace_del_pdf,
       pdf: result.pdf,
+      enlace_xml: result.enlace_del_xml,
       enlace_del_xml: result.enlace_del_xml,
       xml: result.xml,
       cdr: result.cdr,
+      faults: result.faults || [],
+      notes: result.notes || [],
       docModificado: {
         tipoDoc: origTipoDocCode,
         serie: origSerie,

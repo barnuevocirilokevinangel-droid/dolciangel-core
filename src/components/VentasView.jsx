@@ -1569,12 +1569,14 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                   <span
                     className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
                       lastSaleReceipt.comprobante?.enlace_del_pdf || lastSaleReceipt.enlace_del_pdf
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        ? (lastSaleReceipt.comprobante?.estado === 'PENDIENTE' || lastSaleReceipt.comprobante?.estado === 'OBSERVADO'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200')
                         : 'bg-amber-100 text-amber-800 border border-amber-200'
                     }`}
                   >
                     {lastSaleReceipt.comprobante?.enlace_del_pdf || lastSaleReceipt.enlace_del_pdf
-                      ? `✓ SUNAT (${lastSaleReceipt.comprobante?.estado || 'ACEPTADO'})`
+                      ? `SUNAT (${lastSaleReceipt.comprobante?.estado || 'ACEPTADO'})`
                       : 'Control Interno NV01'}
                   </span>
                 </div>
@@ -1634,6 +1636,19 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
                   <FileText className="w-4 h-4 text-slate-500" />
                   <span>Descargar XML SUNAT</span>
                   <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                </a>
+              )}
+
+              {(lastSaleReceipt.comprobante?.cdr || lastSaleReceipt.cdr) && (
+                <a
+                  href={lastSaleReceipt.comprobante?.cdr || lastSaleReceipt.cdr}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Descargar Constancia CDR SUNAT</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-500" />
                 </a>
               )}
 

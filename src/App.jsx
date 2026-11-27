@@ -64,6 +64,8 @@ export const resolveCurrentRoute = () => {
   return 'landing';
 };
 
+const OWNER_ONLY_TABS = new Set(['costeo', 'stats', 'contabilidad', 'web', 'admin']);
+
 const MainLayout = ({ onNavigate }) => {
   const { 
     sede, 
@@ -71,16 +73,19 @@ const MainLayout = ({ onNavigate }) => {
     activeTab,
     setActiveTab,
     productos, 
+    productosLoaded,
+    isOnline,
     seedInitialProducts, 
     toast 
   } = useApp();
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false);
+  const isDueno = Boolean(perfil?.isDueno);
 
-  // Sincronizar URL /admin/contabilidad con activeTab
+  // Sincronizar URL /admin/contabilidad con activeTab (solo Dueño)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !isDueno) return;
     const path = window.location.pathname.toLowerCase();
     if (activeTab === 'contabilidad' && !path.startsWith('/admin/contabilidad')) {
       try {
@@ -95,30 +100,25 @@ const MainLayout = ({ onNavigate }) => {
         // Ignorar
       }
     }
-  }, [activeTab]);
+  }, [activeTab, isDueno]);
 
   useEffect(() => {
     const syncTabFromUrl = () => {
       const p = window.location.pathname.toLowerCase();
       if (p.startsWith('/admin/contabilidad')) {
-        setActiveTab('contabilidad');
+        setActiveTab(isDueno ? 'contabilidad' : 'ventas');
       }
     };
     window.addEventListener('popstate', syncTabFromUrl);
     return () => window.removeEventListener('popstate', syncTabFromUrl);
-  }, [setActiveTab]);
+  }, [setActiveTab, isDueno]);
 
-  // Auto-siembra de catálogo inicial si la base de datos está vacía al cargar
+  // Auto-siembra segura: únicamente si Firestore ya confirmó 0 productos (no en carga lenta 3G)
   useEffect(() => {
-    if (productos.length === 0) {
-      const timer = setTimeout(() => {
-        if (productos.length === 0) {
-          seedInitialProducts();
-        }
-      }, 1500);
-      return () => clearTimeout(timer);
+    if (productosLoaded && productos.length === 0 && isOnline && isDueno) {
+      seedInitialProducts();
     }
-  }, [productos.length]);
+  }, [productosLoaded, productos.length, isOnline, isDueno]);
 
   // SEGURIDAD: Si no está autenticado, bloqueo estricto con pantalla de PIN antes de mostrar POS o inventario
   if (!sede || !perfil) {
@@ -157,28 +157,62 @@ const MainLayout = ({ onNavigate }) => {
         onGoToPublic={() => onNavigate && onNavigate('landing')}
       />
 
-      {/* Contenido Dinámico de la Pestaña Activa */}
+      {/* Contenido Dinámico de la Pestaña Activa (con bloqueo por rol Dueño) */}
       <main className="flex-1">
-        {activeTab === 'ventas' && (
-          <VentasView 
-            isCartOpen={isCartOpen} 
-            setIsCartOpen={setIsCartOpen} 
-          />
-        )}
-        {activeTab === 'inventario' && <KardexView />}
-        {activeTab === 'costeo' && <CosteoView />}
-        {activeTab === 'caja' && <CajaView />}
-        {activeTab === 'resumen' && <ResumenView />}
-        {activeTab === 'stats' && <StatsView />}
-        {activeTab === 'fidelidad' && <FidelidadView />}
-        {(activeTab === 'historial' || activeTab === 'comandas') && (
-          <HistorialGlobalView />
-        )}
-        {activeTab === 'carta' && <CartaWebView />}
-        {activeTab === 'web' && <GestorHeroView />}
-        {activeTab === 'contabilidad' && <ContabilidadView />}
-        {activeTab === 'admin' && (
-          <AdminView onOpenSwitchModal={() => setIsSwitchModalOpen(true)} />
+        {OWNER_ONLY_TABS.has(activeTab) && !isDueno ? (
+          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl border border-pink-100 shadow-sm text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-2xl mx-auto">
+              👑
+            </div>
+            <div>
+              <h3 className="font-serif font-bold text-lg text-slate-900">
+                Módulo Reservado al Administrador
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Esta sección requiere acceso de Dueño. Puedes regresar al mostrador de ventas o cambiar de perfil.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('ventas')}
+                className="flex-1 py-2.5 rounded-xl bg-brand-700 text-white font-bold text-xs"
+              >
+                Ir a Ventas
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSwitchModalOpen(true)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Cambiar Perfil
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'ventas' && (
+              <VentasView 
+                isCartOpen={isCartOpen} 
+                setIsCartOpen={setIsCartOpen} 
+              />
+            )}
+            {activeTab === 'inventario' && <KardexView />}
+            {activeTab === 'costeo' && <CosteoView />}
+            {activeTab === 'caja' && <CajaView />}
+            {activeTab === 'resumen' && <ResumenView />}
+            {activeTab === 'stats' && <StatsView />}
+            {activeTab === 'fidelidad' && <FidelidadView />}
+            {(activeTab === 'historial' || activeTab === 'comandas') && (
+              <HistorialGlobalView />
+            )}
+            {activeTab === 'carta' && <CartaWebView />}
+            {activeTab === 'web' && <GestorHeroView />}
+            {activeTab === 'contabilidad' && <ContabilidadView />}
+            {activeTab === 'admin' && (
+              <AdminView onOpenSwitchModal={() => setIsSwitchModalOpen(true)} />
+            )}
+          </>
         )}
       </main>
 

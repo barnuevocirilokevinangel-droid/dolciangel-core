@@ -4,11 +4,9 @@ import {
   db, 
   collections, 
   doc, 
-  setDoc, 
   updateDoc, 
-  deleteDoc,
   serverTimestamp, 
-  increment,
+  runTransaction,
   writeBatch
 } from '../services/firebase';
 import { 
@@ -74,6 +72,7 @@ export const KardexView = () => {
   const [selectedProdIngreso, setSelectedProdIngreso] = useState('');
   const [cantidadIngreso, setCantidadIngreso] = useState('');
   const [origenIngreso, setOrigenIngreso] = useState('Producción Interna');
+  const [isSubmittingKardex, setIsSubmittingKardex] = useState(false);
 
   // Edición de Movimiento Kardex (Exclusivo Dueño 👑)
   const [editingKardex, setEditingKardex] = useState(null);
@@ -244,9 +243,10 @@ export const KardexView = () => {
     }
   };
 
-  // 3. Registrar Merma / Pérdida con Justificación Obligatoria
+  // 3. Registrar Merma / Pérdida con Transacción Atómica (no permite stock negativo)
   const handleRegistrarMerma = async (e) => {
     e.preventDefault();
+    if (isSubmittingKardex) return;
     if (!selectedProdMerma) {
       showToast('Selecciona un producto para la merma', 'error');
       return;
@@ -264,34 +264,41 @@ export const KardexView = () => {
     const prod = productos.find(p => p.id === selectedProdMerma);
     if (!prod) return;
 
+    setIsSubmittingKardex(true);
     try {
       const kardexId = `K-MERMA-${Date.now()}`;
-      const kardexRef = doc(collections.kardex, kardexId);
+      const kardexRef = doc(db, 'kardex', kardexId);
+      const prodRef = doc(db, 'productos', String(prod.id));
+      const nestedKey = sede === 'BA' ? 'stock.buenosAires' : 'stock.villaEspana';
 
-      await setDoc(kardexRef, {
-        id: kardexId,
-        fecha: new Date().toISOString(),
-        timestamp: serverTimestamp(),
-        sede,
-        tipo: 'MERMA',
-        productoId: prod.id,
-        productoNombre: prod.nombre,
-        cantidad: -cant,
-        motivo: motivoMerma,
-        justificacion: justificacionMerma.trim(),
-        responsable: perfil.nombre,
-        origen: 'Registro Manual de Pérdida'
-      });
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(prodRef);
+        const currentStock = snap.exists() ? getProductStock({ id: snap.id, ...snap.data() }, sede) : 0;
+        const deltaAplicado = Math.min(cant, currentStock);
+        const newStock = Math.max(0, currentStock - deltaAplicado);
 
-      // Descontar del stock en Firestore (soporta campos anidados y directos)
-      const currentStock = getProductStock(prod, sede);
-      const newStock = Math.max(0, currentStock - cant);
-      const prodRef = doc(collections.productos, prod.id);
+        tx.set(kardexRef, {
+          id: kardexId,
+          fecha: new Date().toISOString(),
+          timestamp: serverTimestamp(),
+          sede,
+          tipo: 'MERMA',
+          productoId: prod.id,
+          productoNombre: prod.nombre,
+          cantidad: -deltaAplicado,
+          motivo: motivoMerma,
+          justificacion: justificacionMerma.trim(),
+          responsable: perfil.nombre,
+          origen: 'Registro Manual de Pérdida'
+        });
 
-      await updateDoc(prodRef, {
-        [stockField]: increment(-cant),
-        [`stock.${sede === 'BA' ? 'buenosAires' : 'villaEspana'}`]: newStock,
-        updatedAt: serverTimestamp()
+        if (snap.exists()) {
+          tx.update(prodRef, {
+            [stockField]: newStock,
+            [nestedKey]: newStock,
+            updatedAt: serverTimestamp()
+          });
+        }
       });
 
       showToast(`Merma registrada: -${cant} ${prod.nombre}`, 'warning');
@@ -302,12 +309,15 @@ export const KardexView = () => {
     } catch (err) {
       console.error('Error al registrar merma:', err);
       showToast('Error al registrar la merma: ' + err.message, 'error');
+    } finally {
+      setIsSubmittingKardex(false);
     }
   };
 
-  // 4. Registrar Ingreso de Mercadería
+  // 4. Registrar Ingreso de Mercadería (Transacción Atómica)
   const handleRegistrarIngreso = async (e) => {
     e.preventDefault();
+    if (isSubmittingKardex) return;
     if (!selectedProdIngreso) {
       showToast('Selecciona un producto', 'error');
       return;
@@ -321,34 +331,41 @@ export const KardexView = () => {
     const prod = productos.find(p => p.id === selectedProdIngreso);
     if (!prod) return;
 
+    setIsSubmittingKardex(true);
     try {
       const kardexId = `K-INGRESO-${Date.now()}`;
-      const kardexRef = doc(collections.kardex, kardexId);
+      const kardexRef = doc(db, 'kardex', kardexId);
+      const prodRef = doc(db, 'productos', String(prod.id));
+      const nestedKey = sede === 'BA' ? 'stock.buenosAires' : 'stock.villaEspana';
 
-      await setDoc(kardexRef, {
-        id: kardexId,
-        fecha: new Date().toISOString(),
-        timestamp: serverTimestamp(),
-        sede,
-        tipo: 'INGRESO',
-        productoId: prod.id,
-        productoNombre: prod.nombre,
-        cantidad: cant,
-        motivo: `Ingreso: ${origenIngreso}`,
-        justificacion: `Abastecimiento desde ${origenIngreso}`,
-        responsable: perfil.nombre,
-        origen: origenIngreso
-      });
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(prodRef);
+        const currentStock = snap.exists() ? getProductStock({ id: snap.id, ...snap.data() }, sede) : 0;
+        const newStock = currentStock + cant;
 
-      // Sumar al stock en Firestore
-      const currentStock = getProductStock(prod, sede);
-      const newStock = currentStock + cant;
-      const prodRef = doc(collections.productos, prod.id);
+        tx.set(kardexRef, {
+          id: kardexId,
+          fecha: new Date().toISOString(),
+          timestamp: serverTimestamp(),
+          sede,
+          tipo: 'INGRESO',
+          productoId: prod.id,
+          productoNombre: prod.nombre,
+          cantidad: cant,
+          motivo: `Ingreso: ${origenIngreso}`,
+          justificacion: `Abastecimiento desde ${origenIngreso}`,
+          responsable: perfil.nombre,
+          origen: origenIngreso
+        });
 
-      await updateDoc(prodRef, {
-        [stockField]: increment(cant),
-        [`stock.${sede === 'BA' ? 'buenosAires' : 'villaEspana'}`]: newStock,
-        updatedAt: serverTimestamp()
+        if (snap.exists()) {
+          tx.update(prodRef, {
+            [stockField]: newStock,
+            [nestedKey]: newStock,
+            disponible: true,
+            updatedAt: serverTimestamp()
+          });
+        }
       });
 
       showToast(`Stock ingresado: +${cant} ${prod.nombre}`, 'success');
@@ -358,12 +375,14 @@ export const KardexView = () => {
     } catch (err) {
       console.error('Error al ingresar mercadería:', err);
       showToast('Error al ingresar mercadería: ' + err.message, 'error');
+    } finally {
+      setIsSubmittingKardex(false);
     }
   };
 
-  // 5. Anular Movimiento de Kardex (Exclusivo Dueño 👑)
+  // 5. Anular Movimiento de Kardex (Exclusivo Dueño 👑 - Transacción Atómica)
   const handleAnularKardex = async (item) => {
-    if (!isDueno) return;
+    if (!isDueno || isSubmittingKardex) return;
     const confirmMsg = `¿Deseas ANULAR este movimiento de kardex?\n\n` +
       `Producto: ${item.productoNombre}\n` +
       `Cantidad: ${item.cantidad > 0 ? '+' : ''}${item.cantidad}\n` +
@@ -372,25 +391,39 @@ export const KardexView = () => {
 
     if (!window.confirm(confirmMsg)) return;
 
+    setIsSubmittingKardex(true);
     try {
-      const batch = writeBatch(db);
+      const targetSede = item.sede === 'VE' ? 'VE' : 'BA';
+      const targetField = targetSede === 'VE' ? 'stock_VE' : 'stock_BA';
+      const nestedKey = targetSede === 'VE' ? 'stock.villaEspana' : 'stock.buenosAires';
+      const kRef = doc(db, 'kardex', String(item.id));
 
-      if (item.productoId) {
-        const prodRef = doc(collections.productos, item.productoId);
-        batch.update(prodRef, {
-          [stockField]: increment(-item.cantidad),
-          updatedAt: serverTimestamp()
-        });
-      }
+      await runTransaction(db, async (tx) => {
+        let prodSnap = null;
+        let prodRef = null;
+        if (item.productoId) {
+          prodRef = doc(db, 'productos', String(item.productoId));
+          prodSnap = await tx.get(prodRef);
+        }
 
-      const kRef = doc(collections.kardex, item.id);
-      batch.delete(kRef);
+        if (prodRef && prodSnap?.exists()) {
+          const curr = getProductStock({ id: prodSnap.id, ...prodSnap.data() }, targetSede);
+          const reverted = Math.max(0, curr - Number(item.cantidad || 0));
+          tx.update(prodRef, {
+            [targetField]: reverted,
+            [nestedKey]: reverted,
+            updatedAt: serverTimestamp()
+          });
+        }
+        tx.delete(kRef);
+      });
 
-      await batch.commit();
       showToast(`Movimiento anulado y stock revertido correctamente`, 'success');
     } catch (err) {
       console.error('Error al anular kardex:', err);
       showToast('Error al anular movimiento: ' + err.message, 'error');
+    } finally {
+      setIsSubmittingKardex(false);
     }
   };
 

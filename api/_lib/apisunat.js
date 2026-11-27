@@ -145,8 +145,19 @@ export function buildLinesAndTotals(items = [], { isCreditNote = false, moneda =
   const qtyKey = isCreditNote ? 'cbc:CreditedQuantity' : 'cbc:InvoicedQuantity';
 
   const lines = (items || []).map((item, idx) => {
-    const qty = Number(item.cantidad ?? item.quantity ?? 1) || 1;
-    const precioUnitario = round2(Number(item.precio ?? item.precioUnitario ?? 0) || 0);
+    const qty = Number(item.cantidad ?? item.quantity ?? 0);
+    const precioUnitario = round2(Number(item.precio ?? item.precioUnitario ?? 0));
+    if (!Number.isFinite(qty) || qty <= 0) {
+      const err = new Error(`Ítem #${idx + 1} (${item.nombre || 'Producto'}) tiene cantidad inválida.`);
+      err.statusCode = 400;
+      throw err;
+    }
+    if (!Number.isFinite(precioUnitario) || precioUnitario <= 0) {
+      const err = new Error(`Ítem #${idx + 1} (${item.nombre || 'Producto'}) debe tener precio mayor a S/ 0.00 para SUNAT.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
     const valorUnitario = Number((precioUnitario / 1.18).toFixed(6));
 
     // Aritmética de precisión entera (x100000) equivalente al widget oficial APISUNAT
@@ -273,13 +284,23 @@ export function buildLinesAndTotals(items = [], { isCreditNote = false, moneda =
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function getNextCorrelativeFromApiSunat({ personaId, personaToken, type, serie }) {
   try {
-    const resp = await fetch(`${APISUNAT_BASE_URL}/personas/lastDocument`, {
+    const resp = await fetchWithTimeout(`${APISUNAT_BASE_URL}/personas/lastDocument`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ personaId, personaToken, type, serie })
-    });
+    }, 5000);
     if (!resp.ok) return null;
     const data = await resp.json();
     const suggested = parseInt(data?.suggestedNumber, 10);
@@ -287,6 +308,57 @@ export async function getNextCorrelativeFromApiSunat({ personaId, personaToken, 
   } catch {
     return null;
   }
+}
+
+export async function checkDocumentStatusById({ documentId, fileName }) {
+  if (!documentId) {
+    const err = new Error('Falta documentId para consultar estado en APISUNAT.');
+    err.statusCode = 400;
+    throw err;
+  }
+  const docResp = await fetchWithTimeout(`${APISUNAT_BASE_URL}/documents/${documentId}/getById`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  }, 6000);
+  if (!docResp.ok) {
+    const err = new Error(`APISUNAT devolvió HTTP ${docResp.status} al consultar ${documentId}`);
+    err.statusCode = docResp.status;
+    throw err;
+  }
+  const docJson = await docResp.json();
+  const status = docJson?.status || 'PENDIENTE';
+  const xmlUrl = docJson?.xml || null;
+  const cdrUrl = docJson?.cdr || null;
+  const faults = docJson?.faults || [];
+  const notes = docJson?.notes || [];
+  let hashCpe = docJson?.hash || docJson?.digestValue || null;
+
+  if (!hashCpe && xmlUrl) {
+    try {
+      const xmlResp = await fetchWithTimeout(xmlUrl, {}, 2500);
+      if (xmlResp.ok) {
+        const xmlText = await xmlResp.text();
+        const match = xmlText.match(/<(?:ds:)?DigestValue>([^<]+)<\/(?:ds:)?DigestValue>/i);
+        if (match && match[1]) hashCpe = match[1].trim();
+      }
+    } catch {
+      // No bloquear respuesta si el XML demora
+    }
+  }
+
+  return {
+    documentId,
+    fileName: fileName || docJson?.fileName || null,
+    status,
+    hash_cpe: hashCpe,
+    enlace_del_pdf: fileName
+      ? `${APISUNAT_BASE_URL}/documents/${documentId}/getPDF/ticket80mm/${fileName}.pdf`
+      : null,
+    enlace_del_xml: xmlUrl,
+    cdr: cdrUrl,
+    faults,
+    notes
+  };
 }
 
 /**
@@ -304,11 +376,11 @@ export async function sendBillAndFetchArtifacts({ personaId, personaToken, fileN
     sendPayload.customerEmail = customerEmail;
   }
 
-  const sendResponse = await fetch(`${APISUNAT_BASE_URL}/personas/v1/sendBill`, {
+  const sendResponse = await fetchWithTimeout(`${APISUNAT_BASE_URL}/personas/v1/sendBill`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(sendPayload)
-  });
+  }, 15000);
 
   const sendText = await sendResponse.text();
   let sendData = null;
@@ -343,10 +415,10 @@ export async function sendBillAndFetchArtifacts({ personaId, personaToken, fileN
   for (const waitMs of delays) {
     await sleep(waitMs);
     try {
-      const docResp = await fetch(`${APISUNAT_BASE_URL}/documents/${documentId}/getById`, {
+      const docResp = await fetchWithTimeout(`${APISUNAT_BASE_URL}/documents/${documentId}/getById`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
-      });
+      }, 4000);
       if (!docResp.ok) continue;
       const docJson = await docResp.json();
       status = docJson?.status || status;
@@ -364,7 +436,7 @@ export async function sendBillAndFetchArtifacts({ personaId, personaToken, fileN
     }
   }
 
-  if (status === 'RECHAZADO' || status === 'EXCEPCION') {
+  if (status === 'RECHAZADO' || status === 'EXCEPCION' || status === 'ERROR') {
     const faultMsg = Array.isArray(faults) && faults.length > 0
       ? faults.map(f => f.description || f.message || JSON.stringify(f)).join(' | ')
       : `Documento en estado ${status} en SUNAT`;
@@ -377,10 +449,7 @@ export async function sendBillAndFetchArtifacts({ personaId, personaToken, fileN
   // Extraer DigestValue (hash_cpe oficial SUNAT) desde el XML firmado si aún no se tiene
   if (!hashCpe && xmlUrl) {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2000);
-      const xmlResp = await fetch(xmlUrl, { signal: controller.signal });
-      clearTimeout(timer);
+      const xmlResp = await fetchWithTimeout(xmlUrl, {}, 2500);
       if (xmlResp.ok) {
         const xmlText = await xmlResp.text();
         const match = xmlText.match(/<(?:ds:)?DigestValue>([^<]+)<\/(?:ds:)?DigestValue>/i);

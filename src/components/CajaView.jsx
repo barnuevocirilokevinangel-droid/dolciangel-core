@@ -59,7 +59,9 @@ export const CajaView = () => {
   const [montoContado, setMontoContado] = useState('');
   const [arqueoNota, setArqueoNota] = useState('');
   const [arqueoResult, setArqueoResult] = useState(null);
+  const [isSubmittingCaja, setIsSubmittingCaja] = useState(false);
 
+  const round2 = (n) => Math.round((Number(n || 0) + Number.EPSILON) * 100) / 100;
   const isDueno = perfil?.isDueno ?? false;
 
   // Filtrar ventas del turno activo
@@ -74,15 +76,19 @@ export const CajaView = () => {
 
   // Totales de ventas por método de pago
   const ventasEfectivo = useMemo(() => {
-    return ventasTurno
-      .filter(v => v.metodoPago === 'EFECTIVO')
-      .reduce((sum, v) => sum + (v.total || 0), 0);
+    return round2(
+      ventasTurno
+        .filter(v => v.metodoPago === 'EFECTIVO')
+        .reduce((sum, v) => sum + (Number(v.total) || 0), 0)
+    );
   }, [ventasTurno]);
 
   const ventasDigital = useMemo(() => {
-    return ventasTurno
-      .filter(v => v.metodoPago !== 'EFECTIVO')
-      .reduce((sum, v) => sum + (v.total || 0), 0);
+    return round2(
+      ventasTurno
+        .filter(v => v.metodoPago !== 'EFECTIVO')
+        .reduce((sum, v) => sum + (Number(v.total) || 0), 0)
+    );
   }, [ventasTurno]);
 
   // Filtrar egresos/gastos del turno activo
@@ -94,25 +100,31 @@ export const CajaView = () => {
   }, [movimientosCaja, sesionCaja]);
 
   const totalEgresos = useMemo(() => {
-    return egresosTurno.reduce((sum, m) => sum + (m.monto || 0), 0);
+    return round2(egresosTurno.reduce((sum, m) => sum + (Number(m.monto) || 0), 0));
   }, [egresosTurno]);
 
   // Efectivo esperado en gaveta (Apertura + Ventas Efectivo - Egresos)
   const efectivoEsperado = useMemo(() => {
     if (!sesionCaja) return 0;
     const inicial = Number(sesionCaja.montoApertura) || 0;
-    return inicial + ventasEfectivo - totalEgresos;
+    return round2(inicial + ventasEfectivo - totalEgresos);
   }, [sesionCaja, ventasEfectivo, totalEgresos]);
 
   // 1. Abrir Turno de Caja
   const handleApertura = async (e) => {
     e.preventDefault();
-    const inicial = parseFloat(montoApertura);
+    if (isSubmittingCaja) return;
+    if (sesionCaja) {
+      showToast('Ya existe un turno abierto en esta sede.', 'warning');
+      return;
+    }
+    const inicial = parseFloat(String(montoApertura).replace(',', '.'));
     if (isNaN(inicial) || inicial < 0) {
       showToast('Ingresa un monto de apertura válido', 'error');
       return;
     }
 
+    setIsSubmittingCaja(true);
     try {
       const sesionId = `SESION-${sede}-${Date.now()}`;
       const sesionRef = doc(collections.sesionesCaja, sesionId);
@@ -121,7 +133,7 @@ export const CajaView = () => {
         id: sesionId,
         sede,
         sedeNombre: SEDES[sede].nombre,
-        montoApertura: inicial,
+        montoApertura: round2(inicial),
         fechaApertura: new Date().toISOString(),
         timestamp: serverTimestamp(),
         abiertoPor: perfil.nombre,
@@ -135,13 +147,16 @@ export const CajaView = () => {
     } catch (err) {
       console.error('Error al abrir turno:', err);
       showToast('Error al abrir turno: ' + err.message, 'error');
+    } finally {
+      setIsSubmittingCaja(false);
     }
   };
 
   // 2. Registrar Gasto / Salida
   const handleRegistrarGasto = async (e) => {
     e.preventDefault();
-    const monto = parseFloat(gastoMonto);
+    if (isSubmittingCaja || !sesionCaja) return;
+    const monto = parseFloat(String(gastoMonto).replace(',', '.'));
     if (isNaN(monto) || monto <= 0) {
       showToast('Ingresa un monto válido para el egreso', 'error');
       return;
@@ -151,6 +166,7 @@ export const CajaView = () => {
       return;
     }
 
+    setIsSubmittingCaja(true);
     try {
       const movId = `EGRESO-${Date.now()}`;
       const movRef = doc(collections.movimientosCaja, movId);
@@ -160,7 +176,7 @@ export const CajaView = () => {
         sesionId: sesionCaja.id,
         sede,
         tipo: 'EGRESO_GASTO',
-        monto,
+        monto: round2(monto),
         motivo: gastoMotivo,
         descripcion: gastoDetalle.trim(),
         responsable: perfil.nombre,
@@ -175,6 +191,8 @@ export const CajaView = () => {
     } catch (err) {
       console.error('Error al registrar egreso:', err);
       showToast('Error: ' + err.message, 'error');
+    } finally {
+      setIsSubmittingCaja(false);
     }
   };
 
@@ -237,17 +255,19 @@ export const CajaView = () => {
   // 5. Arqueo Ciego y Cierre de Turno
   const handleCerrarTurno = async (e) => {
     e.preventDefault();
-    const contado = parseFloat(montoContado);
+    if (isSubmittingCaja || !sesionCaja) return;
+    const contado = parseFloat(String(montoContado).replace(',', '.'));
     if (isNaN(contado) || contado < 0) {
       showToast('Ingresa el monto de efectivo que tienes en mano', 'error');
       return;
     }
 
-    const diferencia = contado - efectivoEsperado;
+    const diferencia = round2(contado - efectivoEsperado);
     let estadoArqueo = 'CUADRADO';
     if (diferencia > 0.05) estadoArqueo = 'SOBRANTE';
     else if (diferencia < -0.05) estadoArqueo = 'FALTANTE';
 
+    setIsSubmittingCaja(true);
     try {
       const sesionRef = doc(collections.sesionesCaja, sesionCaja.id);
 
@@ -255,7 +275,7 @@ export const CajaView = () => {
         estado: 'CERRADA',
         fechaCierre: new Date().toISOString(),
         cerradoPor: perfil.nombre,
-        montoContado: contado,
+        montoContado: round2(contado),
         montoEsperado: efectivoEsperado,
         diferencia,
         estadoArqueo,
@@ -263,7 +283,7 @@ export const CajaView = () => {
         ventasEfectivo,
         ventasDigital,
         totalEgresos,
-        totalVendido: ventasEfectivo + ventasDigital
+        totalVendido: round2(ventasEfectivo + ventasDigital)
       };
 
       await updateDoc(sesionRef, cierreData);
@@ -273,7 +293,7 @@ export const CajaView = () => {
         sesionId: sesionCaja.id,
         sede,
         tipo: 'CIERRE_ARQUEO',
-        monto: contado,
+        monto: round2(contado),
         diferencia,
         estadoArqueo,
         responsable: perfil.nombre,
@@ -282,7 +302,7 @@ export const CajaView = () => {
       });
 
       setArqueoResult({
-        contado,
+        contado: round2(contado),
         esperado: efectivoEsperado,
         diferencia,
         estadoArqueo,
@@ -296,6 +316,8 @@ export const CajaView = () => {
     } catch (err) {
       console.error('Error al cerrar turno:', err);
       showToast('Error al cerrar turno: ' + err.message, 'error');
+    } finally {
+      setIsSubmittingCaja(false);
     }
   };
 
@@ -547,29 +569,32 @@ export const CajaView = () => {
         </div>
       )}
 
-      {/* Modal: Apertura de Caja */}
+      {/* Modal: Apertura de Caja (92dvh en móvil) */}
       {showAperturaModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-sm">
-            <div className="w-12 h-12 rounded-2xl bg-brand-100 text-brand-700 mx-auto flex items-center justify-center text-2xl mb-3">
-              💵
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-sm rounded-t-2xl sm:rounded-3xl p-5 shadow-2xl border border-pink-100 flex flex-col justify-between overflow-y-auto">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-brand-100 text-brand-700 mx-auto flex items-center justify-center text-2xl mb-3">
+                💵
+              </div>
+              <h3 className="font-serif font-bold text-lg text-slate-900 text-center">
+                Apertura de Caja
+              </h3>
+              <p className="text-xs text-slate-500 text-center mt-1">
+                Sede {SEDES[sede]?.nombre} • Responsable: {perfil?.nombre}
+              </p>
             </div>
-            <h3 className="font-serif font-bold text-lg text-slate-900 text-center">
-              Apertura de Caja
-            </h3>
-            <p className="text-xs text-slate-500 text-center mt-1">
-              Sede {SEDES[sede]?.nombre} • Responsable: {perfil?.nombre}
-            </p>
 
-            <form onSubmit={handleApertura} className="mt-4 space-y-4">
+            <form onSubmit={handleApertura} className="mt-4 flex-1 flex flex-col justify-between space-y-4">
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
                   Monto Inicial en Gaveta (S/) *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">S/</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">S/</span>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.5"
                     min="0"
                     value={montoApertura}
@@ -577,7 +602,7 @@ export const CajaView = () => {
                     placeholder="Ej. 100.00"
                     required
                     autoFocus
-                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-pink-200 text-slate-800 font-bold focus:outline-none focus:border-brand-500 text-sm"
+                    className="w-full pl-9 pr-3 py-3 rounded-xl border border-pink-200 text-slate-900 font-black focus:outline-none focus:border-brand-500 text-base"
                   />
                 </div>
                 <div className="flex gap-2 mt-2">
@@ -586,7 +611,7 @@ export const CajaView = () => {
                       type="button"
                       key={v}
                       onClick={() => setMontoApertura(v.toString())}
-                      className="px-2 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-brand-700 text-xs font-bold"
+                      className="px-3 py-1.5 rounded-lg bg-pink-50 hover:bg-pink-100 text-brand-700 text-xs font-bold"
                     >
                       S/{v}
                     </button>
@@ -594,19 +619,21 @@ export const CajaView = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 bg-white pt-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex gap-2 border-t border-slate-100">
                 <button
                   type="button"
+                  disabled={isSubmittingCaja}
                   onClick={() => setShowAperturaModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-md shadow-brand-700/20"
+                  disabled={isSubmittingCaja}
+                  className="flex-1 py-3 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white font-extrabold text-xs shadow-md"
                 >
-                  Confirmar Apertura
+                  {isSubmittingCaja ? 'Abriendo...' : 'Confirmar Apertura'}
                 </button>
               </div>
             </form>
@@ -614,77 +641,84 @@ export const CajaView = () => {
         </div>
       )}
 
-      {/* Modal: Registrar Gasto / Salida */}
+      {/* Modal: Registrar Gasto / Salida (92dvh en móvil) */}
       {showGastoModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md">
-            <h3 className="font-serif font-bold text-lg text-slate-900">
-              - Registrar Gasto / Salida de Caja
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Quedará registrado en los movimientos de auditoría de este turno.
-            </p>
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-md rounded-t-2xl sm:rounded-3xl p-5 shadow-2xl border border-pink-100 flex flex-col justify-between overflow-y-auto">
+            <div>
+              <h3 className="font-serif font-bold text-lg text-slate-900">
+                - Registrar Gasto / Salida de Caja
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Quedará registrado en los movimientos de auditoría de este turno.
+              </p>
+            </div>
 
-            <form onSubmit={handleRegistrarGasto} className="mt-4 space-y-3.5">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Monto (S/) *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">S/</span>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    value={gastoMonto}
-                    onChange={(e) => setGastoMonto(e.target.value)}
-                    placeholder="0.00"
+            <form onSubmit={handleRegistrarGasto} className="mt-4 flex-1 flex flex-col justify-between space-y-3.5">
+              <div className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Monto (S/) *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">S/</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.5"
+                      min="0.5"
+                      value={gastoMonto}
+                      onChange={(e) => setGastoMonto(e.target.value)}
+                      placeholder="0.00"
+                      required
+                      autoFocus
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-slate-900 font-black focus:outline-none focus:border-brand-500 text-base"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Motivo / Categoría *</label>
+                  <select
+                    value={gastoMotivo}
+                    onChange={(e) => setGastoMotivo(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs font-bold bg-white"
+                  >
+                    <option value="Insumos">Insumos de Pastelería / Cocina</option>
+                    <option value="Compras">Compras Urgentes / Supermercado</option>
+                    <option value="Delivery">Pago a Motorizado / Delivery</option>
+                    <option value="Servicios">Servicios Básicos / Limpieza</option>
+                    <option value="Personal">Adelanto / Pasajes Personal</option>
+                    <option value="Otros">Otros Egresos</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Detalle / Justificación *</label>
+                  <textarea
+                    value={gastoDetalle}
+                    onChange={(e) => setGastoDetalle(e.target.value)}
+                    placeholder="Ej. Compra de 2kg de fresas para Cheesecake..."
+                    rows={2}
                     required
-                    autoFocus
-                    className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-slate-800 font-bold focus:outline-none focus:border-brand-500 text-sm"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Motivo / Categoría *</label>
-                <select
-                  value={gastoMotivo}
-                  onChange={(e) => setGastoMotivo(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-brand-500 bg-white"
-                >
-                  <option value="Insumos">Insumos de Pastelería / Cocina</option>
-                  <option value="Compras">Compras Urgentes / Supermercado</option>
-                  <option value="Delivery">Pago a Motorizado / Delivery</option>
-                  <option value="Servicios">Servicios Básicos / Limpieza</option>
-                  <option value="Personal">Adelanto / Pasajes Personal</option>
-                  <option value="Otros">Otros Egresos</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Detalle / Justificación *</label>
-                <textarea
-                  value={gastoDetalle}
-                  onChange={(e) => setGastoDetalle(e.target.value)}
-                  placeholder="Ej. Compra de 2kg de fresas para Cheesecake..."
-                  rows={2}
-                  required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 bg-white pt-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex gap-2 border-t border-slate-100">
                 <button
                   type="button"
+                  disabled={isSubmittingCaja}
                   onClick={() => setShowGastoModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20"
+                  disabled={isSubmittingCaja}
+                  className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-extrabold text-xs shadow-md"
                 >
-                  Guardar Egreso
+                  {isSubmittingCaja ? 'Guardando...' : 'Guardar Egreso'}
                 </button>
               </div>
             </form>
@@ -782,65 +816,72 @@ export const CajaView = () => {
         </div>
       )}
 
-      {/* Modal: Arqueo Ciego & Cierre de Turno */}
+      {/* Modal: Arqueo Ciego & Cierre de Turno (92dvh en móvil) */}
       {showArqueoModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-pink-100 w-full max-w-md">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 mx-auto flex items-center justify-center text-2xl mb-3">
-              🛡️
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full h-[92dvh] sm:h-auto sm:max-w-md rounded-t-2xl sm:rounded-3xl p-5 shadow-2xl border border-pink-100 flex flex-col justify-between overflow-y-auto">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 mx-auto flex items-center justify-center text-2xl mb-3">
+                🛡️
+              </div>
+              <h3 className="font-serif font-bold text-lg text-slate-900 text-center">
+                Cierre de Turno (Arqueo Ciego)
+              </h3>
+              <p className="text-xs text-slate-500 text-center mt-1">
+                Cuenta todo el dinero en efectivo en gaveta e ingrésalo aquí.
+              </p>
             </div>
-            <h3 className="font-serif font-bold text-lg text-slate-900 text-center">
-              Cierre de Turno (Arqueo Ciego)
-            </h3>
-            <p className="text-xs text-slate-500 text-center mt-1">
-              Cuenta todo el dinero en efectivo que tienes en gaveta e ingrésalo a continuación. El sistema auditará la diferencia automáticamente.
-            </p>
 
-            <form onSubmit={handleCerrarTurno} className="mt-4 space-y-4">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Efectivo Contado en Gaveta (S/) *
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">S/</span>
+            <form onSubmit={handleCerrarTurno} className="mt-4 flex-1 flex flex-col justify-between space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Efectivo Contado en Gaveta (S/) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">S/</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.1"
+                      min="0"
+                      value={montoContado}
+                      onChange={(e) => setMontoContado(e.target.value)}
+                      placeholder="Total en monedas y billetes"
+                      required
+                      autoFocus
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border-2 border-brand-300 text-slate-900 font-black focus:outline-none focus:border-brand-600 text-base"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Observaciones de Cierre</label>
                   <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={montoContado}
-                    onChange={(e) => setMontoContado(e.target.value)}
-                    placeholder="Total en monedas y billetes"
-                    required
-                    autoFocus
-                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border-2 border-brand-300 text-slate-900 font-extrabold focus:outline-none focus:border-brand-600 text-base"
+                    type="text"
+                    value={arqueoNota}
+                    onChange={(e) => setArqueoNota(e.target.value)}
+                    placeholder="Ej. Quedan monedas para cambio mañana"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base sm:text-xs"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Observaciones de Cierre</label>
-                <input
-                  type="text"
-                  value={arqueoNota}
-                  onChange={(e) => setArqueoNota(e.target.value)}
-                  placeholder="Ej. Quedan monedas para cambio mañana"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 bg-white pt-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex gap-2 border-t border-slate-100">
                 <button
                   type="button"
+                  disabled={isSubmittingCaja}
                   onClick={() => setShowArqueoModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs"
                 >
                   Volver
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-xs shadow-md shadow-brand-700/20"
+                  disabled={isSubmittingCaja}
+                  className="flex-1 py-3 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white font-extrabold text-xs shadow-md"
                 >
-                  Confirmar y Cerrar
+                  {isSubmittingCaja ? 'Cerrando...' : 'Confirmar y Cerrar'}
                 </button>
               </div>
             </form>

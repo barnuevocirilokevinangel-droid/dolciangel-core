@@ -4,6 +4,7 @@ import {
   collections, 
   onSnapshot, 
   doc, 
+  getDoc,
   getDocs,
   setDoc, 
   updateDoc,
@@ -11,13 +12,19 @@ import {
   addDoc, 
   serverTimestamp, 
   writeBatch,
+  runTransaction,
   increment,
   query,
   orderBy,
   limit
 } from '../services/firebase';
 import { INITIAL_PRODUCTS } from '../data/initialCatalog';
-import { emitirComprobante, anularComprobante, obtenerSiguienteCorrelativo } from '../services/sunatService';
+import {
+  emitirComprobante,
+  anularComprobante,
+  obtenerSiguienteCorrelativo,
+  verificarEstadoComprobante
+} from '../services/sunatService';
 import { getProductPrice, getProductStock } from '../services/productUtils';
 
 const AppContext = createContext();
@@ -205,6 +212,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const [productos, setProductos] = useState([]);
+  const [productosLoaded, setProductosLoaded] = useState(false);
   const [ventas, setVentas] = useState([]);
   const [sesionesCajaList, setSesionesCajaList] = useState([]);
   const [movimientosCaja, setMovimientosCaja] = useState([]);
@@ -213,6 +221,9 @@ export const AppProvider = ({ children }) => {
   const [insumosProduccion, setInsumosProduccion] = useState([]);
   const [recetasCosteo, setRecetasCosteo] = useState([]);
   const [costeoTargetProductId, setCosteoTargetProductId] = useState(null);
+
+  const inFlightSalesRef = useRef(new Set());
+  const inFlightVoidsRef = useRef(new Set());
 
   const openProductInCosteo = (productId) => {
     setCosteoTargetProductId(productId || null);
@@ -286,6 +297,9 @@ export const AppProvider = ({ children }) => {
       } else {
         const prods = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         setProductos(prods);
+      }
+      if (!snapshot.metadata?.fromCache || !snapshot.empty) {
+        setProductosLoaded(true);
       }
       setSyncStatus('connected');
     }, (error) => {
@@ -365,20 +379,28 @@ export const AppProvider = ({ children }) => {
     };
   }, []);
 
-  // Sembrado inicial de productos
+  // Sembrado inicial seguro: solo inserta productos que NO existen en Firestore
   const seedInitialProducts = async () => {
     try {
+      const existingSnap = await getDocs(collections.productos);
+      const existingIds = new Set(existingSnap.docs.map((d) => d.id));
+      const missing = INITIAL_PRODUCTS.filter((p) => !existingIds.has(p.id));
+      if (missing.length === 0) {
+        showToast('El catálogo ya está sincronizado en Firestore.', 'info');
+        return;
+      }
+
       const batch = writeBatch(db);
-      for (const prod of INITIAL_PRODUCTS) {
+      for (const prod of missing) {
         const ref = doc(collections.productos, prod.id);
         batch.set(ref, {
           ...prod,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
-        });
+        }, { merge: true });
       }
       await batch.commit();
-      showToast('¡Catálogo inicial sembrado exitosamente en Firestore!');
+      showToast(`Catálogo sincronizado: ${missing.length} productos agregados.`);
     } catch (err) {
       console.error('Error al sembrar productos:', err);
       showToast('Error al sembrar productos: ' + err.message, 'error');
@@ -539,7 +561,7 @@ export const AppProvider = ({ children }) => {
     });
   };
 
-  // Transacción batch para cobrar y liquidar la comanda de una cuenta específica
+  // Transacción atómica para cobrar y liquidar la comanda de una cuenta específica
   const processSale = async ({
     metodoPago,
     tipoComprobante,
@@ -551,316 +573,505 @@ export const AppProvider = ({ children }) => {
     vuelto,
     targetAccountId = activeAccountId
   }) => {
+    const lockKey = String(targetAccountId || 'default');
+    if (inFlightSalesRef.current.has(lockKey)) {
+      throw new Error('Ya hay un cobro en curso para esta cuenta. Por favor espera un momento.');
+    }
+
     const targetAccount = accounts.find(a => a.id === targetAccountId) || activeAccount;
     const itemsToProcess = targetAccount?.items || [];
 
     if (itemsToProcess.length === 0) throw new Error('La comanda de esta cuenta está vacía');
     if (!sede || !perfil) throw new Error('No hay sesión de sede o perfil activa');
 
-    const totalToPay = itemsToProcess.reduce((sum, it) => sum + it.subtotal, 0);
+    inFlightSalesRef.current.add(lockKey);
+    try {
+      const itemsSummary = itemsToProcess.map(item => {
+        const qty = Number(item.quantity || 0);
+        const priceForSede = Number(getProductPrice(item.product, sede) || 0);
+        if (!Number.isFinite(qty) || qty <= 0) {
+          throw new Error(`Cantidad inválida para "${item.product?.nombre || 'Producto'}"`);
+        }
+        return {
+          id: String(item.product.id),
+          nombre: String(item.product.nombre || 'Producto'),
+          categoria: item.product.categoria || (item.product.es_personalizado ? 'Personalizado' : 'Venta Libre'),
+          precio: Number(priceForSede.toFixed(2)),
+          cantidad: qty,
+          subtotal: Number((priceForSede * qty).toFixed(2)),
+          icono: item.product.icono || (item.product.es_personalizado ? '✨' : '🧁'),
+          es_personalizado: Boolean(item.product.es_personalizado),
+          controla_stock: item.product?.controla_stock !== false && item.product?.en_inventario !== false
+        };
+      });
 
-    const batch = writeBatch(db);
-    const stockField = SEDES[sede].stockKey;
-    const saleId = 'V-' + Date.now();
-    const ventaRef = doc(collections.ventas, saleId);
-
-    const itemsSummary = itemsToProcess.map(item => {
-      const priceForSede = getProductPrice(item.product, sede);
-      return {
-        id: item.product.id,
-        nombre: item.product.nombre,
-        categoria: item.product.categoria || (item.product.es_personalizado ? 'Personalizado' : 'Venta Libre'),
-        precio: priceForSede,
-        cantidad: item.quantity,
-        subtotal: priceForSede * item.quantity,
-        icono: item.product.icono || (item.product.es_personalizado ? '✨' : '🧁'),
-        es_personalizado: Boolean(item.product.es_personalizado),
-        controla_stock: Boolean(item.product.controla_stock)
-      };
-    });
-
-    const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
-    const effectiveTipoComprobante = isVE ? 'NOTA_VENTA' : (tipoComprobante || 'NOTA_VENTA');
-    const tipoDocLabel = effectiveTipoComprobante === 'FACTURA' ? 'Factura' : effectiveTipoComprobante === 'BOLETA' ? 'Boleta' : 'Nota de Venta';
-
-    // 1. Obtener correlativo oficial atómico en Firestore (B002 desde 1264 para Boletas, F001 para Facturas)
-    const correlativoInfo = await obtenerSiguienteCorrelativo(effectiveTipoComprobante, sede);
-
-    // Emisión hacia ApiPeru (Buenos Aires) o Control Interno (Villa España)
-    const comprobanteData = await emitirComprobante({
-      id: saleId,
-      sede: isVE ? 'villaEspana' : 'buenosAires',
-      tipoDocumento: tipoDocLabel,
-      tipoComprobante: effectiveTipoComprobante,
-      serie: correlativoInfo.serie,
-      numero: correlativoInfo.numero,
-      correlativo: correlativoInfo.numero,
-      total: totalToPay,
-      metodoPago,
-      items: itemsSummary,
-      clienteDoc: isVE ? '' : (clienteDoc || ''),
-      clienteNombre: clienteNombre || 'CLIENTES VARIOS',
-      clienteDireccion: clienteDireccion || '',
-      cliente: {
-        documento: isVE ? '' : (clienteDoc || ''),
-        nombre: clienteNombre || 'CLIENTES VARIOS',
-        direccion: clienteDireccion || '',
-        telefono: clienteTelefono || ''
+      const totalToPay = Number(itemsSummary.reduce((sum, it) => sum + it.subtotal, 0).toFixed(2));
+      if (!Number.isFinite(totalToPay) || totalToPay <= 0) {
+        throw new Error('El importe total a cobrar debe ser mayor a S/ 0.00');
       }
-    });
 
-    if (!comprobanteData.exito) {
-      throw new Error(comprobanteData.error || 'Error al emitir comprobante');
-    }
+      const isVE = sede === 'VE' || sede === 'villaEspana' || sede === 'Villa España';
+      const effectiveTipoComprobante = isVE ? 'NOTA_VENTA' : (tipoComprobante || 'NOTA_VENTA');
+      const tipoDocLabel = effectiveTipoComprobante === 'FACTURA' ? 'Factura' : effectiveTipoComprobante === 'BOLETA' ? 'Boleta' : 'Nota de Venta';
 
-    const opGravada = Number((totalToPay / 1.18).toFixed(2));
-    const igv = Number((totalToPay - opGravada).toFixed(2));
+      const stockControlledItems = itemsToProcess.filter((item) => {
+        return (
+          item.product?.controla_stock !== false &&
+          item.product?.en_inventario !== false &&
+          !item.product?.es_personalizado &&
+          !item.product?.id?.toString().startsWith('custom-')
+        );
+      });
 
-    // 1. Guardar la venta en 'ventas' con la información completa de comprobante APISUNAT, local y método de pago
-    const ventaDocData = {
-      id: saleId,
-      fecha: new Date().toISOString(),
-      timestamp: serverTimestamp(),
-      sede,
-      local: SEDES[sede].nombre,
-      sedeNombre: SEDES[sede].nombre,
-      vendedor: perfil.nombre,
-      vendedorRol: perfil.rol,
-      estado_sunat: isVE || effectiveTipoComprobante === 'NOTA_VENTA' ? 'no_aplica' : (comprobanteData.estado_sunat || 'aceptado'),
-      serie: comprobanteData.serie || correlativoInfo.serie,
-      correlativo: comprobanteData.numero || correlativoInfo.numero,
-      hash_cpe: comprobanteData.hash_cpe || comprobanteData.hash || null,
-      enlace_pdf: comprobanteData.enlace_pdf || comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
-      enlace_xml: comprobanteData.enlace_xml || comprobanteData.enlace_del_xml || comprobanteData.xml || null,
-      enlace_del_pdf: comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
-      enlace_del_xml: comprobanteData.enlace_del_xml || comprobanteData.xml || null,
-      cuenta: {
-        id: targetAccount.id,
-        nombre: targetAccount.name,
-        tipo: targetAccount.type
-      },
-      items: itemsSummary,
-      total: totalToPay,
-      opGravada,
-      igv,
-      metodoPago, // 'EFECTIVO' | 'YAPE_PLIN' | 'TARJETA'
-      metodo_pago: metodoPago,
-      tipoComprobante: effectiveTipoComprobante, // 'NOTA_VENTA' | 'BOLETA' | 'FACTURA'
-      comprobante: {
-        tipo: comprobanteData.tipo || effectiveTipoComprobante,
-        tipoDoc: comprobanteData.tipoDoc || (effectiveTipoComprobante === 'FACTURA' ? '01' : effectiveTipoComprobante === 'BOLETA' ? '03' : 'NV'),
-        documentId: comprobanteData.documentId || null,
-        fileName: comprobanteData.fileName || null,
+      // 0. Validación previa de stock fresco en Firestore ANTES de emitir ante SUNAT
+      for (const item of stockControlledItems) {
+        const prodRef = doc(db, 'productos', String(item.product.id));
+        const snap = await getDoc(prodRef);
+        if (snap.exists()) {
+          const freshProd = { id: snap.id, ...snap.data() };
+          const avail = getProductStock(freshProd, sede);
+          if (avail < item.quantity) {
+            throw new Error(
+              `Stock insuficiente en ${SEDES[sede].nombre} para "${freshProd.nombre}": disponible ${avail}, solicitado ${item.quantity}`
+            );
+          }
+        }
+      }
+
+      const saleId = 'V-' + Date.now();
+      const ventaRef = doc(db, 'ventas', saleId);
+
+      // 1. Obtener correlativo oficial y emitir comprobante (SUNAT si BA + Boleta/Factura, sino NV01)
+      const correlativoInfo = await obtenerSiguienteCorrelativo(effectiveTipoComprobante, sede);
+
+      const comprobanteData = await emitirComprobante({
+        id: saleId,
+        sede: isVE ? 'villaEspana' : 'buenosAires',
+        tipoDocumento: tipoDocLabel,
+        tipoComprobante: effectiveTipoComprobante,
+        serie: correlativoInfo.serie,
+        numero: correlativoInfo.numero,
+        correlativo: correlativoInfo.numero,
+        total: totalToPay,
+        metodoPago,
+        items: itemsSummary,
+        clienteDoc: isVE ? '' : (clienteDoc || ''),
+        clienteNombre: clienteNombre || 'CLIENTES VARIOS',
+        clienteDireccion: clienteDireccion || '',
+        cliente: {
+          documento: isVE ? '' : (clienteDoc || ''),
+          nombre: clienteNombre || 'CLIENTES VARIOS',
+          direccion: clienteDireccion || '',
+          telefono: clienteTelefono || ''
+        }
+      });
+
+      if (!comprobanteData.exito) {
+        throw new Error(comprobanteData.error || 'Error al emitir comprobante');
+      }
+
+      const opGravada = Number((comprobanteData.opGravada ?? totalToPay / 1.18).toFixed(2));
+      const igv = Number((comprobanteData.totalIgv ?? (totalToPay - opGravada)).toFixed(2));
+      const finalTotal = Number((comprobanteData.totalVenta ?? totalToPay).toFixed(2));
+
+      const estadoSunatNorm =
+        isVE || effectiveTipoComprobante === 'NOTA_VENTA'
+          ? 'no_aplica'
+          : (comprobanteData.estado_sunat || 'aceptado').toLowerCase();
+      const compEstadoUpper =
+        isVE || effectiveTipoComprobante === 'NOTA_VENTA'
+          ? 'CONTROL_INTERNO'
+          : (comprobanteData.estado || 'ACEPTADO').toUpperCase();
+
+      const nowIso = new Date().toISOString();
+
+      const ventaDocData = {
+        id: saleId,
+        fecha: nowIso,
+        timestamp: serverTimestamp(),
+        sede,
+        local: SEDES[sede].nombre,
+        sedeNombre: SEDES[sede].nombre,
+        vendedor: perfil.nombre,
+        vendedorRol: perfil.rol,
+        estado_sunat: estadoSunatNorm,
         serie: comprobanteData.serie || correlativoInfo.serie,
-        numero: comprobanteData.numero || correlativoInfo.numero,
-        codigoCompleto: comprobanteData.codigoCompleto || correlativoInfo.codigoCompleto,
-        estado: comprobanteData.estado || (isVE || effectiveTipoComprobante === 'NOTA_VENTA' ? 'CONTROL_INTERNO' : 'ACEPTADO'),
+        correlativo: comprobanteData.numero || correlativoInfo.numero,
+        hash_cpe: comprobanteData.hash_cpe || comprobanteData.hash || null,
+        cdr: comprobanteData.cdr || null,
+        enlace_pdf: comprobanteData.enlace_pdf || comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
+        enlace_xml: comprobanteData.enlace_xml || comprobanteData.enlace_del_xml || comprobanteData.xml || null,
         enlace_del_pdf: comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
         enlace_del_xml: comprobanteData.enlace_del_xml || comprobanteData.xml || null,
-        cdr: comprobanteData.cdr || null,
-        url_comprobante_sunat: comprobanteData.enlace_del_pdf || comprobanteData.url_comprobante_sunat || null,
-        cadena_para_codigo_qr: comprobanteData.cadena_para_codigo_qr || null,
-        hash_cpe: comprobanteData.hash_cpe || comprobanteData.hash || null,
-        hash: comprobanteData.hash_cpe || comprobanteData.hash || null,
-        fecha: new Date().toISOString()
-      },
-      cliente: {
-        documento: isVE ? '' : (clienteDoc || ''),
-        nombre: clienteNombre || 'Público General',
-        direccion: clienteDireccion || '',
-        telefono: clienteTelefono || ''
-      },
-      montoRecibido: Number(montoRecibido) || totalToPay,
-      vuelto: Number(vuelto) || 0,
-      estado: 'COMPLETADA'
-    };
-    batch.set(ventaRef, ventaDocData);
+        cuenta: {
+          id: targetAccount.id,
+          nombre: targetAccount.name,
+          tipo: targetAccount.type
+        },
+        items: itemsSummary,
+        total: finalTotal,
+        opGravada,
+        igv,
+        metodoPago,
+        metodo_pago: metodoPago,
+        tipoComprobante: effectiveTipoComprobante,
+        comprobante: {
+          tipo: comprobanteData.tipo || effectiveTipoComprobante,
+          tipoDoc: comprobanteData.tipoDoc || (effectiveTipoComprobante === 'FACTURA' ? '01' : effectiveTipoComprobante === 'BOLETA' ? '03' : 'NV'),
+          documentId: comprobanteData.documentId || null,
+          fileName: comprobanteData.fileName || null,
+          serie: comprobanteData.serie || correlativoInfo.serie,
+          numero: comprobanteData.numero || correlativoInfo.numero,
+          codigoCompleto: comprobanteData.codigoCompleto || correlativoInfo.codigoCompleto,
+          estado: compEstadoUpper,
+          enlace_del_pdf: comprobanteData.enlace_del_pdf || comprobanteData.pdf || null,
+          enlace_del_xml: comprobanteData.enlace_del_xml || comprobanteData.xml || null,
+          cdr: comprobanteData.cdr || null,
+          notes: comprobanteData.notes || [],
+          url_comprobante_sunat: comprobanteData.enlace_del_pdf || comprobanteData.url_comprobante_sunat || null,
+          cadena_para_codigo_qr: comprobanteData.cadena_para_codigo_qr || null,
+          hash_cpe: comprobanteData.hash_cpe || comprobanteData.hash || null,
+          hash: comprobanteData.hash_cpe || comprobanteData.hash || null,
+          fecha: nowIso
+        },
+        cliente: {
+          documento: isVE ? '' : (clienteDoc || ''),
+          nombre: clienteNombre || 'Público General',
+          direccion: clienteDireccion || '',
+          telefono: clienteTelefono || ''
+        },
+        montoRecibido: Number(montoRecibido) || finalTotal,
+        vuelto: Number(vuelto) || 0,
+        estado: 'COMPLETADA'
+      };
 
-    // 2. Descontar stock atómicamente y registrar en kardex (solo para productos con control de stock activo)
-    for (const item of itemsToProcess) {
-      const controlsStock = item.product?.controla_stock !== false && 
-                            item.product?.en_inventario !== false && 
-                            !item.product?.es_personalizado &&
-                            !item.product?.id?.toString().startsWith('custom-');
-      if (!controlsStock) continue;
-
-      const prodRef = doc(collections.productos, item.product.id);
       const stockFieldLegacy = SEDES[sede].stockKey;
       const stockFieldNested = sede === 'VE' ? 'stock.villaEspana' : 'stock.buenosAires';
 
-      batch.update(prodRef, {
-        [stockFieldLegacy]: increment(-item.quantity),
-        [stockFieldNested]: increment(-item.quantity),
-        updatedAt: serverTimestamp()
-      });
+      // 2. Transacción atómica en Firestore (lectura fresca de stock + guardado de venta, kardex, fidelidad y caja)
+      try {
+        await runTransaction(db, async (tx) => {
+          // Leer primero todos los documentos requeridos por Firestore transaction rules
+          const prodSnaps = new Map();
+          for (const item of stockControlledItems) {
+            const pId = String(item.product.id);
+            if (!prodSnaps.has(pId)) {
+              const pRef = doc(db, 'productos', pId);
+              const snap = await tx.get(pRef);
+              prodSnaps.set(pId, { ref: pRef, snap });
+            }
+          }
 
-      const kardexRef = doc(collections.kardex, `K-${saleId}-${item.product.id}`);
-      batch.set(kardexRef, {
-        fecha: new Date().toISOString(),
-        timestamp: serverTimestamp(),
-        sede,
-        tipo: 'VENTA',
-        productoId: item.product.id,
-        productoNombre: item.product.nombre,
-        cantidad: -item.quantity,
-        precioUnitario: item.product.precio,
-        total: item.subtotal,
-        motivo: `Venta ${saleId} (${tipoComprobante} - ${targetAccount.name})`,
-        responsable: perfil.nombre
-      });
-    }
+          let cliSnap = null;
+          let cliRef = null;
+          const telClean = clienteTelefono ? clienteTelefono.trim() : '';
+          if (telClean.length >= 9) {
+            cliRef = doc(db, 'clientes_fidelidad', telClean);
+            cliSnap = await tx.get(cliRef);
+          }
 
-    // 3. Si hay celular, actualizar/crear en clientes_fidelidad
-    if (clienteTelefono && clienteTelefono.trim().length >= 9) {
-      const telClean = clienteTelefono.trim();
-      const cliRef = doc(collections.clientesFidelidad, telClean);
-      const existingCli = clientesFidelidad.find(c => c.id === telClean);
+          // Escritura de la venta
+          tx.set(ventaRef, ventaDocData);
 
-      if (existingCli) {
-        batch.update(cliRef, {
-          sellos: increment(1),
-          totalVisitas: increment(1),
-          totalGastado: increment(totalToPay),
-          ultimaVisita: new Date().toISOString(),
-          nombre: clienteNombre || existingCli.nombre || 'Cliente Frecuente',
-          updatedAt: serverTimestamp()
+          // Descuento atómico y sincronizado (campo legado y anidado) + Kardex
+          for (const item of stockControlledItems) {
+            const pId = String(item.product.id);
+            const entry = prodSnaps.get(pId);
+            if (entry?.snap?.exists()) {
+              const curr = getProductStock({ id: pId, ...entry.snap.data() }, sede);
+              const nextStock = Math.max(0, curr - item.quantity);
+              tx.update(entry.ref, {
+                [stockFieldLegacy]: nextStock,
+                [stockFieldNested]: nextStock,
+                disponible: nextStock > 0 || getProductStock({ id: pId, ...entry.snap.data() }, sede === 'BA' ? 'VE' : 'BA') > 0,
+                updatedAt: serverTimestamp()
+              });
+            }
+
+            const kardexRef = doc(db, 'kardex', `K-${saleId}-${pId}`);
+            tx.set(kardexRef, {
+              id: `K-${saleId}-${pId}`,
+              fecha: nowIso,
+              timestamp: serverTimestamp(),
+              sede,
+              tipo: 'VENTA',
+              productoId: pId,
+              productoNombre: item.product.nombre,
+              cantidad: -item.quantity,
+              precioUnitario: Number(getProductPrice(item.product, sede) || 0),
+              total: Number(item.subtotal || 0),
+              motivo: `Venta ${saleId} (${effectiveTipoComprobante} - ${targetAccount.name})`,
+              responsable: perfil.nombre
+            });
+          }
+
+          // Fidelidad
+          if (cliRef) {
+            if (cliSnap?.exists()) {
+              tx.update(cliRef, {
+                sellos: increment(1),
+                totalVisitas: increment(1),
+                totalGastado: increment(finalTotal),
+                ultimaVisita: nowIso,
+                nombre: clienteNombre || cliSnap.data()?.nombre || 'Cliente Frecuente',
+                updatedAt: serverTimestamp()
+              });
+            } else {
+              tx.set(cliRef, {
+                id: telClean,
+                telefono: telClean,
+                nombre: clienteNombre || 'Cliente Frecuente',
+                sellos: 1,
+                totalVisitas: 1,
+                premiosCanjeados: 0,
+                totalGastado: finalTotal,
+                fechaRegistro: nowIso,
+                ultimaVisita: nowIso,
+                sedeRegistro: SEDES[sede].nombre
+              });
+            }
+          }
+
+          // Caja efectivo
+          if (metodoPago === 'EFECTIVO' && sesionCaja) {
+            const movCajaRef = doc(db, 'movimientos_caja', `MC-${saleId}`);
+            tx.set(movCajaRef, {
+              id: `MC-${saleId}`,
+              sesionId: sesionCaja.id,
+              fecha: nowIso,
+              timestamp: serverTimestamp(),
+              sede,
+              tipo: 'VENTA_EFECTIVO',
+              monto: finalTotal,
+              descripcion: `Venta POS en Efectivo ${saleId} (${targetAccount.name})`,
+              responsable: perfil.nombre
+            });
+          }
         });
-      } else {
-        batch.set(cliRef, {
-          id: telClean,
-          telefono: telClean,
-          nombre: clienteNombre || 'Cliente Frecuente',
-          sellos: 1,
-          totalVisitas: 1,
-          premiosCanjeados: 0,
-          totalGastado: totalToPay,
-          fechaRegistro: new Date().toISOString(),
-          ultimaVisita: new Date().toISOString(),
-          sedeRegistro: SEDES[sede].nombre
-        });
+      } catch (fsErr) {
+        console.error('Error en transacción Firestore tras emisión:', fsErr);
+        // Respaldo de emergencia para nunca perder ni duplicar un comprobante ya emitido en SUNAT
+        try {
+          const pendingKey = 'dg_pending_ventas_sync';
+          const prevPending = JSON.parse(localStorage.getItem(pendingKey) || '[]');
+          const { timestamp: _omit, ...serializableVenta } = ventaDocData;
+          prevPending.push({ ...serializableVenta, fecha: nowIso });
+          localStorage.setItem(pendingKey, JSON.stringify(prevPending));
+        } catch {
+          // Ignorar fallo de localStorage
+        }
+        clearCart(targetAccountId);
+        showToast(
+          'Comprobante emitido, pero falló la sincronización instantánea con Firestore. Guardado en respaldo local.',
+          'warning'
+        );
+        return { ...ventaDocData, pendingSync: true };
       }
+
+      clearCart(targetAccountId);
+      return ventaDocData;
+    } finally {
+      inFlightSalesRef.current.delete(lockKey);
     }
+  };
 
-    // 4. Si el pago es en efectivo y hay caja abierta, registrar movimiento
-    if (metodoPago === 'EFECTIVO' && sesionCaja) {
-      const movCajaRef = doc(collections.movimientosCaja, `MC-${saleId}`);
-      batch.set(movCajaRef, {
-        sesionId: sesionCaja.id,
-        fecha: new Date().toISOString(),
-        timestamp: serverTimestamp(),
-        sede,
-        tipo: 'VENTA_EFECTIVO',
-        monto: totalToPay,
-        descripcion: `Venta POS en Efectivo ${saleId} (${targetAccount.name})`,
-        responsable: perfil.nombre
-      });
+  // Re-sincronizar cola local de ventas si hubo caída de red tras emisión SUNAT
+  useEffect(() => {
+    if (!isOnline) return;
+    const syncPending = async () => {
+      try {
+        const raw = localStorage.getItem('dg_pending_ventas_sync');
+        if (!raw) return;
+        const list = JSON.parse(raw);
+        if (!Array.isArray(list) || list.length === 0) return;
+
+        const remaining = [];
+        for (const v of list) {
+          try {
+            await setDoc(doc(db, 'ventas', String(v.id)), {
+              ...v,
+              timestamp: serverTimestamp(),
+              syncedFromLocalRecovery: true
+            }, { merge: true });
+          } catch {
+            remaining.push(v);
+          }
+        }
+        if (remaining.length > 0) {
+          localStorage.setItem('dg_pending_ventas_sync', JSON.stringify(remaining));
+        } else {
+          localStorage.removeItem('dg_pending_ventas_sync');
+          showToast(`Respaldo local sincronizado (${list.length} venta/s recuperada/s).`, 'success');
+        }
+      } catch {
+        // Silencioso
+      }
+    };
+    syncPending();
+  }, [isOnline]);
+
+  /**
+   * Consulta en APISUNAT el estado definitivo de un comprobante en estado PENDIENTE.
+   */
+  const refreshSunatStatus = async (venta) => {
+    if (!venta?.id || !venta?.comprobante?.documentId) {
+      throw new Error('La venta no tiene documentId de APISUNAT para consultar.');
     }
+    const statusData = await verificarEstadoComprobante({
+      documentId: venta.comprobante.documentId,
+      fileName: venta.comprobante.fileName || ''
+    });
 
-    // Ejecutar lote atómico
-    await batch.commit();
-
-    // VACIAR ÚNICAMENTE LA CUENTA LIQUIDADA
-    clearCart(targetAccountId);
-
-    return ventaDocData;
+    const newStatusUpper = String(statusData.status || 'PENDIENTE').toUpperCase();
+    const ventaRef = doc(db, 'ventas', String(venta.id));
+    await updateDoc(ventaRef, {
+      estado_sunat: newStatusUpper.toLowerCase(),
+      hash_cpe: statusData.hash_cpe || venta.hash_cpe || null,
+      cdr: statusData.cdr || venta.cdr || null,
+      enlace_xml: statusData.enlace_del_xml || venta.enlace_xml || null,
+      enlace_del_xml: statusData.enlace_del_xml || venta.enlace_del_xml || null,
+      'comprobante.estado': newStatusUpper,
+      'comprobante.hash_cpe': statusData.hash_cpe || venta.comprobante?.hash_cpe || null,
+      'comprobante.cdr': statusData.cdr || venta.comprobante?.cdr || null,
+      'comprobante.enlace_del_xml': statusData.enlace_del_xml || venta.comprobante?.enlace_del_xml || null,
+      'comprobante.notes': statusData.notes || [],
+      updatedAt: serverTimestamp()
+    });
+    return statusData;
   };
 
   /**
    * Anular Venta con emisión real de Nota de Crédito (07) en APISUNAT si es Boleta/Factura electrónica.
    * Conserva el documento en `ventas` marcado como `estado: 'ANULADA'` para auditoría contable SIRE
-   * y devuelve automáticamente el stock al inventario correspondiente.
+   * y devuelve automáticamente el stock al inventario correspondiente mediante transacción segura.
    */
   const anularVenta = async (venta, { motivo = 'ANULACION DE LA OPERACION', codigoMotivo = '01' } = {}) => {
     if (!venta || !venta.id) throw new Error('Venta inválida');
     if (venta.estado === 'ANULADA') throw new Error('Esta venta ya se encuentra anulada');
 
-    const comp = venta.comprobante || {};
-    const serieOrig = (comp.serie || '').toUpperCase();
-    const esComprobanteSunat =
-      (venta.tipoComprobante === 'BOLETA' || venta.tipoComprobante === 'FACTURA') &&
-      serieOrig !== 'NV01' &&
-      comp.estado !== 'CONTROL_INTERNO';
-
-    let notaCreditoData = null;
-    if (esComprobanteSunat) {
-      notaCreditoData = await anularComprobante({ venta, motivo, codigoMotivo });
+    const voidKey = String(venta.id);
+    if (inFlightVoidsRef.current.has(voidKey)) {
+      throw new Error('Ya se está procesando la anulación de esta venta.');
     }
 
-    const batch = writeBatch(db);
-    const isVE =
-      venta.sede === 'VE' ||
-      venta.sede === 'villaEspana' ||
-      (venta.sedeNombre && venta.sedeNombre.toLowerCase().includes('villa'));
-    const stockFieldLegacy = isVE ? 'stock_VE' : 'stock_BA';
-    const nestedStockField = isVE ? 'stock.villaEspana' : 'stock.buenosAires';
-    const targetSedeId = isVE ? 'VE' : 'BA';
+    inFlightVoidsRef.current.add(voidKey);
+    try {
+      const comp = venta.comprobante || {};
+      const serieOrig = (comp.serie || '').toUpperCase();
+      const esComprobanteSunat =
+        (venta.tipoComprobante === 'BOLETA' || venta.tipoComprobante === 'FACTURA') &&
+        serieOrig !== 'NV01' &&
+        comp.estado !== 'CONTROL_INTERNO';
 
-    // 1. Devolver stock en Firestore (solo ítems que controlan inventario)
-    if (Array.isArray(venta.items)) {
-      for (const item of venta.items) {
-        const controlsStock =
-          item.controla_stock !== false &&
-          !item.es_personalizado &&
-          !item.id?.toString().startsWith('custom-');
-        if (!controlsStock) continue;
+      let notaCreditoData = null;
+      if (esComprobanteSunat) {
+        notaCreditoData = await anularComprobante({ venta, motivo, codigoMotivo });
+      }
 
-        const prodRef = doc(collections.productos, item.id);
-        batch.update(prodRef, {
-          [stockFieldLegacy]: increment(item.cantidad),
-          [nestedStockField]: increment(item.cantidad),
+      const isVE =
+        venta.sede === 'VE' ||
+        venta.sede === 'villaEspana' ||
+        (venta.sedeNombre && venta.sedeNombre.toLowerCase().includes('villa'));
+      const stockFieldLegacy = isVE ? 'stock_VE' : 'stock_BA';
+      const nestedStockField = isVE ? 'stock.villaEspana' : 'stock.buenosAires';
+      const targetSedeId = isVE ? 'VE' : 'BA';
+      const nowIso = new Date().toISOString();
+
+      const returnItems = Array.isArray(venta.items)
+        ? venta.items.filter(
+            (item) =>
+              item &&
+              item.controla_stock !== false &&
+              !item.es_personalizado &&
+              !item.id?.toString().startsWith('custom-')
+          )
+        : [];
+
+      await runTransaction(db, async (tx) => {
+        const prodEntries = [];
+        for (const item of returnItems) {
+          const pId = String(item.id);
+          const pRef = doc(db, 'productos', pId);
+          const snap = await tx.get(pRef);
+          prodEntries.push({ item, pId, pRef, snap });
+        }
+
+        const movCajaRef = doc(db, 'movimientos_caja', `MC-${venta.id}`);
+        const movCajaSnap = await tx.get(movCajaRef);
+
+        // 1. Devolver stock solo a productos existentes en catálogo (evita abortar si un producto fue borrado)
+        for (const { item, pId, pRef, snap } of prodEntries) {
+          const qty = Number(item.cantidad || 0);
+          if (snap.exists() && qty > 0) {
+            const curr = getProductStock({ id: pId, ...snap.data() }, targetSedeId);
+            const nextStock = curr + qty;
+            tx.update(pRef, {
+              [stockFieldLegacy]: nextStock,
+              [nestedStockField]: nextStock,
+              disponible: true,
+              updatedAt: serverTimestamp()
+            });
+          }
+
+          if (qty > 0) {
+            const kardexRef = doc(db, 'kardex', `K-ANULACION-${venta.id}-${pId}`);
+            tx.set(kardexRef, {
+              id: `K-ANULACION-${venta.id}-${pId}`,
+              fecha: nowIso,
+              timestamp: serverTimestamp(),
+              sede: targetSedeId,
+              tipo: 'INGRESO',
+              productoId: pId,
+              productoNombre: item.nombre || 'Producto',
+              cantidad: qty,
+              motivo: `Devolución de stock por anulación${notaCreditoData ? ` (NC ${notaCreditoData.codigoCompleto})` : ''} de venta ${venta.id}`,
+              responsable: perfil?.nombre || 'Admin'
+            });
+          }
+        }
+
+        // 2. Eliminar movimiento de caja en efectivo si existía
+        if (movCajaSnap.exists()) {
+          tx.delete(movCajaRef);
+        }
+
+        // 3. Marcar venta como ANULADA (conservando documento para trazabilidad SIRE)
+        const ventaRef = doc(db, 'ventas', String(venta.id));
+        tx.update(ventaRef, {
+          estado: 'ANULADA',
+          estado_sunat: notaCreditoData ? 'anulado_con_nc' : 'anulado',
+          fechaAnulacion: nowIso,
+          anuladoPor: perfil?.nombre || 'Admin',
+          motivoAnulacion: motivo,
+          ...(notaCreditoData
+            ? {
+                notaCredito: {
+                  tipoDoc: '07',
+                  serie: notaCreditoData.serie,
+                  numero: notaCreditoData.numero,
+                  codigoCompleto: notaCreditoData.codigoCompleto,
+                  documentId: notaCreditoData.documentId,
+                  fileName: notaCreditoData.fileName,
+                  hash_cpe: notaCreditoData.hash_cpe,
+                  enlace_del_pdf: notaCreditoData.enlace_del_pdf,
+                  enlace_del_xml: notaCreditoData.enlace_del_xml,
+                  cdr: notaCreditoData.cdr,
+                  status: notaCreditoData.status,
+                  motivo: notaCreditoData.motivo,
+                  codigoMotivo: notaCreditoData.codigoMotivo,
+                  fecha: nowIso,
+                  fechaEmision: notaCreditoData.fechaEmision
+                }
+              }
+            : {}),
           updatedAt: serverTimestamp()
         });
+      });
 
-        const kardexRef = doc(collections.kardex, `K-ANULACION-${venta.id}-${item.id}`);
-        batch.set(kardexRef, {
-          fecha: new Date().toISOString(),
-          timestamp: serverTimestamp(),
-          sede: targetSedeId,
-          tipo: 'INGRESO',
-          productoId: item.id,
-          productoNombre: item.nombre,
-          cantidad: item.cantidad,
-          motivo: `Devolución de stock por anulación${notaCreditoData ? ` (NC ${notaCreditoData.codigoCompleto})` : ''} de venta ${venta.id}`,
-          responsable: perfil?.nombre || 'Admin'
-        });
-      }
+      return notaCreditoData;
+    } finally {
+      inFlightVoidsRef.current.delete(voidKey);
     }
-
-    // 2. Eliminar movimiento de caja en efectivo asociado si existiera
-    const movCajaRef = doc(collections.movimientosCaja, `MC-${venta.id}`);
-    batch.delete(movCajaRef);
-
-    // 3. Marcar venta como ANULADA (nunca borrar documento fiscal para trazabilidad SIRE)
-    const ventaRef = doc(collections.ventas, venta.id);
-    batch.update(ventaRef, {
-      estado: 'ANULADA',
-      fechaAnulacion: new Date().toISOString(),
-      anuladoPor: perfil?.nombre || 'Admin',
-      motivoAnulacion: motivo,
-      ...(notaCreditoData ? {
-        notaCredito: {
-          tipoDoc: '07',
-          serie: notaCreditoData.serie,
-          numero: notaCreditoData.numero,
-          codigoCompleto: notaCreditoData.codigoCompleto,
-          documentId: notaCreditoData.documentId,
-          fileName: notaCreditoData.fileName,
-          hash_cpe: notaCreditoData.hash_cpe,
-          enlace_del_pdf: notaCreditoData.enlace_del_pdf,
-          enlace_del_xml: notaCreditoData.enlace_del_xml,
-          cdr: notaCreditoData.cdr,
-          status: notaCreditoData.status,
-          motivo: notaCreditoData.motivo,
-          codigoMotivo: notaCreditoData.codigoMotivo,
-          fecha: new Date().toISOString(),
-          fechaEmision: notaCreditoData.fechaEmision
-        }
-      } : {}),
-      updatedAt: serverTimestamp()
-    });
-
-    await batch.commit();
-    return notaCreditoData;
   };
 
   return (
@@ -892,6 +1103,7 @@ export const AppProvider = ({ children }) => {
       cartCount,
       // Firestore Collections y Red
       productos,
+      productosLoaded,
       ventas,
       sesionCaja,
       movimientosCaja,
@@ -907,6 +1119,7 @@ export const AppProvider = ({ children }) => {
       seedInitialProducts,
       processSale,
       anularVenta,
+      refreshSunatStatus,
       toast,
       showToast
     }}>

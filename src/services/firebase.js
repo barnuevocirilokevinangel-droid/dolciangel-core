@@ -64,6 +64,7 @@ export const collections = {
   canjesFidelidad: collection(db, 'canjes_fidelidad'),
   insumosProduccion: collection(db, 'insumos_produccion'),
   recetasCosteo: collection(db, 'recetas_costeo'),
+  reclamaciones: collection(db, 'reclamaciones'),
 };
 
 export {

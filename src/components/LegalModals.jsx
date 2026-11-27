@@ -92,7 +92,7 @@ export const LegalModals = ({
         }
       };
 
-      await addDoc(collections.reclamaciones || 'reclamaciones', payload);
+      await addDoc(collections.reclamaciones, payload);
       setHojaReclamoNum(correlativo);
     } catch (err) {
       console.error('Error al registrar reclamo:', err);

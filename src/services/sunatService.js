@@ -304,8 +304,9 @@ export const emitirComprobante = async (ventaData) => {
 
     await incrementarCorrelativo(finalSerie, finalNumero);
 
-    const pdfLink = data.enlace_del_pdf || data.pdf || null;
-    const xmlLink = data.enlace_del_xml || data.xml || null;
+    const pdfLink = data.enlace_pdf || data.enlace_del_pdf || data.pdf || null;
+    const xmlLink = data.enlace_xml || data.enlace_del_xml || data.xml || null;
+    const rawStatus = String(data.status || data.estado_sunat || 'ACEPTADO').toUpperCase();
 
     return {
       exito: true,
@@ -317,18 +318,29 @@ export const emitirComprobante = async (ventaData) => {
       serie: finalSerie,
       numero: finalNumero,
       codigoCompleto: finalCodigo,
+      opGravada: Number(data.opGravada ?? Number((total / 1.18).toFixed(2))),
+      totalIgv: Number(data.totalIgv ?? Number((total - total / 1.18).toFixed(2))),
+      totalVenta: Number(data.totalVenta ?? total),
       hash_cpe: data.hash_cpe || null,
       hash: data.hash_cpe || null,
+      enlace_pdf: pdfLink,
       enlace_del_pdf: pdfLink,
       pdf: pdfLink,
       url_comprobante_sunat: pdfLink,
+      enlace_xml: xmlLink,
       enlace_del_xml: xmlLink,
       xml: xmlLink,
       cdr: data.cdr || null,
+      notes: data.notes || [],
       cadena_para_codigo_qr: data.cadena_para_codigo_qr || null,
-      estado: data.status || 'ACEPTADO',
-      estado_sunat: (data.status || 'ACEPTADO').toLowerCase(),
-      mensaje: `Comprobante ${finalCodigo} emitido correctamente en SUNAT`
+      estado: rawStatus,
+      estado_sunat: rawStatus.toLowerCase(),
+      mensaje:
+        rawStatus === 'PENDIENTE'
+          ? `Comprobante ${finalCodigo} enviado a SUNAT (PENDIENTE de CDR)`
+          : rawStatus === 'OBSERVADO'
+          ? `Comprobante ${finalCodigo} emitido con OBSERVACIONES en SUNAT`
+          : `Comprobante ${finalCodigo} emitido y aceptado en SUNAT`
     };
   } catch (error) {
     console.error('Error de red al conectar con /api/emitir-comprobante:', error);
@@ -339,6 +351,26 @@ export const emitirComprobante = async (ventaData) => {
     };
   }
 };
+
+/**
+ * Consulta el estado definitivo de un comprobante PENDIENTE en APISUNAT.
+ */
+export async function verificarEstadoComprobante({ documentId, fileName = '' }) {
+  if (!documentId) {
+    throw new Error('Este comprobante no tiene documentId registrado.');
+  }
+  const params = new URLSearchParams({ documentId });
+  if (fileName) params.set('fileName', fileName);
+
+  const response = await fetch(`${EMITIR_API_URL}?${params.toString()}`, {
+    method: 'GET'
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || `Error HTTP ${response.status} al consultar SUNAT`);
+  }
+  return data;
+}
 
 /**
  * Emite una Nota de Crédito electrónica (tipo 07) en APISUNAT para anular una Boleta/Factura.

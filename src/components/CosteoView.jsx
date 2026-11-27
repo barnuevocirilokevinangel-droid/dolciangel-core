@@ -61,8 +61,13 @@ const formatLimaDateShort = (iso) => {
   });
 };
 
+const parseDecimalInput = (val) => {
+  if (typeof val === 'string') return val.replace(',', '.').trim();
+  return val;
+};
+
 const safeNum = (val, decimals = null, fallback = 0) => {
-  const n = Number(val);
+  const n = Number(parseDecimalInput(val));
   if (!Number.isFinite(n)) return fallback;
   return decimals !== null ? Number(n.toFixed(decimals)) : n;
 };
@@ -321,8 +326,8 @@ export const CosteoView = () => {
   }, [insumosProduccion, insumoSearch, insumoTipoFilter]);
 
   const liveCostoUnitarioInsumo = useMemo(() => {
-    const qty = Number(insumoForm.cantidad_por_paquete) || 0;
-    const price = Number(insumoForm.precio_compra) || 0;
+    const qty = Number(parseDecimalInput(insumoForm.cantidad_por_paquete)) || 0;
+    const price = Number(parseDecimalInput(insumoForm.precio_compra)) || 0;
     return qty > 0 && price >= 0 ? price / qty : 0;
   }, [insumoForm.cantidad_por_paquete, insumoForm.precio_compra]);
 
@@ -361,8 +366,8 @@ export const CosteoView = () => {
       showToast('Ingresa el nombre del insumo.', 'warning');
       return;
     }
-    const qty = Number(insumoForm.cantidad_por_paquete);
-    const price = Number(insumoForm.precio_compra);
+    const qty = Number(parseDecimalInput(insumoForm.cantidad_por_paquete));
+    const price = Number(parseDecimalInput(insumoForm.precio_compra));
     if (!Number.isFinite(qty) || qty <= 0) {
       showToast('La cantidad por paquete debe ser mayor a 0.', 'warning');
       return;
@@ -494,12 +499,18 @@ export const CosteoView = () => {
 
   const handleDeleteInsumo = async (ins) => {
     if (!ins?.id) return;
-    const usedCount = insumoUsageCounts.get(ins.id) || 0;
-    const msg =
-      usedCount > 0
-        ? `"${ins.nombre}" se usa en ${usedCount} receta(s). Si lo eliminas, dejará de actualizarse en cascada. ¿Continuar?`
-        : `¿Eliminar el insumo "${ins.nombre}"?`;
-    if (!window.confirm(msg)) return;
+    const usedInRecipes = recetasCosteo.filter((r) =>
+      [...(r.ingredientes || []), ...(r.empaques || [])].some((l) => String(l.insumoId) === String(ins.id))
+    );
+    if (usedInRecipes.length > 0) {
+      const names = usedInRecipes.slice(0, 3).map((r) => r.productoNombre).join(', ');
+      showToast(
+        `No se puede eliminar "${ins.nombre}" porque está en uso en ${usedInRecipes.length} receta(s): ${names}. Quítalo primero de esas recetas.`,
+        'warning'
+      );
+      return;
+    }
+    if (!window.confirm(`¿Eliminar el insumo "${ins.nombre}"?`)) return;
 
     try {
       await commitBatchedOperations([
@@ -529,7 +540,7 @@ export const CosteoView = () => {
 
   const addLineToList = (insumoId, qtyStr, list, setList, resetQty) => {
     const ins = insumoMap.get(insumoId);
-    const qty = Number(qtyStr);
+    const qty = Number(parseDecimalInput(qtyStr));
     if (!ins) {
       showToast('Selecciona un insumo válido.', 'warning');
       return;
@@ -545,7 +556,7 @@ export const CosteoView = () => {
         idx === existsIdx
           ? {
               ...item,
-              cantidad: Number((Number(item.cantidad) + qty).toFixed(3)),
+              cantidad: Number((safeNum(item.cantidad) + qty).toFixed(3)),
               costo_unitario_base: Number(ins.costo_unitario_base || 0)
             }
           : item
@@ -567,10 +578,10 @@ export const CosteoView = () => {
   };
 
   const updateLineQty = (setter, insumoId, value) => {
-    const qty = Number(value);
+    const qty = Number(parseDecimalInput(value));
     setter((prev) =>
       prev.map((item) =>
-        item.insumoId === insumoId ? { ...item, cantidad: Number.isFinite(qty) ? qty : 0 } : item
+        item.insumoId === insumoId ? { ...item, cantidad: Number.isFinite(qty) && qty >= 0 ? qty : 0 } : item
       )
     );
   };
@@ -585,27 +596,38 @@ export const CosteoView = () => {
   );
 
   const suggestedPrice = useMemo(
-    () => suggestPriceWithIgv(recipeMetrics.costoTotalUnitario, Number(targetMarginPct) || 55),
+    () => suggestPriceWithIgv(recipeMetrics.costoTotalUnitario, safeNum(targetMarginPct, 2, 55)),
     [recipeMetrics.costoTotalUnitario, targetMarginPct]
   );
 
   const marginBA = useMemo(
-    () => calculateNetMargin(Number(precioBA) || 0, recipeMetrics.costoTotalUnitario),
+    () => calculateNetMargin(safeNum(precioBA, 2, 0), recipeMetrics.costoTotalUnitario),
     [precioBA, recipeMetrics.costoTotalUnitario]
   );
 
   const marginVE = useMemo(
-    () => calculateNetMargin(Number(precioVE) || 0, recipeMetrics.costoTotalUnitario),
+    () => calculateNetMargin(safeNum(precioVE, 2, 0), recipeMetrics.costoTotalUnitario),
     [precioVE, recipeMetrics.costoTotalUnitario]
   );
 
   const handleSaveRecipe = async () => {
+    if (savingRecipe) return;
     if (!createNewProduct && !selectedProductoId) {
       showToast('Selecciona un producto del catálogo o activa "Crear producto nuevo".', 'warning');
       return;
     }
     if (createNewProduct && !newProductNombre.trim()) {
       showToast('Escribe el nombre del nuevo producto a crear.', 'warning');
+      return;
+    }
+    const rendNum = Number(parseDecimalInput(rendimiento));
+    const mermaNum = Number(parseDecimalInput(mermaPct || '0'));
+    if (!Number.isFinite(rendNum) || rendNum <= 0) {
+      showToast('El rendimiento debe ser al menos 1 porción por tanda.', 'warning');
+      return;
+    }
+    if (!Number.isFinite(mermaNum) || mermaNum < 0 || mermaNum > 60) {
+      showToast('El % de merma debe estar entre 0% y 60%.', 'warning');
       return;
     }
     if (ingredientes.length === 0 && empaques.length === 0) {
@@ -1339,11 +1361,12 @@ export const CosteoView = () => {
                     </label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       min="1"
                       step="1"
                       value={rendimiento}
                       onChange={(e) => setRendimiento(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-xs font-black text-center focus:outline-none focus:border-brand-500"
+                      className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-base sm:text-xs font-black text-center focus:outline-none focus:border-brand-500"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -1352,12 +1375,13 @@ export const CosteoView = () => {
                     </label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       min="0"
                       max="60"
                       step="0.5"
                       value={mermaPct}
                       onChange={(e) => setMermaPct(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-xs font-black text-center focus:outline-none focus:border-brand-500"
+                      className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-base sm:text-xs font-black text-center focus:outline-none focus:border-brand-500"
                     />
                   </div>
                 </div>
@@ -1437,12 +1461,13 @@ export const CosteoView = () => {
                 <div className="sm:col-span-2">
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     step="any"
                     value={ingQty}
                     onChange={(e) => setIngQty(e.target.value)}
                     placeholder={`Cant. (${insumoMap.get(ingSelectedId)?.unidad_uso || 'g/ml'})`}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-base sm:text-xs font-bold"
                   />
                 </div>
                 <div className="sm:col-span-2">
@@ -1543,12 +1568,13 @@ export const CosteoView = () => {
                 <div className="sm:col-span-2">
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     step="any"
                     value={empQty}
                     onChange={(e) => setEmpQty(e.target.value)}
                     placeholder="Cant./porción"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-base sm:text-xs font-bold"
                   />
                 </div>
                 <div className="sm:col-span-2">
@@ -1705,12 +1731,13 @@ export const CosteoView = () => {
                       <span className="text-xs font-bold text-slate-500">S/</span>
                       <input
                         type="number"
+                        inputMode="decimal"
                         min="0"
                         step="0.10"
                         value={precioBA}
                         onChange={(e) => setPrecioBA(e.target.value)}
                         placeholder={selectedProdObj ? String(getProductPrice(selectedProdObj, 'BA')) : '0.00'}
-                        className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-900"
+                        className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-base sm:text-sm font-black text-slate-900"
                       />
                       <button
                         type="button"
@@ -1754,12 +1781,13 @@ export const CosteoView = () => {
                       <span className="text-xs font-bold text-slate-500">S/</span>
                       <input
                         type="number"
+                        inputMode="decimal"
                         min="0"
                         step="0.10"
                         value={precioVE}
                         onChange={(e) => setPrecioVE(e.target.value)}
                         placeholder={selectedProdObj ? String(getProductPrice(selectedProdObj, 'VE')) : '0.00'}
-                        className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-900"
+                        className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-base sm:text-sm font-black text-slate-900"
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">

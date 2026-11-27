@@ -7,7 +7,8 @@ import {
   buildCustomerParty,
   buildLinesAndTotals,
   getNextCorrelativeFromApiSunat,
-  sendBillAndFetchArtifacts
+  sendBillAndFetchArtifacts,
+  checkDocumentStatusById
 } from './_lib/apisunat.js';
 
 export default async function handler(req, res) {
@@ -15,10 +16,6 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Método no permitido. Use POST.' });
   }
 
   const config = getApiSunatConfig();
@@ -29,8 +26,35 @@ export default async function handler(req, res) {
     });
   }
 
+  // GET /api/emitir-comprobante?documentId=...&fileName=... -> Consultar estado SUNAT definitivo
+  if (req.method === 'GET') {
+    try {
+      const documentId = (req.query?.documentId || '').toString().trim();
+      const fileName = (req.query?.fileName || '').toString().trim();
+      const statusData = await checkDocumentStatusById({ documentId, fileName });
+      return res.status(200).json({
+        success: true,
+        ...statusData
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        message: error.message || 'Error consultando estado del comprobante en APISUNAT.'
+      });
+    }
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, message: 'Método no permitido. Use POST o GET.' });
+  }
+
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    let body = {};
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    } catch {
+      return res.status(400).json({ success: false, message: 'Cuerpo JSON inválido.' });
+    }
 
     const rawTipo = (body.tipoDoc || body.tipoComprobante || body.tipoDocumento || 'BOLETA').toString().toUpperCase();
     const esFactura = rawTipo === '01' || rawTipo === 'FACTURA' || body.tipo_de_comprobante === '1';
@@ -152,6 +176,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       status: result.status,
+      estado_sunat: String(result.status || 'ACEPTADO').toUpperCase(),
       documentId: result.documentId,
       fileName: result.fileName,
       tipoDoc,
@@ -171,6 +196,8 @@ export default async function handler(req, res) {
       enlace_del_xml: result.enlace_del_xml,
       xml: result.xml,
       cdr: result.cdr,
+      faults: result.faults || [],
+      notes: result.notes || [],
       cadena_para_codigo_qr: qrString
     });
   } catch (error) {

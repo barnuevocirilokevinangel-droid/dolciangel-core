@@ -434,33 +434,35 @@ export const AdminView = ({ onOpenSwitchModal }) => {
           </button>
         </div>
 
-        {/* Tarjeta 4: Perfiles y PINes del Sistema */}
-        <div className="bg-white rounded-3xl p-6 border border-pink-100 shadow-sm space-y-4">
-          <div className="flex items-center gap-2.5 text-brand-700 font-bold text-sm">
-            <Users className="w-5 h-5" />
-            <span>Colaboradores & PINes de Acceso</span>
-          </div>
+        {/* Tarjeta 4: Perfiles y PINes del Sistema (Exclusivo Dueño) */}
+        {isDueno && (
+          <div className="bg-white rounded-3xl p-6 border border-pink-100 shadow-sm space-y-4">
+            <div className="flex items-center gap-2.5 text-brand-700 font-bold text-sm">
+              <Users className="w-5 h-5" />
+              <span>Colaboradores &amp; PINes de Acceso</span>
+            </div>
 
-          <div className="divide-y divide-slate-100 text-xs">
-            {PERFILES.map((p) => (
-              <div key={p.id} className="py-2.5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span>{p.avatar}</span>
-                  <div>
-                    <span className="font-bold text-slate-800 block">{p.nombre}</span>
-                    <span className="text-[11px] text-slate-400">{p.rol}</span>
+            <div className="divide-y divide-slate-100 text-xs">
+              {PERFILES.map((p) => (
+                <div key={p.id} className="py-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span>{p.avatar}</span>
+                    <div>
+                      <span className="font-bold text-slate-800 block">{p.nombre}</span>
+                      <span className="text-[11px] text-slate-400">{p.rol}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 block font-mono">PIN Inicial:</span>
+                    <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">
+                      {p.defaultPin}
+                    </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block font-mono">PIN Inicial:</span>
-                  <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">
-                    {p.defaultPin}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
       </>
       )}

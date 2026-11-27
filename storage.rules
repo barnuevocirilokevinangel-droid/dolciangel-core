@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Firebase Storage rules — proyecto dolciangel-5d2aa (dolciangel-core)
+// Permite lectura pública e ingesta de imágenes (< 5 MB, tipo image/*)
+// exclusivamente en las carpetas usadas por el catálogo y el CMS Hero.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isValidImageUpload() {
+      return request.resource != null
+             && request.resource.size < 5 * 1024 * 1024
+             && request.resource.contentType.matches('image/.*');
+    }
+
+    match /productos/{allPaths=**} {
+      allow read: if true;
+      allow write: if isValidImageUpload();
+    }
+
+    match /web_hero/{allPaths=**} {
+      allow read: if true;
+      allow write: if isValidImageUpload();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

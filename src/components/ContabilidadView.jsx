@@ -57,7 +57,6 @@ export const ContabilidadView = () => {
     setIsLoading(true);
     try {
       const [year, month] = monthStr.split('-').map(Number);
-      const startIso = `${monthStr}-01T00:00:00.000Z`;
       // Margen +/-1 día por diferencia horaria UTC vs Lima (UTC-5)
       const prevDay = new Date(Date.UTC(year, month - 1, 0)).toISOString();
       const nextMonthStart = new Date(Date.UTC(year, month, 2)).toISOString();
@@ -149,6 +148,14 @@ export const ContabilidadView = () => {
 
       // 1. Fila del comprobante original (01 / 03 / NV) si pertenece al mes seleccionado
       if (fechaEmisionYMD.startsWith(selectedMonth)) {
+        const isInternalVoid = tipoDocSunat === 'NV' && v.estado === 'ANULADA';
+        const estadoOrig =
+          v.estado === 'ANULADA'
+            ? v.notaCredito
+              ? 'ANULADO_CON_NC'
+              : 'ANULADO'
+            : String(comp.estado || v.estado_sunat || (esSunatReal ? 'ACEPTADO' : 'CONTROL_INTERNO')).toUpperCase();
+
         rows.push({
           rowKey: `${v.id}-ORIG`,
           sortDate: comp.fecha || v.fecha || '',
@@ -163,20 +170,21 @@ export const ContabilidadView = () => {
           tipoDocCliente: tipoDocCli,
           numDocCliente: numDocCli,
           razonSocialCliente: nombreCli,
-          baseGravada: opGravada,
-          igv,
-          total,
+          baseGravada: isInternalVoid ? 0 : opGravada,
+          igv: isInternalVoid ? 0 : igv,
+          total: isInternalVoid ? 0 : total,
           moneda: 'PEN',
           docModTipo: '',
           docModSerie: '',
           docModNumero: '',
           docModFecha: '',
           sede: sedeLabel,
-          metodoPago: v.metodoPago || 'EFECTIVO',
-          estado: v.estado === 'ANULADA' ? (v.notaCredito ? 'ANULADO_CON_NC' : 'ANULADO') : (comp.estado || 'EMITIDO'),
+          metodoPago: v.metodoPago || v.metodo_pago || 'EFECTIVO',
+          estado: estadoOrig,
           hashCpe: v.hash_cpe || comp.hash_cpe || comp.hash || '',
-          enlacePdf: v.enlace_del_pdf || comp.enlace_del_pdf || '',
-          enlaceXml: v.enlace_del_xml || comp.enlace_del_xml || ''
+          enlacePdf: v.enlace_pdf || v.enlace_del_pdf || comp.enlace_del_pdf || '',
+          enlaceXml: v.enlace_xml || v.enlace_del_xml || comp.enlace_del_xml || '',
+          enlaceCdr: v.cdr || comp.cdr || ''
         });
       }
 
@@ -211,11 +219,12 @@ export const ContabilidadView = () => {
             docModNumero: numeroStr,
             docModFecha: formatDMY(fechaEmisionYMD),
             sede: sedeLabel,
-            metodoPago: v.metodoPago || 'EFECTIVO',
-            estado: nc.status || 'ACEPTADO',
+            metodoPago: v.metodoPago || v.metodo_pago || 'EFECTIVO',
+            estado: String(nc.status || 'ACEPTADO').toUpperCase(),
             hashCpe: nc.hash_cpe || '',
             enlacePdf: nc.enlace_del_pdf || '',
-            enlaceXml: nc.enlace_del_xml || ''
+            enlaceXml: nc.enlace_del_xml || '',
+            enlaceCdr: nc.cdr || ''
           });
         }
       }
@@ -285,7 +294,8 @@ export const ContabilidadView = () => {
       'Estado',
       'Hash_CPE',
       'Enlace_PDF',
-      'Enlace_XML'
+      'Enlace_XML',
+      'Enlace_CDR'
     ];
 
     const lines = [
@@ -315,7 +325,8 @@ export const ContabilidadView = () => {
           r.estado,
           r.hashCpe,
           r.enlacePdf,
-          r.enlaceXml
+          r.enlaceXml,
+          r.enlaceCdr
         ]
           .map(escapeCsvField)
           .join(',')
@@ -514,8 +525,10 @@ export const ContabilidadView = () => {
                     </div>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        r.estado.includes('ANULADO')
+                        r.estado.includes('ANULADO') || r.estado === 'RECHAZADO' || r.estado === 'ERROR'
                           ? 'bg-rose-100 text-rose-800'
+                          : r.estado === 'PENDIENTE' || r.estado === 'OBSERVADO'
+                          ? 'bg-amber-100 text-amber-800'
                           : r.estado === 'CONTROL_INTERNO'
                           ? 'bg-slate-100 text-slate-700'
                           : 'bg-emerald-100 text-emerald-800'
@@ -578,6 +591,16 @@ export const ContabilidadView = () => {
                         >
                           <FileText className="w-3.5 h-3.5" />
                           <span>XML</span>
+                        </a>
+                      )}
+                      {r.enlaceCdr && (
+                        <a
+                          href={r.enlaceCdr}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-[11px]"
+                        >
+                          CDR
                         </a>
                       )}
                     </div>
@@ -674,8 +697,10 @@ export const ContabilidadView = () => {
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          r.estado.includes('ANULADO')
+                          r.estado.includes('ANULADO') || r.estado === 'RECHAZADO' || r.estado === 'ERROR'
                             ? 'bg-rose-100 text-rose-800'
+                            : r.estado === 'PENDIENTE' || r.estado === 'OBSERVADO'
+                            ? 'bg-amber-100 text-amber-800'
                             : r.estado === 'CONTROL_INTERNO'
                             ? 'bg-slate-100 text-slate-700'
                             : 'bg-emerald-100 text-emerald-800'
@@ -705,6 +730,17 @@ export const ContabilidadView = () => {
                               className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all"
                             >
                               <FileText className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {r.enlaceCdr && (
+                            <a
+                              href={r.enlaceCdr}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Descargar CDR SUNAT"
+                              className="px-1.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold text-[10px] transition-all"
+                            >
+                              CDR
                             </a>
                           )}
                         </div>
