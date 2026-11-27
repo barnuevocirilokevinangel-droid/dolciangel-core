@@ -36,7 +36,9 @@ import {
   X,
   Save,
   Check,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export const KardexView = () => {
@@ -49,6 +51,8 @@ export const KardexView = () => {
   const [stockSearch, setStockSearch] = useState('');
   const [stockCategory, setStockCategory] = useState('todos');
   const [stockStatusFilter, setStockStatusFilter] = useState('todos'); // 'todos', 'agotado_ba', 'agotado_ve', 'con_stock'
+  const [posVisibilityFilter, setPosVisibilityFilter] = useState('todos'); // 'todos', 'activos_pos', 'ocultos_pos'
+  const [togglingPosId, setTogglingPosId] = useState(null);
   
   // Modal de Ajuste Rápido de Stock
   const [editingStockProd, setEditingStockProd] = useState(null);
@@ -135,9 +139,42 @@ export const KardexView = () => {
         matchStatus = ba > 0 && ve > 0;
       }
 
-      return matchSearch && matchCategory && matchStatus;
+      const isVisiblePOS = p.visiblePOS !== false;
+      let matchPos = true;
+      if (posVisibilityFilter === 'activos_pos') {
+        matchPos = isVisiblePOS;
+      } else if (posVisibilityFilter === 'ocultos_pos') {
+        matchPos = !isVisiblePOS;
+      }
+
+      return matchSearch && matchCategory && matchStatus && matchPos;
     });
-  }, [productos, stockSearch, stockCategory, stockStatusFilter]);
+  }, [productos, stockSearch, stockCategory, stockStatusFilter, posVisibilityFilter]);
+
+  // Toggle rápido de visibilidad en POS (solo cambia visiblePOS sin tocar stock ni receta)
+  const handleToggleVisiblePOS = async (prod) => {
+    if (!prod?.id || togglingPosId) return;
+    const currentlyVisible = prod.visiblePOS !== false;
+    const nextVisible = !currentlyVisible;
+    setTogglingPosId(String(prod.id));
+    try {
+      await updateDoc(doc(db, 'productos', String(prod.id)), {
+        visiblePOS: nextVisible,
+        updatedAt: serverTimestamp(),
+      });
+      showToast(
+        nextVisible
+          ? `"${prod.nombre}" ahora visible en el POS de Ventas`
+          : `"${prod.nombre}" oculto del POS (stock e historial intactos)`,
+        nextVisible ? 'success' : 'info'
+      );
+    } catch (err) {
+      console.error('Error actualizando visiblePOS:', err);
+      showToast('No se pudo actualizar visibilidad en POS: ' + (err?.message || 'Error'), 'error');
+    } finally {
+      setTogglingPosId(null);
+    }
+  };
 
   // Filtrado de movimientos Kardex
   const filteredKardex = useMemo(() => {
@@ -608,6 +645,35 @@ export const KardexView = () => {
               </div>
             </div>
 
+            {/* Filtro rápido por visibilidad en POS */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 whitespace-nowrap">
+                Visibilidad POS:
+              </span>
+              {[
+                { id: 'todos', label: 'Todos' },
+                { id: 'activos_pos', label: 'Activos en Ventas' },
+                { id: 'ocultos_pos', label: 'Ocultos' },
+              ].map((pf) => (
+                <button
+                  key={pf.id}
+                  type="button"
+                  onClick={() => setPosVisibilityFilter(pf.id)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1 ${
+                    posVisibilityFilter === pf.id
+                      ? pf.id === 'ocultos_pos'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {pf.id === 'activos_pos' && <Eye className="w-3 h-3" />}
+                  {pf.id === 'ocultos_pos' && <EyeOff className="w-3 h-3" />}
+                  <span>{pf.label}</span>
+                </button>
+              ))}
+            </div>
+
             {/* Categorías dinámicas */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
               <button
@@ -662,26 +728,52 @@ export const KardexView = () => {
                   const stockVE = getProductStock(prod, 'VE');
                   const precioBA = getProductPrice(prod, 'BA');
                   const precioVE = getProductPrice(prod, 'VE');
+                  const isVisiblePOS = prod.visiblePOS !== false;
+                  const isToggling = togglingPosId === String(prod.id);
 
                   return (
-                    <div key={prod.id} className="p-3.5 space-y-2.5">
+                    <div key={prod.id} className={`p-3.5 space-y-2.5 transition-opacity ${!isVisiblePOS ? 'opacity-65 bg-slate-50/80' : ''}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <span className="font-extrabold text-sm text-slate-900 block leading-tight">
-                            {prod.nombre}
-                          </span>
-                          <span className="text-[11px] text-slate-500 font-semibold">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-extrabold text-sm text-slate-900 leading-tight">
+                              {prod.nombre}
+                            </span>
+                            {!isVisiblePOS && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-black uppercase">
+                                <EyeOff className="w-2.5 h-2.5" />
+                                Oculto en POS
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-semibold block mt-0.5">
                             {prod.categoria || 'General'} • BA: S/ {precioBA.toFixed(2)} | VE: S/ {precioVE.toFixed(2)}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenQuickStock(prod)}
-                          className="shrink-0 px-3 py-2 rounded-xl bg-slate-900 hover:bg-brand-700 text-white font-bold text-xs flex items-center gap-1.5 active:scale-95"
-                        >
-                          <SlidersHorizontal className="w-3.5 h-3.5 text-gold-400" />
-                          <span>Ajustar</span>
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            disabled={isToggling}
+                            onClick={() => handleToggleVisiblePOS(prod)}
+                            title={isVisiblePOS ? 'Ocultar del POS de Ventas' : 'Mostrar en POS de Ventas'}
+                            className={`px-2.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 ${
+                              isVisiblePOS
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                            }`}
+                          >
+                            {isVisiblePOS ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                            <span>{isVisiblePOS ? 'POS' : 'Oculto'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenQuickStock(prod)}
+                            className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-brand-700 text-white font-bold text-xs flex items-center gap-1.5 active:scale-95"
+                          >
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-gold-400" />
+                            <span>Ajustar</span>
+                          </button>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -722,13 +814,14 @@ export const KardexView = () => {
                     <th className="py-3 px-4 text-center">Stock Buenos Aires</th>
                     <th className="py-3 px-4 text-center">Stock Villa España</th>
                     <th className="py-3 px-4 text-center">Precio BA / VE</th>
+                    <th className="py-3 px-4 text-center">Visible en POS</th>
                     <th className="py-3 px-4 text-center">Ajuste Rápido</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredStockProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-slate-400">
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
                         <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
                         <p className="font-semibold text-sm">No se encontraron productos</p>
                         <p className="text-xs text-slate-400 mt-1">Prueba cambiando los filtros de búsqueda o categoría</p>
@@ -740,9 +833,11 @@ export const KardexView = () => {
                       const stockVE = getProductStock(prod, 'VE');
                       const precioBA = getProductPrice(prod, 'BA');
                       const precioVE = getProductPrice(prod, 'VE');
+                      const isVisiblePOS = prod.visiblePOS !== false;
+                      const isToggling = togglingPosId === String(prod.id);
 
                       return (
-                        <tr key={prod.id} className="hover:bg-pink-50/20 transition-colors">
+                        <tr key={prod.id} className={`transition-all ${!isVisiblePOS ? 'opacity-60 bg-slate-50/70' : 'hover:bg-pink-50/20'}`}>
                           {/* 1. Imagen y Nombre del producto */}
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
@@ -755,10 +850,18 @@ export const KardexView = () => {
                                 />
                               </div>
                               <div>
-                                <span className="font-bold text-slate-900 text-sm block leading-tight">
-                                  {prod.nombre}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-mono">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-slate-900 text-sm leading-tight">
+                                    {prod.nombre}
+                                  </span>
+                                  {!isVisiblePOS && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-black uppercase">
+                                      <EyeOff className="w-2.5 h-2.5" />
+                                      Oculto en POS
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
                                   ID: {prod.id}
                                 </span>
                               </div>
@@ -812,7 +915,34 @@ export const KardexView = () => {
                             </div>
                           </td>
 
-                          {/* 6. Botón de Ajuste Rápido de Stock Directo */}
+                          {/* 6. Interruptor rápido de visibilidad en POS */}
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              type="button"
+                              disabled={isToggling}
+                              onClick={() => handleToggleVisiblePOS(prod)}
+                              title={isVisiblePOS ? 'Ocultar del POS de Ventas' : 'Mostrar en POS de Ventas'}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all active:scale-95 disabled:opacity-50 mx-auto ${
+                                isVisiblePOS
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                              }`}
+                            >
+                              {isVisiblePOS ? (
+                                <>
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Activo en POS</span>
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="w-3.5 h-3.5" />
+                                  <span>Oculto en POS</span>
+                                </>
+                              )}
+                            </button>
+                          </td>
+
+                          {/* 7. Botón de Ajuste Rápido de Stock Directo */}
                           <td className="py-3 px-4 text-center">
                             <button
                               onClick={() => handleOpenQuickStock(prod)}

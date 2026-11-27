@@ -67,6 +67,7 @@ export const AdminProductManager = () => {
   const [formVisibleBA, setFormVisibleBA] = useState(true);
   const [formVisibleVE, setFormVisibleVE] = useState(true);
   const [formControlaStock, setFormControlaStock] = useState(true);
+  const [formVisiblePOS, setFormVisiblePOS] = useState(true);
   const [formRecetaId, setFormRecetaId] = useState(null);
 
   const isDueno = perfil?.isDueno ?? false;
@@ -150,6 +151,7 @@ export const AdminProductManager = () => {
     setFormVisibleBA(true);
     setFormVisibleVE(true);
     setFormControlaStock(true);
+    setFormVisiblePOS(true);
     setFormRecetaId(null);
     setShowCreateModal(true);
   };
@@ -177,6 +179,7 @@ export const AdminProductManager = () => {
     setFormVisibleBA(p.visible_BA ?? p.mostrar_en_carta ?? true);
     setFormVisibleVE(p.visible_VE ?? p.mostrar_en_carta ?? true);
     setFormControlaStock(p.controla_stock !== false && p.en_inventario !== false);
+    setFormVisiblePOS(p.visiblePOS !== false);
     const linkedReceta = p.receta_id || recetasById.get(p.id)?.id || null;
     setFormRecetaId(linkedReceta);
   };
@@ -251,6 +254,7 @@ export const AdminProductManager = () => {
         stock_VE: sVE,
         controla_stock: Boolean(formControlaStock),
         en_inventario: Boolean(formControlaStock),
+        visiblePOS: Boolean(formVisiblePOS),
         esPedidoGrande: Boolean(formEsPedidoGrande),
         visible_BA: Boolean(formVisibleBA),
         visible_VE: Boolean(formVisibleVE),
@@ -1048,6 +1052,44 @@ export const AdminProductManager = () => {
                             className="sr-only peer"
                           />
                           <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-700"></div>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Toggle Mostrar en Punto de Venta (POS) */}
+                    <div className={`p-4 rounded-2xl border transition-all ${
+                      formVisiblePOS
+                        ? 'bg-gradient-to-r from-emerald-50/80 to-teal-50/40 border-emerald-300 shadow-xs'
+                        : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <label className="flex items-start justify-between cursor-pointer gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-base">{formVisiblePOS ? '👁️' : '🙈'}</span>
+                            <span className="font-extrabold text-slate-900 text-sm">
+                              Mostrar en punto de venta (POS)
+                            </span>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                              formVisiblePOS
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                : 'bg-amber-100 text-amber-800 border border-amber-300'
+                            }`}>
+                              {formVisiblePOS ? 'Visible en Ventas' : 'Oculto en POS'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 mt-1 leading-snug">
+                            Activa o pausa este producto en el mostrador de Ventas sin perder su stock, receta ni historial (ideal para postres de temporada).
+                          </p>
+                        </div>
+
+                        <div className="relative inline-flex items-center cursor-pointer flex-shrink-0 pt-0.5">
+                          <input
+                            type="checkbox"
+                            checked={formVisiblePOS}
+                            onChange={(e) => setFormVisiblePOS(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                         </div>
                       </label>
                     </div>

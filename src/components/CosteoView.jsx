@@ -721,6 +721,7 @@ export const CosteoView = () => {
             precio_VE: finalPrecioVE,
             precio: finalPrecioBA,
             controla_stock: true,
+            visiblePOS: true,
             stock_BA: 0,
             stock_VE: 0,
             disponible: true,

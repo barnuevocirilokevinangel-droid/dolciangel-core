@@ -54,7 +54,9 @@ export const VentasView = ({ isCartOpen, setIsCartOpen }) => {
 
   // Filtrar productos autorizados para el Punto de Venta (POS)
   const productosPOS = useMemo(() => {
-    return (productos || []).filter((p) => p && p.controla_stock !== false && p.en_inventario !== false);
+    return (productos || []).filter(
+      (p) => p && p.controla_stock !== false && p.en_inventario !== false && p.visiblePOS !== false
+    );
   }, [productos]);
 
   // Categorías derivadas dinámicamente de Firestore
